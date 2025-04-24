@@ -1,0 +1,58 @@
+{
+  "modules": [
+    {
+      "id": "hello",
+      "title": "Hello-World",
+      "enabled": true
+    },
+    {
+      "id": "counter",
+      "title": "Counter-Demo",
+      "enabled": true
+    },
+    {
+      "id": "brightness",
+      "title": "Brightness",
+      "enabled": true
+    },
+    {
+      "id": "system",
+      "title": "System Status",
+      "enabled": true
+    },
+    {
+      "id": "netinfo",
+      "title": "Net-Interfaces",
+      "enabled": true
+    },
+    {
+      "id": "ping",
+      "title": "Ping Tool",
+      "enabled": true
+    },
+    {
+      "id": "netsettings",
+      "title": "Net-Setting",
+      "enabled": true
+    },
+    {
+      "id": "internet",
+      "title": "Internet Test",
+      "enabled": false
+    },
+    {
+      "id": "wifi",
+      "title": "WiFi Settings",
+      "enabled": false
+    },
+    {
+      "id": "network",
+      "title": "Net-Info",
+      "enabled": false
+    }
+  ],
+  "settings": {
+    "welcomeMessage": "Welcome to MicroPanel",
+    "startupDelay": 1000
+  }
+}

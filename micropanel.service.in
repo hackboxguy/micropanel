@@ -1,0 +1,13 @@
+[Unit]
+Description=MicroPanel OLED Menu System
+After=network.target
+
+[Service]
+Type=simple
+User=root
+ExecStart=@CMAKE_INSTALL_PREFIX@/bin/micropanel -a -p
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
