@@ -20,29 +20,35 @@ class ScreenModule {
 public:
     ScreenModule(std::shared_ptr<Display> display, std::shared_ptr<InputDevice> input)
         : m_display(display), m_input(input), m_running(false) {}
-    
+
     virtual ~ScreenModule() = default;
-    
+
     // Lifecycle methods
     virtual void enter() = 0;
     virtual void update() = 0;
     virtual void exit() = 0;
-    
+
     // Input handling
     virtual bool handleInput() = 0;
-    
+
     // Main run loop
     void run();
-    
+
     // Control functions
     void stop() { m_running = false; }
     bool isRunning() const { return m_running; }
     
+    // Added for module identification
+    virtual std::string getModuleId() const = 0;
+
 protected:
     std::shared_ptr<Display> m_display;
     std::shared_ptr<InputDevice> m_input;
     std::atomic<bool> m_running{false};
 };
+
+// Forward declaration for MenuScreenModule
+class MenuScreenModule;
 
 /**
  * Network information screen
@@ -50,12 +56,13 @@ protected:
 class NetworkInfoScreen : public ScreenModule {
 public:
     NetworkInfoScreen(std::shared_ptr<Display> display, std::shared_ptr<InputDevice> input);
-    
+
     void enter() override;
     void update() override;
     void exit() override;
     bool handleInput() override;
-    
+    std::string getModuleId() const override { return "network"; }
+
 private:
     void getNetworkInfo(std::string& ip, std::string& mac, std::string& iface);
 };
@@ -66,16 +73,17 @@ private:
 class SystemStatsScreen : public ScreenModule {
 public:
     SystemStatsScreen(std::shared_ptr<Display> display, std::shared_ptr<InputDevice> input);
-    
+
     void enter() override;
     void update() override;
     void exit() override;
     bool handleInput() override;
-    
+    std::string getModuleId() const override { return "system"; }
+
 private:
-    void getSystemInfo(std::string& cpu, std::string& memTotal, std::string& memFree, 
+    void getSystemInfo(std::string& cpu, std::string& memTotal, std::string& memFree,
                        int& cpuPercentage, int& memPercentage);
-    
+
     struct timeval m_lastUpdate = {0, 0};
 };
 
@@ -85,16 +93,17 @@ private:
 class BrightnessScreen : public ScreenModule {
 public:
     BrightnessScreen(std::shared_ptr<Display> display, std::shared_ptr<InputDevice> input);
-    
+
     void enter() override;
     void update() override;
     void exit() override;
     bool handleInput() override;
-    
+    std::string getModuleId() const override { return "brightness"; }
+
 private:
     void updateBrightnessValue(int brightness);
     void setupScreen();
-    
+
     int m_previousBrightness = 0;
 };
 
@@ -104,16 +113,17 @@ private:
 class InternetTestScreen : public ScreenModule {
 public:
     InternetTestScreen(std::shared_ptr<Display> display, std::shared_ptr<InputDevice> input);
-    
+
     void enter() override;
     void update() override;
     void exit() override;
     bool handleInput() override;
-    
+    std::string getModuleId() const override { return "internet"; }
+
 private:
     static int pingServer(const std::string& server, int timeoutSec);
     void startTest();
-    
+
     std::thread m_testThread;
     std::atomic<bool> m_testCompleted{false};
     std::atomic<int> m_testResult{-1};
@@ -129,17 +139,18 @@ private:
 class WiFiSettingsScreen : public ScreenModule {
 public:
     WiFiSettingsScreen(std::shared_ptr<Display> display, std::shared_ptr<InputDevice> input);
-    
+
     void enter() override;
     void update() override;
     void exit() override;
     bool handleInput() override;
-    
+    std::string getModuleId() const override { return "wifi"; }
+
 private:
     void setWiFiStatus(bool enabled);
     bool getWiFiStatus() const;
     void renderOptions();
-    
+
     std::vector<std::string> m_options = {"Turn On", "Turn Off", "Back"};
     int m_selectedOption = 0;
     mutable bool m_currentWiFiState = false;
@@ -153,12 +164,13 @@ private:
 class HelloWorldScreen : public ScreenModule {
 public:
     HelloWorldScreen(std::shared_ptr<Display> display, std::shared_ptr<InputDevice> input);
-    
+
     void enter() override;
     void update() override;
     void exit() override;
     bool handleInput() override;
-    
+    std::string getModuleId() const override { return "hello"; }
+
 private:
     time_t m_startTime = 0;
     const int m_displayTime = 2; // seconds
@@ -170,12 +182,13 @@ private:
 class CounterScreen : public ScreenModule {
 public:
     CounterScreen(std::shared_ptr<Display> display, std::shared_ptr<InputDevice> input);
-    
+
     void enter() override;
     void update() override;
     void exit() override;
     bool handleInput() override;
-    
+    std::string getModuleId() const override { return "counter"; }
+
 private:
     static int s_counter;
     time_t m_startTime = 0;
@@ -200,6 +213,7 @@ public:
     void update() override;
     void exit() override;
     bool handleInput() override;
+    std::string getModuleId() const override { return "ping"; }
 
     const std::string& getSelectedIp() const;
 
@@ -236,6 +250,7 @@ public:
     void update() override;
     void exit() override;
     bool handleInput() override;
+    std::string getModuleId() const override { return "netinfo"; }
 
 private:
     // Internal implementation
@@ -256,6 +271,7 @@ public:
     void update() override;
     void exit() override;
     bool handleInput() override;
+    std::string getModuleId() const override { return "netsettings"; }
 
 private:
     // Internal implementation

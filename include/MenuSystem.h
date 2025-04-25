@@ -146,12 +146,14 @@ public:
     bool handleRotation(int direction);
     bool handleButtonPress();
     
+    // Set Menu title
+    void setTitle(const std::string& title) { m_title = title; }
     // Parent/child menu relationships
     void setParent(std::shared_ptr<Menu> parent) { m_parent = parent; }
     std::shared_ptr<Menu> getParent() const { return m_parent.lock(); }
     
 private:
-    std::string m_title;
+    std::string m_title = "MAIN MENU";
     std::shared_ptr<Display> m_display;
     std::vector<std::shared_ptr<MenuItem>> m_items;
     std::weak_ptr<Menu> m_parent;

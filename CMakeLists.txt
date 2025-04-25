@@ -57,6 +57,7 @@ set(SOURCES_MODULES
     src/modules/IPSelector.cpp
     src/modules/IPSelectorScreen.cpp
     src/modules/IPPingScreen.cpp
+    src/modules/MenuScreenModule.cpp
 )
 
 set(SOURCES_MAIN

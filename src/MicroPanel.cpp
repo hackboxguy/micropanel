@@ -3,6 +3,7 @@
 #include "DeviceInterfaces.h"
 #include "MenuSystem.h"
 #include "ScreenModules.h"
+#include "MenuScreenModule.h"
 #include "Logger.h"
 #include <iostream>
 #include <signal.h>
@@ -198,7 +199,7 @@ bool MicroPanel::initialize()
 
     return true;
 }
-
+/*
 bool MicroPanel::loadConfigFromJson() {
     try {
         Logger::debug("Loading configuration from: " + m_config.configFile);
@@ -275,6 +276,162 @@ bool MicroPanel::loadConfigFromJson() {
         // Initially render the menu
         m_mainMenu->render();
         
+        return true;
+    } catch (const std::exception& e) {
+        Logger::error("Error parsing JSON config: " + std::string(e.what()));
+        return false;
+    }
+}
+*/
+bool MicroPanel::loadConfigFromJson() {
+    try {
+        Logger::debug("Loading configuration from: " + m_config.configFile);
+
+        // Open the file
+        std::ifstream configFile(m_config.configFile);
+        if (!configFile.is_open()) {
+            Logger::error("Could not open config file: " + m_config.configFile);
+            return false;
+        }
+
+        // Parse JSON
+        json config = json::parse(configFile);
+
+        // Initial startup delay to make sure device is fully initialized
+        usleep(Config::STARTUP_DELAY);
+        std::cout << "Initializing display..." << std::endl;
+
+        // Clear the display
+        m_display->clear();
+        usleep(Config::DISPLAY_CMD_DELAY * 15);
+
+        // Draw startup message
+        m_display->drawText(0, 0, "Menu System");
+        usleep(Config::DISPLAY_CMD_DELAY * 10);
+
+        m_display->drawText(0, 10, "Loading Config...");
+        usleep(Config::DISPLAY_CMD_DELAY * 10);
+
+        // Clear before showing menu
+        m_display->clear();
+        usleep(Config::DISPLAY_CMD_DELAY * 15);
+
+        // Check if "modules" field exists and is an array
+        if (!config.contains("modules") || !config["modules"].is_array()) {
+            Logger::error("Config file doesn't contain valid 'modules' array");
+            return false;
+        }
+
+        // First pass: Create all menu modules
+        for (const auto& module : config["modules"]) {
+            // Check for required fields
+            if (!module.contains("id") || !module.contains("title") || !module.contains("enabled")) {
+                Logger::warning("Skipping module with missing required field");
+                continue;
+            }
+
+            // Get module properties
+            std::string id = module["id"].get<std::string>();
+            std::string title = module["title"].get<std::string>();
+            bool enabled = module["enabled"].get<bool>();
+            // Check if this is a menu type module
+            bool isMenu = module.contains("type") && module["type"].get<std::string>() == "menu";
+            // Skip disabled modules
+            if (!enabled && !isMenu) {
+                Logger::debug("Skipping disabled module: " + id);
+                continue;
+	    }
+	    // Check if this is a special action type module
+            if (module.contains("type") && module["type"].get<std::string>() == "action") {
+               if (id == "invert_display") {
+                   m_mainMenu->addItem(std::make_shared<ActionMenuItem>(title, [this]() {
+                   m_display->setInverted(!m_display->isInverted());
+                }));
+                Logger::debug("Added invert display action to main menu: " + title);
+                }
+                continue;
+            }
+	    // If this is a menu type, create a MenuScreenModule for it
+            if (isMenu) {
+                Logger::debug("Creating menu module: " + id);
+                auto menuModule = std::make_shared<MenuScreenModule>(m_display, m_inputDevice, id, title);
+                // Add to module registry (whether enabled or not - might be a submenu)
+                m_modules[id] = menuModule;
+                // Only add to main menu if enabled
+                if (enabled) {
+                    registerModuleInMenu(id, title);
+                }
+            }
+            // Otherwise, check if it's in the registry (existing module)
+            else if (m_modules.find(id) != m_modules.end()) {
+                // Register this module in the menu
+                registerModuleInMenu(id, title);
+                Logger::debug("Registered module: " + id + " with title: " + title);
+            } else {
+                Logger::warning("Module not found: " + id);
+            }
+        }
+	// Second pass: Configure menu hierarchies
+        for (const auto& module : config["modules"]) {
+            // Check if this module has an ID and is a menu type
+            if (module.contains("id") &&
+                module.contains("type") &&
+                module["type"].get<std::string>() == "menu") {
+                std::string menuId = module["id"].get<std::string>();
+                // Check if the menu module exists in our registry
+                auto it = m_modules.find(menuId);
+                if (it == m_modules.end() || !std::dynamic_pointer_cast<MenuScreenModule>(it->second)) {
+                    Logger::warning("Menu module not found: " + menuId);
+                    continue;
+                }
+                // Get the menu module
+                auto menuModule = std::dynamic_pointer_cast<MenuScreenModule>(it->second);
+                // Set the module registry so the menu can look up modules
+                menuModule->setModuleRegistry(&m_modules);
+                // Check if this menu has submenus
+                if (module.contains("submenus") && module["submenus"].is_array()) {
+                    // Add each submenu item
+                    for (const auto& submenu : module["submenus"]) {
+                        // Check for required fields
+                        if (!submenu.contains("id") || !submenu.contains("title")) {
+                            Logger::warning("Skipping submenu with missing required field");
+                            continue;
+                        }
+                        // Get submenu properties
+                        std::string submenuId = submenu["id"].get<std::string>();
+                        std::string submenuTitle = submenu["title"].get<std::string>();
+                        // Add to the menu
+                        menuModule->addSubmenuItem(submenuId, submenuTitle);
+                        Logger::debug("Added submenu item " + submenuId + " to menu " + menuId);
+                    }
+                }
+            }
+        }
+	// Special case for Invert Display option
+        if (config.contains("options") && config["options"].is_object()) {
+            auto options = config["options"];
+            if (options.contains("invert_display") && options["invert_display"].is_object()) {
+                auto invertOpt = options["invert_display"];
+                if (invertOpt.contains("enabled") && invertOpt["enabled"].get<bool>() &&
+                    invertOpt.contains("title") && invertOpt["title"].is_string()) {
+                    // Add the invert display option with custom title
+                    std::string title = invertOpt["title"].get<std::string>();
+                    m_mainMenu->addItem(std::make_shared<ActionMenuItem>(title, [this]() {
+                        m_display->setInverted(!m_display->isInverted());
+                    }));
+                    Logger::debug("Added invert display option: " + title);
+                }
+            }
+        }
+
+        // Add Exit option at the end
+        m_mainMenu->addItem(std::make_shared<ActionMenuItem>("Exit", [this]() {
+            m_running = false;
+        }));
+
+        // Initially render the menu
+        m_mainMenu->render();
+
         return true;
     } catch (const std::exception& e) {
         Logger::error("Error parsing JSON config: " + std::string(e.what()));
