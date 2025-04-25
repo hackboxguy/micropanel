@@ -32,6 +32,11 @@ else()
     message( FATAL_ERROR "Error!!! Missing nlohmann json library, try sudo apt-get install nlohmann-json3-dev" )
 endif()
 
+set(SOURCES_PERSISTENCE
+    src/PersistentStorage.cpp
+    src/ModuleDependency.cpp
+)
+
 # Define source files by directory
 set(SOURCES_DEVICES
     src/devices/DisplayDevice.cpp
@@ -70,6 +75,7 @@ set(SOURCES
     ${SOURCES_DEVICES}
     ${SOURCES_MENU}
     ${SOURCES_MODULES}
+    ${SOURCES_PERSISTENCE}
     ${SOURCES_MAIN}
 )
 

@@ -1,7 +1,8 @@
 #include "MenuScreenModule.h"
 #include "Config.h"
 #include "Logger.h"
-#include "DeviceInterfaces.h"  // Add this include for InputDevice
+#include "DeviceInterfaces.h"
+#include "ModuleDependency.h"
 #include <iostream>
 #include <unistd.h>
 
@@ -131,7 +132,7 @@ void MenuScreenModule::buildSubmenu() {
         }));
     }
 }
-
+/*
 void MenuScreenModule::executeSubmenuAction(const std::string& moduleId) {
     // Check if we have a module registry
     if (!m_moduleRegistry) {
@@ -173,6 +174,88 @@ void MenuScreenModule::executeSubmenuAction(const std::string& moduleId) {
     m_display->clear();
     usleep(Config::DISPLAY_CMD_DELAY * 5);
     
+    // Re-render our menu
+    m_menu->render();
+}*/
+
+void MenuScreenModule::executeSubmenuAction(const std::string& moduleId) {
+    // Check if we have a module registry
+    if (!m_moduleRegistry) {
+        Logger::error("No module registry available");
+        return;
+    }
+
+    // Special handling for back action
+    if (moduleId == "back") {
+        m_exitToParent = true;
+        return;
+    }
+
+    // Special handling for invert_display action
+    if (moduleId == "invert_display") {
+        m_display->setInverted(!m_display->isInverted());
+        return;
+    }
+
+    // Look up the module in the registry
+    auto it = m_moduleRegistry->find(moduleId);
+    if (it == m_moduleRegistry->end()) {
+        Logger::error("Module not found in registry: " + moduleId);
+        return;
+    }
+
+    // Get the module
+    auto module = it->second;
+    if (!module) {
+        Logger::error("Invalid module pointer for: " + moduleId);
+        return;
+    }
+
+    // Check if this is a menu module
+    auto menuModule = std::dynamic_pointer_cast<MenuScreenModule>(module);
+    bool isMenuModule = (menuModule != nullptr);
+    
+    // Check dependencies for regular (non-menu) modules
+    if (!isMenuModule) {
+        auto& dependencies = ModuleDependency::getInstance();
+        if (!dependencies.shouldSkipDependencyCheck(moduleId) && !dependencies.checkDependencies(moduleId)) {
+            Logger::warning("Dependencies not satisfied for module: " + moduleId);
+            
+            // Show a message on display
+            m_display->clear();
+            usleep(Config::DISPLAY_CMD_DELAY * 5);
+            m_display->drawText(0, 0, "Dependency Error");
+            m_display->drawText(0, 10, "Module unavailable:");
+            m_display->drawText(0, 20, moduleId);
+            usleep(Config::DISPLAY_CMD_DELAY * 2000); // Show for 2 seconds
+            
+            // Re-render the menu
+            m_display->clear();
+            usleep(Config::DISPLAY_CMD_DELAY * 5);
+            m_menu->render();
+            return;
+        }
+    }
+
+    // If this is a MenuScreenModule, set its parent to this
+    if (isMenuModule) {
+        menuModule->setParentMenu(this);
+    }
+
+    // Execute the module
+    Logger::debug("Executing submenu module: " + moduleId);
+
+    // Clear the display before launching the module
+    m_display->clear();
+    usleep(Config::DISPLAY_CMD_DELAY * 5);
+
+    // Run the module
+    module->run();
+
+    // Clear the display before returning to menu
+    m_display->clear();
+    usleep(Config::DISPLAY_CMD_DELAY * 5);
+
     // Re-render our menu
     m_menu->render();
 }

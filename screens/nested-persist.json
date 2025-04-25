@@ -1,0 +1,111 @@
+{
+  "modules": [
+    {
+      "id": "hello",
+      "title": "Hello World",
+      "enabled": false
+    },
+    {
+      "id": "counter",
+      "title": "Counter Demo", 
+      "enabled": false
+    },
+    {
+      "id": "system_menu",
+      "title": "System",
+      "enabled": true,
+      "type": "menu",
+      "submenus": [
+        {"id": "invert_display", "title": "Invert Display"},
+        {"id": "brightness", "title": "Brightness"},
+        {"id": "system", "title": "System Info"},
+        {"id": "back", "title": "Back"}
+      ]
+    },
+    {
+      "id": "network_menu",
+      "title": "Network",
+      "enabled": true,
+      "type": "menu",
+      "submenus": [
+        {"id": "network_config", "title": "Configuration"},
+        {"id": "network_status", "title": "Status"},
+        {"id": "back", "title": "Back"}
+      ]
+    },
+    {
+      "id": "network_config",
+      "title": "Network Config",
+      "enabled": false,
+      "type": "menu",
+      "submenus": [
+        {"id": "netsettings", "title": "IP Settings"},
+        {"id": "wifi", "title": "WiFi Settings"}, 
+        {"id": "back", "title": "Back"}
+      ]
+    },
+    {
+      "id": "network_status",
+      "title": "Network Status",
+      "enabled": false,
+      "type": "menu",
+      "submenus": [
+        {"id": "netinfo", "title": "Interfaces"},
+        {"id": "ping", "title": "Ping Test"},
+        {"id": "internet", "title": "Internet Test"},
+        {"id": "back", "title": "Back"}
+      ]
+    },
+    {
+      "id": "brightness",
+      "title": "Brightness",
+      "enabled": false
+    },
+    {
+      "id": "system",
+      "title": "System Info",
+      "enabled": false
+    },
+    {
+      "id": "netsettings",
+      "title": "IP Settings",
+      "enabled": false,
+      "depends": {
+        "action_script": "/mnt/old-nvm/embedded/micropanel-1/micropanel/scripts/dhcp-net-settings.sh"
+      }
+    },
+    {
+      "id": "netinfo",
+      "title": "Network Info",
+      "enabled": false
+    },
+    {
+      "id": "ping",
+      "title": "Ping Tool",
+      "enabled": false
+    },
+    {
+      "id": "internet",
+      "title": "Internet Test",
+      "enabled": false
+    },
+    {
+      "id": "wifi",
+      "title": "WiFi Settings",
+      "enabled": false,
+      "depends": {
+        "daemon_script": "/etc/init.d/networking"
+      }
+    },
+    {
+      "id": "invert_display",
+      "title": "Invert Display",
+      "enabled": false,
+      "type": "action",
+      "action": "invert_display"
+    }
+  ],
+  "persistent_data": {
+    "file_path": "/mnt/old-nvm/embedded/micropanel-1/micropanel/settings.json"
+  }
+}

@@ -1,6 +1,7 @@
 #include "ScreenModules.h"
 #include "MenuSystem.h"
 #include "DeviceInterfaces.h"
+#include "ModuleDependency.h"
 #include "Config.h"
 #include "Logger.h"
 #include "IPSelector.h"
@@ -14,7 +15,7 @@
 #include <sstream>
 
 // Script path for network settings
-#define NET_SETTINGS_SCRIPT "/usr/bin/dhcp-net-settings.sh"
+//#define NET_SETTINGS_SCRIPT "/usr/bin/dhcp-net-settings.sh"
 
 // Menu states - define which menu is currently active
 enum class NetSettingsMenuState {
@@ -68,7 +69,7 @@ public:
     void applyNetworkSettings();
     bool initNetworkSettingsFromScript();
     void networkFieldChanged(const std::string& ip);
-
+    std::string getNetSettingsScriptPath();
     // Menu state management
     void switchToMainMenu();
     void switchToModeMenu();
@@ -145,7 +146,8 @@ NetSettingsScreen::Impl::~Impl() {
 
 bool NetSettingsScreen::Impl::initNetworkSettingsFromScript() {
     // Command to execute the script
-    std::string cmd = std::string(NET_SETTINGS_SCRIPT);
+    //std::string cmd = std::string(NET_SETTINGS_SCRIPT);
+    std::string cmd = getNetSettingsScriptPath(); 
     FILE* fp = popen(cmd.c_str(), "r");
     if (!fp) {
         Logger::error("Failed to run dhcp-net-settings.sh");
@@ -249,7 +251,7 @@ void NetSettingsScreen::Impl::applyNetworkSettings() {
     char cmd[512];
     char line[128];
     bool success = false;
-    
+    std::string scriptPath = getNetSettingsScriptPath(); 
     FILE* fp = nullptr;
 
     if (m_mode == NetworkMode::NET_MODE_STATIC) {
@@ -261,7 +263,7 @@ void NetSettingsScreen::Impl::applyNetworkSettings() {
         // Construct command with all parameters
         snprintf(cmd, sizeof(cmd),
                 "%s --mode=static --ip=%s --gateway=%s --netmask=%s",
-                NET_SETTINGS_SCRIPT, ip.c_str(), gateway.c_str(), netmask.c_str());
+                scriptPath.c_str(), ip.c_str(), gateway.c_str(), netmask.c_str());
 
         Logger::debug("Running command: " + std::string(cmd));
 
@@ -298,7 +300,7 @@ void NetSettingsScreen::Impl::applyNetworkSettings() {
     }
     else {
         // DHCP mode - simpler command
-        snprintf(cmd, sizeof(cmd), "%s --mode=dhcp", NET_SETTINGS_SCRIPT);
+        snprintf(cmd, sizeof(cmd), "%s --mode=dhcp", scriptPath.c_str());//NET_SETTINGS_SCRIPT);
 
         Logger::debug("Running command: " + std::string(cmd));
 
@@ -1129,4 +1131,22 @@ bool NetSettingsScreen::handleInput() {
     
     // Return false to exit the screen
     return !m_pImpl->m_shouldExit;
+}
+
+//check if required dhcp-net-settings.sh is provided through json config file
+//else returns default path
+std::string NetSettingsScreen::Impl::getNetSettingsScriptPath() {
+    const std::string defaultPath = "/usr/bin/dhcp-net-settings.sh";
+    
+    // Try to get the path from dependencies
+    auto& dependencies = ModuleDependency::getInstance();
+    std::string scriptPath = dependencies.getDependencyPath("netsettings", "action_script");
+    
+    if (scriptPath.empty()) {
+        Logger::debug("No action_script dependency found for netsettings, using default path");
+        return defaultPath;
+    }
+    
+    Logger::debug("Using script path from dependencies: " + scriptPath);
+    return scriptPath;
 }

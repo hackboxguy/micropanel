@@ -2,6 +2,8 @@
 #include "MenuSystem.h"
 #include "DeviceInterfaces.h"
 #include "Config.h"
+#include "Logger.h"
+#include "PersistentStorage.h"
 #include <iostream>
 #include <unistd.h>
 
@@ -12,6 +14,15 @@ BrightnessScreen::BrightnessScreen(std::shared_ptr<Display> display, std::shared
 
 void BrightnessScreen::enter()
 {
+    // Try to load the saved brightness from persistent storage
+    auto& storage = PersistentStorage::getInstance();
+    int savedBrightness = storage.getValue("brightness", "level", -1);
+    
+    // If we have a saved value, use it
+    if (savedBrightness >= 0 && savedBrightness <= 255) {
+        m_display->setBrightness(savedBrightness);
+    }
+
     // Remember the current brightness to restore if needed
     m_previousBrightness = m_display->getBrightness();
     
@@ -29,7 +40,15 @@ void BrightnessScreen::update()
 
 void BrightnessScreen::exit()
 {
-    // Nothing to clean up
+    // Save the changed Brightness value
+    int currentBrightness = m_display->getBrightness();
+    auto& storage = PersistentStorage::getInstance();
+    
+    // Only save if it's changed
+    if (currentBrightness != m_previousBrightness) {
+        Logger::debug("Saving brightness value to persistent storage: " + std::to_string(currentBrightness));
+        storage.setValue("brightness", "level", currentBrightness);
+    }
 }
 
 bool BrightnessScreen::handleInput()
