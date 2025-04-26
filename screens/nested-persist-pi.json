@@ -18,7 +18,7 @@
       "enabled": true,
       "type": "menu",
       "submenus": [
-        {"id": "network_config", "title": "Configuration"},
+        {"id": "network_config", "title": "Settings"},
         {"id": "network_status", "title": "Status"},
         {"id": "back", "title": "Back"}
       ]
