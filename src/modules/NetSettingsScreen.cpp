@@ -70,6 +70,8 @@ public:
     bool initNetworkSettingsFromScript();
     void networkFieldChanged(const std::string& ip);
     std::string getNetSettingsScriptPath();
+    std::string getNetSettingsOsType();
+    std::string getNetSettingsInterface();
     // Menu state management
     void switchToMainMenu();
     void switchToModeMenu();
@@ -146,8 +148,11 @@ NetSettingsScreen::Impl::~Impl() {
 
 bool NetSettingsScreen::Impl::initNetworkSettingsFromScript() {
     // Command to execute the script
-    //std::string cmd = std::string(NET_SETTINGS_SCRIPT);
-    std::string cmd = getNetSettingsScriptPath(); 
+    ///usr/bin/dhcp-net-settings.sh --os=debian --interface=eth0
+    std::string cmd = getNetSettingsScriptPath();
+    std::string ostype = getNetSettingsOsType();
+    std::string iface = getNetSettingsInterface();
+    cmd+=" --os="+ostype+" --interface="+iface;
     FILE* fp = popen(cmd.c_str(), "r");
     if (!fp) {
         Logger::error("Failed to run dhcp-net-settings.sh");
@@ -252,6 +257,8 @@ void NetSettingsScreen::Impl::applyNetworkSettings() {
     char line[128];
     bool success = false;
     std::string scriptPath = getNetSettingsScriptPath(); 
+    std::string ostype = getNetSettingsOsType();
+    std::string iface  = getNetSettingsInterface();
     FILE* fp = nullptr;
 
     if (m_mode == NetworkMode::NET_MODE_STATIC) {
@@ -262,8 +269,8 @@ void NetSettingsScreen::Impl::applyNetworkSettings() {
 
         // Construct command with all parameters
         snprintf(cmd, sizeof(cmd),
-                "%s --mode=static --ip=%s --gateway=%s --netmask=%s",
-                scriptPath.c_str(), ip.c_str(), gateway.c_str(), netmask.c_str());
+                "%s --os=%s --interface=%s --mode=static --ip=%s --gateway=%s --netmask=%s",
+                scriptPath.c_str(), ostype.c_str(),iface.c_str(),ip.c_str(), gateway.c_str(), netmask.c_str());
 
         Logger::debug("Running command: " + std::string(cmd));
 
@@ -300,7 +307,7 @@ void NetSettingsScreen::Impl::applyNetworkSettings() {
     }
     else {
         // DHCP mode - simpler command
-        snprintf(cmd, sizeof(cmd), "%s --mode=dhcp", scriptPath.c_str());//NET_SETTINGS_SCRIPT);
+        snprintf(cmd, sizeof(cmd), "%s --os=%s --interface=%s --mode=dhcp", scriptPath.c_str(),ostype.c_str(),iface.c_str());//NET_SETTINGS_SCRIPT);
 
         Logger::debug("Running command: " + std::string(cmd));
 
@@ -1149,4 +1156,32 @@ std::string NetSettingsScreen::Impl::getNetSettingsScriptPath() {
     
     Logger::debug("Using script path from dependencies: " + scriptPath);
     return scriptPath;
+}
+std::string NetSettingsScreen::Impl::getNetSettingsOsType() {
+    const std::string defaultOs = "debian";
+
+    // Try to get the os_type from dependencies
+    auto& dependencies = ModuleDependency::getInstance();
+    std::string osType = dependencies.getDependencyPath("netsettings", "os_type");
+
+    if (osType.empty()) {
+        Logger::debug("No os_type dependency found for netsettings, using default debian os_type");
+        return defaultOs;
+    }
+    Logger::debug("Using os_type from dependencies: " + osType);
+    return osType;
+}
+std::string NetSettingsScreen::Impl::getNetSettingsInterface() {
+    const std::string defaultInterface = "eth0";
+
+    // Try to get the iface_name
+    auto& dependencies = ModuleDependency::getInstance();
+    std::string interfaceName = dependencies.getDependencyPath("netsettings", "iface_name");
+
+    if(interfaceName.empty()) {
+       Logger::debug("No iface_name dependency found for netsettings, using default eth0 interface");
+       return defaultInterface;
+    }
+    Logger::debug("Using iface_name from dependencies: " + interfaceName);
+    return interfaceName;
 }

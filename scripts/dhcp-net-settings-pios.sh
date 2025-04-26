@@ -289,6 +289,15 @@ set_nm_static() {
     # Check if connection exists for interface
     CONNECTION=$(nmcli -t -f NAME,DEVICE connection show --active | grep ":$INTERFACE" | cut -d':' -f1)
     
+    # Remove leading zeros from IP address components
+    # NetworkManager doesn't accept IPs with leading zeros like 192.168.001.001
+    # Split IP address by dots, remove leading zeros from each part, then rejoin
+    CLEAN_IP=$(echo "$IP" | awk -F. '{printf "%d.%d.%d.%d", $1, $2, $3, $4}')
+    CLEAN_GATEWAY=$(echo "$GATEWAY" | awk -F. '{printf "%d.%d.%d.%d", $1, $2, $3, $4}')
+    
+    log_verbose "Cleaned IP address: $CLEAN_IP (was $IP)"
+    log_verbose "Cleaned Gateway: $CLEAN_GATEWAY (was $GATEWAY)"
+    
     if [ "$DRY_RUN" -eq 0 ]; then
         # Prepare DNS servers string
         DNS_SERVERS=""
@@ -298,7 +307,7 @@ set_nm_static() {
         
         if [ -n "$CONNECTION" ]; then
             # Modify existing connection
-            nmcli connection modify "$CONNECTION" ipv4.method manual ipv4.addresses "$IP/$CIDR" ipv4.gateway "$GATEWAY" 
+            nmcli connection modify "$CONNECTION" ipv4.method manual ipv4.addresses "$CLEAN_IP/$CIDR" ipv4.gateway "$CLEAN_GATEWAY" 
             
             # Set DNS servers if provided
             if [ -n "$DNS_SERVERS" ]; then
@@ -310,7 +319,7 @@ set_nm_static() {
         else
             # Create new static IP connection
             nmcli connection add type ethernet con-name "$INTERFACE" ifname "$INTERFACE" \
-                ipv4.method manual ipv4.addresses "$IP/$CIDR" ipv4.gateway "$GATEWAY"
+                ipv4.method manual ipv4.addresses "$CLEAN_IP/$CIDR" ipv4.gateway "$CLEAN_GATEWAY"
             
             # Set DNS servers if provided
             if [ -n "$DNS_SERVERS" ]; then

@@ -61,8 +61,8 @@
       "title": "IP Settings",
       "enabled": false,
       "depends": {
-        "action_script": "/home/user/micropanel/scripts/dhcp-net-settings.sh",
-        "os_type": "debian",
+        "action_script": "/home/pi/micropanel/scripts/dhcp-net-settings.sh",
+        "os_type": "pios",
         "iface_name": "eth0"
       }
     },
@@ -98,6 +98,6 @@
     }
   ],
   "persistent_data": {
-    "file_path": "/home/user/micropanel/settings.json"
+    "file_path": "/home/pi/micropanel/settings.json"
   }
 }
