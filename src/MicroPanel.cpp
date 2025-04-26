@@ -820,7 +820,8 @@ void MicroPanel::shutdown()
     if (m_display && m_displayDevice->isOpen()) {
         m_display->clear();
         usleep(Config::DISPLAY_CMD_DELAY);
-        m_display->drawText(0, 0, "Daemon stopped");
+        //m_display->drawText(0, 0, "Daemon stopped");
+        m_display->drawText(0, 0, "Rebooting.....");
         usleep(Config::DISPLAY_CMD_DELAY * 10);
     }
     
