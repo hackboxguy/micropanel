@@ -5,7 +5,7 @@ After=network.target
 [Service]
 Type=simple
 User=root
-ExecStart=@CMAKE_INSTALL_PREFIX@/bin/micropanel -a -p
+ExecStart=/home/pi/micropanel/build/micropanel -c /home/pi/micropanel/screens/nested-persist-pi.json 1>/tmp/micropanel.log 2>/tmp/micropanel.log
 Restart=on-failure
 RestartSec=5
 
