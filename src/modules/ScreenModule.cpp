@@ -72,7 +72,7 @@ bool ScreenModule::handleInput()
         bool buttonPressed = false;
         
         m_input->processEvents(
-            [](int direction) {
+            [](int) {
                 // Ignore rotation events by default
             },
             [&]() {

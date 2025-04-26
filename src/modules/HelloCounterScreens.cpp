@@ -50,7 +50,7 @@ bool HelloWorldScreen::handleInput()
         bool buttonPressed = false;
         
         m_input->processEvents(
-            [](int direction) {
+            [](int) {
                 // Just consume rotation events without doing anything
                 // This prevents rotation events from "leaking" back to the main menu
                 std::cout << "HelloWorld: Ignoring rotation event" << std::endl;
@@ -117,7 +117,7 @@ bool CounterScreen::handleInput()
         bool buttonPressed = false;
         
         m_input->processEvents(
-            [](int direction) {
+            [](int) {
                 // Just consume rotation events without doing anything
                 // This prevents rotation events from "leaking" back to the main menu
                 std::cout << "Counter: Ignoring rotation event" << std::endl;

@@ -192,7 +192,8 @@ void IPPingScreen::renderMenu(bool fullRedraw) {
         usleep(Config::DISPLAY_CMD_DELAY * 3);
 
         // Draw header
-        m_display->drawText(0, 0, "   IP Pinger");
+        //m_display->drawText(0, 0, "   IP Pinger");
+        m_display->drawText(0, 0, "   Ping Test");
         usleep(Config::DISPLAY_CMD_DELAY);
 
         // Draw separator

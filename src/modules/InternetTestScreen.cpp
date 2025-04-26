@@ -123,7 +123,7 @@ bool InternetTestScreen::handleInput()
         bool buttonPressed = false;
         
         m_input->processEvents(
-            [](int direction) {
+            [](int) {
                 // Ignore rotation in this screen
             },
             [&]() {

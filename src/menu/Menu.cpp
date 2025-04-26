@@ -5,7 +5,7 @@
 #include <algorithm>
 
 Menu::Menu(std::shared_ptr<Display> display, const std::string& title)
-    : m_display(display), m_title(title)
+    : m_title(title), m_display(display)
 {
     gettimeofday(&m_lastUpdateTime, nullptr);
 }
@@ -195,7 +195,7 @@ void Menu::render()
         }
 
         // Draw down arrow if there are items below
-        if (m_scrollOffset + Config::MENU_VISIBLE_ITEMS < m_items.size()) {
+        if (m_scrollOffset + Config::MENU_VISIBLE_ITEMS < static_cast<int>(m_items.size())) {
             int yPos = Config::MENU_START_Y + ((Config::MENU_VISIBLE_ITEMS - 1) * Config::MENU_ITEM_SPACING);
             m_display->drawText(Config::DISPLAY_WIDTH - Config::MENU_SCROLL_INDICATOR_WIDTH, yPos, "v");
         }

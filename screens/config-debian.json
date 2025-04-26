@@ -8,7 +8,7 @@
       "submenus": [
         {"id": "invert_display", "title": "Invert Display"},
         {"id": "brightness", "title": "Brightness"},
-        {"id": "system", "title": "System Stat"},
+        {"id": "system", "title": "System Stats"},
         {"id": "back", "title": "Back"}
       ]
     },
@@ -18,14 +18,14 @@
       "enabled": true,
       "type": "menu",
       "submenus": [
-        {"id": "network_config", "title": "Configuration"},
+        {"id": "network_config", "title": "Config"},
         {"id": "network_status", "title": "Status"},
         {"id": "back", "title": "Back"}
       ]
     },
     {
       "id": "network_config",
-      "title": "Network Config",
+      "title": "Config",
       "enabled": false,
       "type": "menu",
       "submenus": [
@@ -36,7 +36,7 @@
     },
     {
       "id": "network_status",
-      "title": "Network Status",
+      "title": "Status",
       "enabled": false,
       "type": "menu",
       "submenus": [
@@ -53,7 +53,7 @@
     },
     {
       "id": "system",
-      "title": "System Stat",
+      "title": "System Stats",
       "enabled": false
     },
     {
@@ -61,7 +61,7 @@
       "title": "IP Settings",
       "enabled": false,
       "depends": {
-        "action_script": "/home/user/micropanel/scripts/dhcp-net-settings.sh",
+        "action_script": "/mnt/old-nvm/embedded/micropanel-1/micropanel/scripts/dhcp-net-settings.sh",
         "os_type": "debian",
         "iface_name": "eth0"
       }
@@ -98,6 +98,6 @@
     }
   ],
   "persistent_data": {
-    "file_path": "/home/user/micropanel/settings.json"
+    "file_path": "/mnt/old-nvm/embedded/micropanel-1/micropanel/settings.json"
   }
 }

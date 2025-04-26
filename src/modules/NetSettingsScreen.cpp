@@ -120,7 +120,7 @@ public:
 };
 
 // Callback function for IP selector changes
-static void ip_change_callback(const std::string& ip) {
+static void ip_change_callback(const std::string&) {
     // This will be handled in the implementation
 }
 
@@ -230,7 +230,7 @@ bool NetSettingsScreen::Impl::initNetworkSettingsFromScript() {
     return true;
 }
 
-void NetSettingsScreen::Impl::networkFieldChanged(const std::string& ip) {
+void NetSettingsScreen::Impl::networkFieldChanged(const std::string&) {
     m_settingsChanged = true;
     m_settingsApplied = false;
 }
@@ -641,7 +641,7 @@ void NetSettingsScreen::Impl::drawModeMenu(bool fullRedraw) {
 }
 
 void NetSettingsScreen::Impl::updateModeMenuSelection(int oldSelection, int newSelection) {
-    char buffer[32];
+    //char buffer[32];
 
     // Clear old selection
     switch (static_cast<ModeMenuSelection>(oldSelection)) {

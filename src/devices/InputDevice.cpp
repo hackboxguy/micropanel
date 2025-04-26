@@ -13,7 +13,8 @@ InputDevice::InputDevice(const std::string& devicePath)
     : DeviceInterface(devicePath)
 {
     // Initialize state
-    memset(&m_state, 0, sizeof(m_state));
+    //memset(&m_state, 0, sizeof(m_state));
+    m_state = {};
 }
 
 InputDevice::~InputDevice()
