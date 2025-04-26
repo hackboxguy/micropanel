@@ -107,44 +107,6 @@ bool PersistentStorage::initialize(const std::string& filePath) {
     return true;
 }
 
-
-/*bool PersistentStorage::loadFromFile() {
-    try {
-        // Check if file exists
-        if (!fileExists(m_storageFilePath)) {
-            return false;
-        }
-        
-        // Open the file
-        std::ifstream file(m_storageFilePath);
-        if (!file.is_open()) {
-            Logger::error("Failed to open storage file: " + m_storageFilePath);
-            return false;
-        }
-        
-        // Parse JSON
-        m_data = nlohmann::json::parse(file);
-        
-        // Check if root is an object
-        if (!m_data.is_object()) {
-            Logger::error("Storage file does not contain a valid JSON object");
-            m_data = nlohmann::json::object();
-            return false;
-        }
-        
-        Logger::debug("Successfully loaded persistent storage from " + m_storageFilePath);
-        return true;
-    } catch (const nlohmann::json::parse_error& e) {
-        Logger::error("JSON parse error in storage file: " + std::string(e.what()));
-        // Reset to empty object on parse error
-        m_data = nlohmann::json::object();
-        return false;
-    } catch (const std::exception& e) {
-        Logger::error("Error loading storage file: " + std::string(e.what()));
-        return false;
-    }
-}
-*/
 bool PersistentStorage::loadFromFile() {
     try {
         // Check if file exists

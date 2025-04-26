@@ -132,51 +132,6 @@ void MenuScreenModule::buildSubmenu() {
         }));
     }
 }
-/*
-void MenuScreenModule::executeSubmenuAction(const std::string& moduleId) {
-    // Check if we have a module registry
-    if (!m_moduleRegistry) {
-        Logger::error("No module registry available");
-        return;
-    }
-    
-    // Look up the module in the registry
-    auto it = m_moduleRegistry->find(moduleId);
-    if (it == m_moduleRegistry->end()) {
-        Logger::error("Module not found in registry: " + moduleId);
-        return;
-    }
-    
-    // Get the module
-    auto module = it->second;
-    if (!module) {
-        Logger::error("Invalid module pointer for: " + moduleId);
-        return;
-    }
-    
-    // If this is a MenuScreenModule, set its parent to this
-    auto menuModule = std::dynamic_pointer_cast<MenuScreenModule>(module);
-    if (menuModule) {
-        menuModule->setParentMenu(this);
-    }
-    
-    // Execute the module
-    Logger::debug("Executing submenu module: " + moduleId);
-    
-    // Clear the display before launching the module
-    m_display->clear();
-    usleep(Config::DISPLAY_CMD_DELAY * 5);
-    
-    // Run the module
-    module->run();
-    
-    // Clear the display before returning to menu
-    m_display->clear();
-    usleep(Config::DISPLAY_CMD_DELAY * 5);
-    
-    // Re-render our menu
-    m_menu->render();
-}*/
 
 void MenuScreenModule::executeSubmenuAction(const std::string& moduleId) {
     // Check if we have a module registry
