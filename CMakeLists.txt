@@ -107,20 +107,20 @@ add_custom_command(TARGET micropanel POST_BUILD
 )
 
 # Create a systemd service file
-configure_file(
-    ${CMAKE_CURRENT_SOURCE_DIR}/micropanel.service.in
-    ${CMAKE_CURRENT_BINARY_DIR}/micropanel.service
-    @ONLY
-)
+#configure_file(
+#    ${CMAKE_CURRENT_SOURCE_DIR}/micropanel.service.in
+#    ${CMAKE_CURRENT_BINARY_DIR}/micropanel.service
+#    @ONLY
+#)
 
 # Install systemd service if requested
-option(INSTALL_SYSTEMD_SERVICE "Install systemd service file" OFF)
-if(INSTALL_SYSTEMD_SERVICE)
-    install(FILES
-        ${CMAKE_CURRENT_BINARY_DIR}/micropanel.service
-        DESTINATION /etc/systemd/system
-    )
-endif()
+#option(INSTALL_SYSTEMD_SERVICE "Install systemd service file" OFF)
+#if(INSTALL_SYSTEMD_SERVICE)
+#    install(FILES
+#        ${CMAKE_CURRENT_BINARY_DIR}/micropanel.service
+#        DESTINATION /etc/systemd/system
+#    )
+#endif()
 
 # Add uninstall target
 configure_file(
