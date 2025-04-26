@@ -2,10 +2,12 @@
 #include "MenuSystem.h"
 #include "DeviceInterfaces.h"
 #include "Config.h"
+#include "Logger.h"
 #include <iostream>
 #include <unistd.h>
 #include <linux/input.h>
-
+#include <atomic>
+std::atomic<bool> g_signalReceived(false);
 void ScreenModule::run()
 {
     // Set running flag
@@ -22,6 +24,12 @@ void ScreenModule::run()
     }
     
     while (m_running) {
+        // Check for global signal flag
+        if (g_signalReceived.load()) {
+            Logger::debug("Signal detected in screen module: " + getModuleId());
+            break;
+        }
+
         // Check for device disconnection
         if (m_display->isDisconnected()) {
             std::cout << "Device disconnected during module execution" << std::endl;

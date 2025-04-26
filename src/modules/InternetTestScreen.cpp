@@ -2,10 +2,12 @@
 #include "MenuSystem.h"
 #include "DeviceInterfaces.h"
 #include "Config.h"
+#include "Logger.h"
 #include <iostream>
 #include <unistd.h>
 #include <cstdlib>
 #include <ctime>
+#include <chrono>
 
 InternetTestScreen::InternetTestScreen(std::shared_ptr<Display> display, std::shared_ptr<InputDevice> input)
     : ScreenModule(display, input),
@@ -17,138 +19,205 @@ InternetTestScreen::InternetTestScreen(std::shared_ptr<Display> display, std::sh
 
 void InternetTestScreen::enter()
 {
+    Logger::debug("InternetTestScreen: Entered");
+    m_running = true;
+    
     // Clear display and show initial screen
     m_display->clear();
     usleep(Config::DISPLAY_CMD_DELAY * 3);
-    
+
     // Draw title
     m_display->drawText(0, 0, " Internet Test");
     usleep(Config::DISPLAY_CMD_DELAY);
-    
+
     // Draw separator
     m_display->drawText(0, 8, "----------------");
     usleep(Config::DISPLAY_CMD_DELAY);
-    
+
     // Draw testing message
-    m_display->drawText(20, 20, "Testing");
+    m_display->drawText(20, 20, "Testing...");
     usleep(Config::DISPLAY_CMD_DELAY);
-    
+
     // Initial progress bar (0%)
     m_display->drawProgressBar(10, 35, 108, 15, 0);
     usleep(Config::DISPLAY_CMD_DELAY);
-    
+
     // Reset state
     m_testCompleted = false;
     m_testResult = -1;
     m_progress = 0;
-    
+    m_progressLastUpdated = 0;
+    m_animationLastUpdated = 0;
+    m_resultDisplayed = false;
+
     // Record start time
-    m_startTime = time(nullptr);
-    
+    m_startTime = std::chrono::steady_clock::now();
+
     // Start the test in a separate thread
     startTest();
+    
+    Logger::debug("InternetTestScreen: Test started");
 }
 
 void InternetTestScreen::startTest()
 {
     // Start a new thread for the test
     m_testThread = std::thread([this]() {
+        Logger::debug("InternetTestScreen: Test thread started for " + m_testServer);
+        
+        // Sleep for a short time to allow UI to initialize
+        std::this_thread::sleep_for(std::chrono::milliseconds(500));
+        
         // Perform the ping test
         int result = pingServer(m_testServer, m_timeoutSec);
         
+        Logger::debug("InternetTestScreen: Test completed with result " + std::to_string(result));
+
         // Update state when complete
         m_testResult = result;
         m_testCompleted = true;
         m_progress = 100;
     });
-    
+
     // Detach the thread to allow it to run independently
     m_testThread.detach();
 }
 
 void InternetTestScreen::update()
 {
-    if (m_testCompleted) {
-        // Test has finished, update UI once
-        if (m_progress < 100) {
-            // Update progress bar to 100%
-            m_display->drawProgressBar(10, 35, 108, 15, 100);
-            m_progress = 100;
-            
-            // Show result message
-            m_display->drawText(0, 60, "                ");  // Clear line
-            if (m_testResult == 0) {
-                m_display->drawText(30, 60, "Connected!");
-            } else {
-                m_display->drawText(20, 60, "No Connection");
-            }
-        }
-    } else {
-        // Test still running, update progress bar
-        time_t currentTime = time(nullptr);
-        time_t elapsed = currentTime - m_startTime;
+    auto currentTime = std::chrono::steady_clock::now();
+    auto elapsedMs = std::chrono::duration_cast<std::chrono::milliseconds>(
+        currentTime - m_startTime).count();
+    
+    // Update animation every 500ms
+    bool shouldUpdateAnimation = (elapsedMs - m_animationLastUpdated >= 500);
+    if (shouldUpdateAnimation) {
+        m_animationLastUpdated = elapsedMs;
         
-        // Calculate progress percentage (based on timeout)
-        int progress = (elapsed * 100) / m_timeoutSec;
-        if (progress > 95) progress = 95;  // Cap at 95% until complete
-        
-        // Only update if progress has changed
-        if (progress > m_progress) {
-            m_progress = progress;
-            
-            // Update the progress bar
-            m_display->drawProgressBar(10, 35, 108, 15, progress);
-            
-            // Add animated dots to the "Testing" message
-            int dots = (elapsed % 4);
+        if (!m_testCompleted) {
+            // Update animation dots
+            int dots = ((elapsedMs / 500) % 4);
             std::string message = "Testing";
             for (int i = 0; i < dots; i++) {
                 message += ".";
             }
+            for (int i = dots; i < 3; i++) {
+                message += " ";
+            }
             
-            m_display->drawText(0, 20, "                ");  // Clear line
+            m_display->drawText(0, 20, "                ");
             m_display->drawText(20, 20, message);
+            usleep(Config::DISPLAY_CMD_DELAY);
+            
+            Logger::debug("InternetTestScreen: Animation update: " + message);
         }
+    }
+    
+    // Update progress every 250ms if test is running
+    bool shouldUpdateProgress = (elapsedMs - m_progressLastUpdated >= 250);
+    if (shouldUpdateProgress && !m_testCompleted) {
+        m_progressLastUpdated = elapsedMs;
+        
+        // Calculate progress as a percentage of the timeout
+        int progress = static_cast<int>((elapsedMs * 100) / (m_timeoutSec * 1000));
+        if (progress > 95) progress = 95;  // Cap at 95% until complete
+        
+        if (progress > m_progress) {
+            m_progress = progress;
+            m_display->drawProgressBar(10, 35, 108, 15, progress);
+            usleep(Config::DISPLAY_CMD_DELAY);
+            Logger::debug("InternetTestScreen: Progress update: " + std::to_string(progress) + "%");
+        }
+    }
+    
+    // Handle test completion
+    if (m_testCompleted && !m_resultDisplayed) {
+        // Update to 100%
+        m_display->drawProgressBar(10, 35, 108, 15, 100);
+        usleep(Config::DISPLAY_CMD_DELAY);
+        
+        // Clear testing message
+        m_display->drawText(0, 20, "                ");
+        usleep(Config::DISPLAY_CMD_DELAY);
+        
+        // Show result
+        if (m_testResult == 0) {
+            m_display->drawText(20, 20, "CONNECTED!");
+            Logger::debug("InternetTestScreen: Showing CONNECTED message");
+        } else {
+            m_display->drawText(20, 20, "NO CONNECTION");
+            Logger::debug("InternetTestScreen: Showing NO CONNECTION message");
+        }
+        usleep(Config::DISPLAY_CMD_DELAY);
+        
+        // Show press button message
+        m_display->drawText(15, 60, "Press to exit");
+        usleep(Config::DISPLAY_CMD_DELAY);
+        
+        m_resultDisplayed = true;
+        Logger::debug("InternetTestScreen: Result displayed");
     }
 }
 
 void InternetTestScreen::exit()
 {
-    // No cleanup needed as thread is detached
+    Logger::debug("InternetTestScreen: Exiting");
+    
+    // Clean up
+    m_running = false;
+    m_display->clear();
+    usleep(Config::DISPLAY_CMD_DELAY * 3);
 }
 
 bool InternetTestScreen::handleInput()
 {
+    // Process any pending input
     if (m_input->waitForEvents(100) > 0) {
         bool buttonPressed = false;
-        
+
         m_input->processEvents(
-            [](int) {
+            [this](int) {
                 // Ignore rotation in this screen
+                m_display->updateActivityTimestamp();
             },
-            [&]() {
-                // Button press exits
+            [&buttonPressed, this]() {
+                // Button press 
                 buttonPressed = true;
+                m_display->updateActivityTimestamp();
+                Logger::debug("InternetTestScreen: Button pressed");
             }
         );
-        
+
         if (buttonPressed) {
-            m_display->updateActivityTimestamp();
-            return false; // Exit
+            if (m_testCompleted) {
+                Logger::debug("InternetTestScreen: Test completed, exiting on button press");
+                return false; // Exit if test is complete
+            } else {
+                // If test is still running, mark it as complete with an interrupted status
+                Logger::debug("InternetTestScreen: Test interrupted by user");
+                m_testCompleted = true;
+                m_testResult = 2; // 2 = interrupted
+                return true; // Stay in screen to show result
+            }
         }
     }
-    
-    return true; // Continue
+
+    return m_running; // Continue as long as running is true
 }
 
 int InternetTestScreen::pingServer(const std::string& server, int timeoutSec)
 {
+    Logger::debug("InternetTestScreen: Pinging server " + server);
+    
     // Construct ping command with timeout and minimal output
     std::string command = "ping -c 1 -W " + std::to_string(timeoutSec) + " " + server + " > /dev/null 2>&1";
-    
+
     // Execute the command
     int result = system(command.c_str());
     
+    // Log the result
+    Logger::debug("InternetTestScreen: Ping returned " + std::to_string(result));
+
     // Return 0 for success, non-zero for failure
     return (result == 0) ? 0 : 1;
 }

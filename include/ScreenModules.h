@@ -128,7 +128,10 @@ private:
     std::atomic<bool> m_testCompleted{false};
     std::atomic<int> m_testResult{-1};
     std::atomic<int> m_progress{0};
-    time_t m_startTime = 0;
+    std::chrono::steady_clock::time_point m_startTime;
+    int64_t m_progressLastUpdated = 0;
+    int64_t m_animationLastUpdated = 0;
+    bool m_resultDisplayed = false;
     const int m_timeoutSec = 5;
     const std::string m_testServer = "8.8.8.8";
 };
