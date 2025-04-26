@@ -13,6 +13,8 @@
 #include <atomic>
 #include <csignal>
 #include <sys/wait.h>
+#include <fstream>
+#include <sstream>
 
 IPPingScreen::IPPingScreen(std::shared_ptr<Display> display, std::shared_ptr<InputDevice> input)
     : ScreenModule(display, input)
@@ -46,6 +48,7 @@ void IPPingScreen::enter() {
     m_shouldExit = false;
     m_lastStatusText = "";   // Reset last status
     m_statusChanged = true;  // Force initial status update
+    m_pingTimeMs = 0.0;      // Reset ping time
 
     // Reset IP selector
     m_ipSelector->reset();
@@ -59,7 +62,7 @@ void IPPingScreen::update() {
     if (m_pingInProgress) {
         bool wasInProgress = m_pingInProgress;
         checkPingStatus();
-        
+
         // Only update status if ping state changed or still in progress
         if (wasInProgress != m_pingInProgress || m_pingInProgress) {
             m_statusChanged = true;
@@ -82,6 +85,10 @@ void IPPingScreen::exit() {
         m_pingInProgress = false;
         m_pingPid = -1;
     }
+
+    // Clean up temporary file if it exists
+    std::string tempFile = "/tmp/micropanel_ping_result.txt";
+    unlink(tempFile.c_str());
 
     // Clear display
     m_display->clear();
@@ -236,7 +243,14 @@ void IPPingScreen::updateStatusLine() {
     }
     // Handle ping result
     else if (m_pingResult != -1) {
-        statusText = (m_pingResult == 0) ? "Success!" : "No Response";
+        if (m_pingResult == 0) {
+            // Format with ping time if available
+            char buffer[32];
+            snprintf(buffer, sizeof(buffer), "Success!(%.1fms)", m_pingTimeMs);
+            statusText = buffer;
+        } else {
+            statusText = "No Response";
+        }
     }
 
     // Only update display if status text has changed
@@ -246,7 +260,7 @@ void IPPingScreen::updateStatusLine() {
             m_display->drawText(0, 48, statusText);
         }
         usleep(Config::DISPLAY_CMD_DELAY);
-        
+
         // Save current status text
         m_lastStatusText = statusText;
     }
@@ -267,11 +281,32 @@ void IPPingScreen::checkPingStatus() {
         // Determine ping result
         if (WIFEXITED(status)) {
             m_pingResult = WEXITSTATUS(status);
+
+            // If ping succeeded, try to read the ping time from temp file
+            if (m_pingResult == 0) {
+                std::ifstream pingFile("/tmp/micropanel_ping_result.txt");
+                if (pingFile.is_open()) {
+                    std::string line;
+                    if (std::getline(pingFile, line)) {
+                        try {
+                            m_pingTimeMs = std::stod(line);
+                        } catch (...) {
+                            Logger::error("Failed to parse ping time");
+                            m_pingTimeMs = 0.0;
+                        }
+                    }
+                    pingFile.close();
+                }
+
+                // Clean up temporary file
+                unlink("/tmp/micropanel_ping_result.txt");
+            }
         } else {
             m_pingResult = 1; // Error
         }
 
-        Logger::debug("Ping completed with result: " + std::to_string(m_pingResult));
+        Logger::debug("Ping completed with result: " + std::to_string(m_pingResult) +
+                     (m_pingResult == 0 ? " time: " + std::to_string(m_pingTimeMs) + "ms" : ""));
 
         // Mark status as changed so it will update once
         m_statusChanged = true;
@@ -288,6 +323,7 @@ void IPPingScreen::startPing() {
 
     // Reset ping state
     m_pingResult = -1;
+    m_pingTimeMs = 0.0;
     m_pingInProgress = true;
     m_statusChanged = true;  // Force status update
     m_lastStatusText = "";   // Reset last status
@@ -297,8 +333,11 @@ void IPPingScreen::startPing() {
 
     if (child_pid == 0) {
         // Child process - run ping
-        char command[100];
-        snprintf(command, sizeof(command), "ping -c 1 -W 2 %s > /dev/null 2>&1", ipAddress.c_str());
+        char command[256];
+        // Use ping with time output and grep to extract time value, save to temp file
+        snprintf(command, sizeof(command),
+                "ping -c 1 -W 2 %s | grep -oP 'time=\\K[0-9.]+' > /tmp/micropanel_ping_result.txt",
+                ipAddress.c_str());
         int result = system(command);
         std::quick_exit(result == 0 ? 0 : 1);
     } else if (child_pid < 0) {

@@ -232,6 +232,7 @@ private:
     std::string m_statusMessage;
     std::string m_lastStatusText;
     bool m_statusChanged = false;
+    double m_pingTimeMs = 0.0;
 
     IPPingMenuState m_state{IPPingMenuState::MENU_STATE_IP};
     bool m_shouldExit{false};
