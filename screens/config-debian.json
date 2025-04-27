@@ -30,7 +30,7 @@
       "type": "menu",
       "submenus": [
         {"id": "netsettings", "title": "IP Settings"},
-        {"id": "wifi", "title": "WiFi Settings"}, 
+        {"id": "wifi", "title": "WiFi Settings"},
         {"id": "back", "title": "Back"}
       ]
     },
@@ -43,6 +43,7 @@
         {"id": "netinfo", "title": "Interfaces"},
         {"id": "ping", "title": "Ping Test"},
         {"id": "internet", "title": "Internet Test"},
+        {"id": "speedtest", "title": "Speed Test"},
         {"id": "back", "title": "Back"}
       ]
     },
@@ -80,6 +81,15 @@
       "id": "internet",
       "title": "Internet Test",
       "enabled": false
+    },
+    {
+      "id": "speedtest",
+      "title": "Speed Test",
+      "enabled": false,
+      "depends": {
+        "download_url": "http://download.thinkbroadband.com/5MB.zip",
+        "upload_script": ""
+      }
     },
     {
       "id": "wifi",

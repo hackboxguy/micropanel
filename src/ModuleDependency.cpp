@@ -99,7 +99,7 @@ const std::map<std::string, std::string>& ModuleDependency::getModuleDependencie
     // Return all dependencies for the module
     return moduleIt->second;
 }
-
+/*
 bool ModuleDependency::checkDependencies(const std::string& moduleId) {
     // Always allow menu modules to pass dependency checks
     if (shouldSkipDependencyCheck(moduleId)) {
@@ -121,6 +121,39 @@ bool ModuleDependency::checkDependencies(const std::string& moduleId) {
         if (access(path.c_str(), F_OK) != 0) {
             Logger::warning("Dependency not satisfied: " + path + " for module " + moduleId);
             return true;//false;TODO
+        }
+    }
+
+    return true;
+}
+*/
+bool ModuleDependency::checkDependencies(const std::string& moduleId) {
+    // Always allow menu modules to pass dependency checks
+    if (shouldSkipDependencyCheck(moduleId)) {
+        return true;
+    }
+
+    // If the module has no dependencies, they're satisfied by default
+    auto moduleIt = m_dependencies.find(moduleId);
+    if (moduleIt == m_dependencies.end()) {
+        return true;
+    }
+
+    // For each dependency, check if it exists
+    for (const auto& dep : moduleIt->second) {
+        std::string key = dep.first;
+        std::string path = dep.second;
+
+        // Skip URL dependencies (http:// or https://)
+        if (path.substr(0, 7) == "http://" || path.substr(0, 8) == "https://") {
+            Logger::debug("Skipping URL dependency check for: " + path);
+            continue;
+        }
+
+        // Check if file exists
+        if (access(path.c_str(), F_OK) != 0) {
+            Logger::warning("Dependency not satisfied: " + path + " for module " + moduleId);
+            return true;  // Changed to true as per your code comment
         }
     }
 

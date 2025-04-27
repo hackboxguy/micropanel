@@ -282,3 +282,49 @@ private:
     class Impl;
     std::unique_ptr<Impl> m_pImpl;
 };
+
+/**
+ * Network Speed Test screen
+ * Performs download speed test and optionally upload speed test if configured
+ */
+class SpeedTestScreen : public ScreenModule {
+public:
+    SpeedTestScreen(std::shared_ptr<Display> display, std::shared_ptr<InputDevice> input);
+
+    void enter() override;
+    void update() override;
+    void exit() override;
+    bool handleInput() override;
+    std::string getModuleId() const override { return "speedtest"; }
+
+private:
+    static double calculateSpeed(size_t bytes, std::chrono::milliseconds duration);
+    void startDownloadTest();
+    void startUploadTest();
+    void renderScreen();
+    void updateStatusLine();
+    bool checkConfiguration();
+    void displayFinalResults();
+
+    // Configuration
+    std::string m_downloadUrl;
+    std::string m_uploadScript;
+    bool m_uploadEnabled;
+
+    // Test state
+    std::thread m_testThread;
+    std::atomic<bool> m_downloadInProgress{false};
+    std::atomic<bool> m_uploadInProgress{false};
+    std::atomic<bool> m_testCompleted{false};
+    std::atomic<int> m_progress{0};
+    std::atomic<double> m_downloadSpeed{0.0};
+    std::atomic<double> m_uploadSpeed{0.0};
+    std::atomic<int> m_testResult{-1};  // -1: not started, 0: success, 1: failure
+    std::chrono::steady_clock::time_point m_startTime;
+    int64_t m_progressLastUpdated = 0;
+    int64_t m_animationLastUpdated = 0;
+    std::string m_statusMessage;
+    std::string m_lastStatusText;
+    bool m_statusChanged = false;
+    bool m_shouldExit = false;
+};

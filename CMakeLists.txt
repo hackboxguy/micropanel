@@ -15,6 +15,17 @@ endif()
 find_package(Threads REQUIRED)
 find_library(UDEV_LIBRARY udev REQUIRED)
 
+# Find libcurl for SpeedTestScreen
+find_package(CURL QUIET)
+if(NOT CURL_FOUND)
+    message(STATUS "libcurl not found!")
+    message(FATAL_ERROR "Error!!! Missing libcurl library, try sudo apt-get install libcurl4-openssl-dev")
+endif()
+include_directories(
+        ${CMAKE_CURRENT_SOURCE_DIR}/include
+        ${CURL_INCLUDE_DIRS}
+)
+
 # Include directories
 include_directories(
 	${CMAKE_CURRENT_SOURCE_DIR}/include
@@ -63,6 +74,7 @@ set(SOURCES_MODULES
     src/modules/IPSelectorScreen.cpp
     src/modules/IPPingScreen.cpp
     src/modules/MenuScreenModule.cpp
+    src/modules/SpeedTestScreen.cpp
 )
 
 set(SOURCES_MAIN
@@ -93,6 +105,7 @@ target_link_libraries(micropanel
     PRIVATE
     Threads::Threads
     ${UDEV_LIBRARY}
+    ${CURL_LIBRARIES}
 )
 
 # Install target

@@ -440,7 +440,7 @@ void MicroPanel::initializeModules()
     m_modules["ping"] = std::make_shared<IPPingScreen>(m_display, m_inputDevice);
     m_modules["netinfo"] = std::make_shared<NetInfoScreen>(m_display, m_inputDevice);
     m_modules["netsettings"] = std::make_shared<NetSettingsScreen>(m_display, m_inputDevice);
-    //std::cout << "Module initialization complete" << std::endl;
+    m_modules["speedtest"] = std::make_shared<SpeedTestScreen>(m_display, m_inputDevice); 
     Logger::debug("Module initialization complete - " + std::to_string(m_modules.size()) + " modules available");
 }
 
