@@ -75,6 +75,7 @@ set(SOURCES_MODULES
     src/modules/IPPingScreen.cpp
     src/modules/MenuScreenModule.cpp
     src/modules/SpeedTestScreen.cpp
+    src/modules/ThroughputServerScreen.cpp
 )
 
 set(SOURCES_MAIN

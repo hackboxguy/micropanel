@@ -328,3 +328,36 @@ private:
     bool m_statusChanged = false;
     bool m_shouldExit = false;
 };
+
+/**
+ * Throughput Test Server Screen
+ * Runs an iperf3 server for network throughput testing
+ */
+class ThroughputServerScreen : public ScreenModule {
+public:
+    ThroughputServerScreen(std::shared_ptr<Display> display, std::shared_ptr<InputDevice> input);
+    ~ThroughputServerScreen();
+
+    void enter() override;
+    void update() override;
+    void exit() override;
+    bool handleInput() override;
+    std::string getModuleId() const override { return "throughputserver"; }
+
+private:
+    void renderOptions();
+    void startServer();
+    void stopServer();
+    bool isServerRunning() const;
+    std::string getIperf3Path();
+    void getLocalIpAddress();
+    void refreshSettings();
+   
+    std::vector<std::string> m_options = {"Start", "Stop", "Back"};
+    int m_selectedOption = 0;
+    int m_port = 5201;             // Default port
+    std::string m_localIp;         // Local IP address
+    pid_t m_serverPid = -1;        // PID of the iperf3 server process
+    std::thread m_serverThread;    // Thread for server operation
+};
+
