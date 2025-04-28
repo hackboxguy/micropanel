@@ -55,8 +55,23 @@
       "type": "menu",
       "submenus": [
         {"id": "throughputserver", "title": "Server"},
+        {"id": "throughputclient", "title": "Client"},
         {"id": "back", "title": "Back"}
       ]
+    },
+    {
+      "id": "throughputclient",
+      "title": "Throughput Client",
+      "enabled": false,
+      "depends": {
+        "iperf3_path": "/usr/bin/iperf3",
+        "default_port": "5201",
+        "default_duration": "10",
+        "default_protocol": "tcp",
+        "default_bandwidth": "0",
+        "default_parallel": "1",
+        "default_server_ip": "192.168.001.051"
+      }
     },
     {
       "id": "brightness",

@@ -6,8 +6,10 @@
 #include <atomic>
 #include <vector>
 #include <time.h>
+#include <chrono>
 #include <sys/time.h>
 #include "IPSelector.h"
+
 // Forward declarations
 class Display;
 class InputDevice;
@@ -363,4 +365,111 @@ private:
     std::thread m_serverThread;    // Thread for server operation
     pid_t m_avahiPid = -1;  // PID for the Avahi announcement process
 };
+// Add these enum declarations:
 
+// Enum for ThroughputClientScreen menu states
+enum class ThroughputClientState {
+    MENU_STATE_START,
+    MENU_STATE_PROTOCOL,
+    MENU_STATE_DURATION,
+    MENU_STATE_BANDWIDTH,
+    MENU_STATE_PARALLEL,
+    MENU_STATE_SERVER_IP,
+    MENU_STATE_BACK,
+    MENU_STATE_RESULTS,
+    // Submenu states
+    SUBMENU_STATE_PROTOCOL,
+    SUBMENU_STATE_DURATION,
+    SUBMENU_STATE_BANDWIDTH,
+    SUBMENU_STATE_PARALLEL,
+    SUBMENU_STATE_SERVER_IP,
+    SUBMENU_STATE_AUTO_DISCOVER
+};
+
+// Forward declare the IPSelector class if not already included
+class IPSelector;
+
+// ThroughputClientScreen class declaration
+class ThroughputClientScreen : public ScreenModule {
+public:
+    ThroughputClientScreen(std::shared_ptr<Display> display, std::shared_ptr<InputDevice> input);
+    virtual ~ThroughputClientScreen();
+
+    void enter() override;
+    void update() override;
+    void exit() override;
+    bool handleInput() override;
+    std::string getModuleId() const override { return "throughputclient"; }
+private:
+    // Menu state and rendering
+    ThroughputClientState m_state;
+    int m_submenuSelection;
+    bool m_editingIp;
+    bool m_shouldExit;
+    std::string m_statusMessage;
+    bool m_statusChanged;
+
+    // Test parameters
+    std::string m_serverIp;
+    int m_serverPort;
+    std::string m_protocol;
+    int m_duration;
+    int m_bandwidth;
+    int m_parallel;
+
+    // Test execution
+    bool m_testInProgress;
+    pid_t m_testPid;
+    int m_testResult;
+    std::string m_testOutput;
+    double m_bandwidth_result;
+    double m_jitter_result;
+    double m_loss_result;
+    int m_retransmits_result;
+
+    // Auto-discovery
+    bool m_discoveryInProgress;
+    pid_t m_discoveryPid;
+    std::vector<std::pair<std::string, int>> m_discoveredServers;  // IP and port pairs
+    std::vector<std::string> m_discoveredServerNames;              // Service names
+
+    // UI Components
+    std::unique_ptr<IPSelector> m_ipSelector;
+
+    // Menu options
+    std::vector<std::string> m_protocolOptions;
+    std::vector<int> m_durationOptions;
+    std::vector<int> m_bandwidthOptions;
+    std::vector<int> m_parallelOptions;
+    std::chrono::steady_clock::time_point m_resultsShownTime;
+
+    // Rendering methods
+    void renderMainMenu(bool fullRedraw = false);
+    void renderProtocolSubmenu(bool fullRedraw = false);
+    void renderDurationSubmenu(bool fullRedraw = false);
+    void renderBandwidthSubmenu(bool fullRedraw = false);
+    void renderParallelSubmenu(bool fullRedraw = false);
+    void renderServerIPSubmenu(bool fullRedraw = false);
+    void renderAutoDiscoverScreen(bool fullRedraw = false);
+    void updateStatusLine();
+    void renderResultsScreen();
+    void showResultsAndWait(int durationMs);
+
+    // Action methods
+    void startTest();
+    void checkTestStatus();
+    void startDiscovery();
+    void checkDiscoveryStatus();
+    void parseDiscoveryResults();
+    void parseTestResults();
+    void selectServer(int index);
+
+    // Helper methods
+    std::string getIperf3Path() const;
+    bool isIperf3Available() const;
+    bool isAvahiAvailable() const;
+    void refreshSettings();
+    std::string getBandwidthString(int value) const;
+    std::string formatBandwidth(double value) const;
+    std::string normalizeIp(const std::string& ip);
+};

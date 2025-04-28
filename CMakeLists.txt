@@ -76,6 +76,7 @@ set(SOURCES_MODULES
     src/modules/MenuScreenModule.cpp
     src/modules/SpeedTestScreen.cpp
     src/modules/ThroughputServerScreen.cpp
+    src/modules/ThroughputClientScreen.cpp
 )
 
 set(SOURCES_MAIN
