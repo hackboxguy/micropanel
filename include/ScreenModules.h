@@ -37,7 +37,7 @@ public:
     // Control functions
     void stop() { m_running = false; }
     bool isRunning() const { return m_running; }
-    
+
     // Added for module identification
     virtual std::string getModuleId() const = 0;
 
@@ -352,12 +352,15 @@ private:
     std::string getIperf3Path();
     void getLocalIpAddress();
     void refreshSettings();
-   
+    inline bool isAvahiAvailable() const {
+        return (system("which avahi-publish > /dev/null 2>&1") == 0);
+    };
     std::vector<std::string> m_options = {"Start", "Stop", "Back"};
     int m_selectedOption = 0;
     int m_port = 5201;             // Default port
     std::string m_localIp;         // Local IP address
     pid_t m_serverPid = -1;        // PID of the iperf3 server process
     std::thread m_serverThread;    // Thread for server operation
+    pid_t m_avahiPid = -1;  // PID for the Avahi announcement process
 };
 
