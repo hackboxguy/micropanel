@@ -401,9 +401,9 @@ bool MicroPanel::loadConfigFromJson() {
         }
 
         // Add Exit option at the end
-        m_mainMenu->addItem(std::make_shared<ActionMenuItem>("Exit", [this]() {
-            m_running = false;
-        }));
+        //m_mainMenu->addItem(std::make_shared<ActionMenuItem>("Exit", [this]() {
+        //    m_running = false;
+        //}));
 
         // Debug the menu state
         Logger::debug("Menu setup complete, about to render");
@@ -494,9 +494,9 @@ void MicroPanel::setupMenu()
     registerModuleInMenu("netsettings", "Net Settings");
 
     // Add Exit option at the end
-    m_mainMenu->addItem(std::make_shared<ActionMenuItem>("Exit", [this]() {
-        m_running = false;
-    }));
+    //m_mainMenu->addItem(std::make_shared<ActionMenuItem>("Exit", [this]() {
+    //    m_running = false;
+    //}));
 
     // Initially render the menu
     m_mainMenu->render();
