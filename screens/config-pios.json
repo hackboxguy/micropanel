@@ -30,7 +30,7 @@
       "type": "menu",
       "submenus": [
         {"id": "netsettings", "title": "IP Settings"},
-        {"id": "wifi", "title": "WiFi Settings"}, 
+        {"id": "wifi", "title": "WiFi Settings"},
         {"id": "back", "title": "Back"}
       ]
     },
@@ -44,6 +44,17 @@
         {"id": "ping", "title": "Ping Test"},
         {"id": "internet", "title": "Internet Test"},
         {"id": "speedtest", "title": "Speed Test"},
+        {"id": "throughputtest", "title": "Throughput"},
+        {"id": "back", "title": "Back"}
+      ]
+    },
+    {
+      "id": "throughputtest",
+      "title": "Throughput",
+      "enabled": false,
+      "type": "menu",
+      "submenus": [
+        {"id": "throughputserver", "title": "Server"},
         {"id": "back", "title": "Back"}
       ]
     },
@@ -87,8 +98,16 @@
       "title": "Speed Test",
       "enabled": false,
       "depends": {
-        "download_url": "http://download.thinkbroadband.com/5MB.zip",
-        "upload_script": ""
+        "download_url": "https://cachefly.cachefly.net/50mb.test"
+      }
+    },
+    {
+      "id": "throughputserver",
+      "title": "Throughput Server",
+      "enabled": false,
+      "depends": {
+        "iperf3_path": "/usr/bin/iperf3",
+        "default_port": "5201"
       }
     },
     {

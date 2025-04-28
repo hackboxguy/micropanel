@@ -59,10 +59,10 @@ log "Using config file: $CONFIG_FILE" force
 printf "Installing dependencies ................................ "
 if [ $VERBOSE -eq 1 ]; then
     DEBIAN_FRONTEND=noninteractive apt-get update
-    DEBIAN_FRONTEND=noninteractive apt-get install -y cmake libudev-dev nlohmann-json3-dev
+    DEBIAN_FRONTEND=noninteractive apt-get install -y cmake libudev-dev nlohmann-json3-dev iperf3 libcurl4-openssl-dev
 else
     DEBIAN_FRONTEND=noninteractive apt-get update < /dev/null > /dev/null
-    DEBIAN_FRONTEND=noninteractive apt-get install -y -qq cmake libudev-dev nlohmann-json3-dev < /dev/null > /dev/null
+    DEBIAN_FRONTEND=noninteractive apt-get install -y -qq cmake libudev-dev nlohmann-json3-dev iperf3 libcurl4-openssl-dev < /dev/null > /dev/null
 fi
 test 0 -eq $? && echo "[OK]" || { echo "[FAIL]"; exit 1; }
 
