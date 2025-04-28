@@ -376,6 +376,7 @@ enum class ThroughputClientState {
     MENU_STATE_PARALLEL,
     MENU_STATE_SERVER_IP,
     MENU_STATE_BACK,
+    MENU_STATE_TESTING, 
     MENU_STATE_RESULTS,
     // Submenu states
     SUBMENU_STATE_PROTOCOL,
@@ -385,7 +386,17 @@ enum class ThroughputClientState {
     SUBMENU_STATE_SERVER_IP,
     SUBMENU_STATE_AUTO_DISCOVER
 };
+struct UDPTestResult {
+    double bandwidth_mbps = 0.0;
+    double jitter_ms = 0.0;
+    int lost_packets = 0;
+    double lost_percent = 0.0;
+    int total_packets = 0;
+    bool valid = false;  // To indicate whether parsing was successful
+};
 
+// Add the function declaration in header file
+UDPTestResult parseUDPTestResults(const std::string& output);
 // Forward declare the IPSelector class if not already included
 class IPSelector;
 
@@ -408,6 +419,7 @@ private:
     bool m_shouldExit;
     std::string m_statusMessage;
     bool m_statusChanged;
+    bool m_testCancellationPrompt = false;
 
     // Test parameters
     std::string m_serverIp;
@@ -422,10 +434,11 @@ private:
     pid_t m_testPid;
     int m_testResult;
     std::string m_testOutput;
-    double m_bandwidth_result;
-    double m_jitter_result;
-    double m_loss_result;
-    int m_retransmits_result;
+    double m_bandwidth_result = 0.0;
+    double m_jitter_result = 0.0;
+    double m_loss_result = 0.0;
+    int m_retransmits_result = 0;
+    bool m_waitingForButtonPress = false;
 
     // Auto-discovery
     bool m_discoveryInProgress;
@@ -453,7 +466,8 @@ private:
     void renderAutoDiscoverScreen(bool fullRedraw = false);
     void updateStatusLine();
     void renderResultsScreen();
-    void showResultsAndWait(int durationMs);
+    void renderTestingScreen();
+    void showResultsAndWait();//int durationMs);
 
     // Action methods
     void startTest();
@@ -472,4 +486,6 @@ private:
     std::string getBandwidthString(int value) const;
     std::string formatBandwidth(double value) const;
     std::string normalizeIp(const std::string& ip);
+    UDPTestResult parseUDPTestResults(const std::string& output);
+    void showResultsScreen();
 };

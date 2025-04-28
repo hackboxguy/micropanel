@@ -70,7 +70,7 @@
         "default_protocol": "tcp",
         "default_bandwidth": "0",
         "default_parallel": "1",
-        "default_server_ip": "192.168.001.051"
+        "default_server_ip": "192.168.1.1"
       }
     },
     {
