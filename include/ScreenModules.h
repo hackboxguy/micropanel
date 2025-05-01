@@ -568,6 +568,7 @@ public:
     void setId(const std::string& id) { m_id = id; }
     // Set configuration from JSON
     void setConfig(const nlohmann::json& config);
+    void loadDynamicItems();
 private:
     // Item structure
     struct ListItem {
@@ -592,4 +593,8 @@ private:
     // State flags
     bool m_stateMode = false;
     bool m_shouldExit = false;
+
+    std::string m_itemsSource;  // Script to generate list items
+    std::string m_itemsPath;    // Path parameter for the items source
+    std::string m_itemsAction;  // Action template for dynamic items
 };

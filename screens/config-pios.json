@@ -9,6 +9,7 @@
         {"id": "invert_display", "title": "Invert Display"},
         {"id": "brightness", "title": "Brightness"},
         {"id": "system", "title": "System Stats"},
+	{"id": "power_settings", "title": "Power Settings"},
         {"id": "back", "title": "Back"}
       ]
     },
@@ -45,6 +46,61 @@
         "default_parallel": "1",
         "default_server_ip": "192.168.1.1"
       }
+    },
+    {
+      "id": "buzzer_settings",
+      "title": "Buzzer",
+      "enabled": false,
+      "type": "GenericList",
+      "list_items": [
+        {"title": "On", "action": "/home/pi/micropanel/scripts/buzzer.sh On"},
+        {"title": "Off", "action": "/home/pi/micropanel/scripts/buzzer.sh Off"},
+        {"title": "Back"}
+      ],
+      "list_selection": "/home/pi/micropanel/scripts/buzzer.sh"
+    },
+    {
+      "id": "hdmi_patch",
+      "title": "HDMI Patch",
+      "enabled": false,
+      "type": "GenericList",
+      "list_items": [
+        {"title": "Off", "action": "/home/pi/micropanel/scripts/hdmi-patch.sh $1"},
+        {"title": "Red", "action": "/home/pi/micropanel/scripts/hdmi-patch.sh $1"},
+        {"title": "Green", "action": "/home/pi/micropanel/scripts/hdmi-patch.sh $1"},
+        {"title": "Blue", "action": "/home/pi/micropanel/scripts/hdmi-patch.sh $1"},
+        {"title": "Cyan", "action": "/home/pi/micropanel/scripts/hdmi-patch.sh $1"},
+        {"title": "Magenta", "action": "/home/pi/micropanel/scripts/hdmi-patch.sh $1"},
+        {"title": "Yellow", "action": "/home/pi/micropanel/scripts/hdmi-patch.sh $1"},
+        {"title": "White", "action": "/home/pi/micropanel/scripts/hdmi-patch.sh $1"},
+        {"title": "Back"}
+      ],
+      "list_selection": "/home/pi/micropanel/scripts/hdmi-patch.sh"
+    },
+    {
+      "id": "power_settings",
+      "title": "Power Settings",
+      "enabled": false,
+      "type": "GenericList",
+      "list_items": [
+        {"title": "Reboot", "action": "/usr/sbin/reboot"},
+        {"title": "Poweroff", "action": "/usr/sbin/poweroff"},
+        {"title": "Back"}
+      ]
+    },
+    {
+      "id": "video_player",
+      "title": "Video Player",
+      "enabled": false,
+      "type": "GenericList",
+      "items_source": "/home/pi/micropanel/scripts/list-videos.sh",
+      "items_path": "/home/pi/micropanel/media",
+      "items_action": "/home/pi/micropanel/scripts/play-video.sh $1 /home/pi/micropanel/media",
+      "list_selection": "/home/pi/micropanel/scripts/list-videos.sh",
+      "list_items": [
+        {"title": "Stop-Playback", "action": "/home/pi/micropanel/scripts/stop-video.sh"},
+        {"title": "Back"}
+      ]
     },
     {
       "id": "network_config",

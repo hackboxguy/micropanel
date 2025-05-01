@@ -7,6 +7,7 @@
 #include <unistd.h>
 #include <memory>
 #include <array>
+#include <sstream>
 
 GenericListScreen::GenericListScreen(std::shared_ptr<Display> display, std::shared_ptr<InputDevice> input)
     : ScreenModule(display, input)
@@ -57,15 +58,37 @@ void GenericListScreen::setConfig(const nlohmann::json& config)
     }
     
     // Set the maximum visible items
-    m_maxVisibleItems = 4; // Just use a safe fixed value
+    m_maxVisibleItems = 6; // Just use a safe fixed value
+
+    // Check for dynamic items source
+    if (config.contains("items_source") && config["items_source"].is_string()) {
+        m_itemsSource = config["items_source"].get<std::string>();
+    }
+    // Check for items path
+    if (config.contains("items_path") && config["items_path"].is_string()) {
+        m_itemsPath = config["items_path"].get<std::string>();
+    }
+    // Check for items action template
+    if (config.contains("items_action") && config["items_action"].is_string()) {
+        m_itemsAction = config["items_action"].get<std::string>();
+    }
     
+    // Load dynamic items if source is specified
+    if (!m_itemsSource.empty()) {
+        loadDynamicItems();
+    }
+
     Logger::debug("GenericListScreen configured: " + m_id);
 }
 
 void GenericListScreen::enter()
 {
     Logger::debug("Entering GenericListScreen: " + m_id);
-    
+    // Reload dynamic items if needed
+    if (!m_itemsSource.empty()) {
+        loadDynamicItems();
+    }
+
     // Reset state
     m_selectedIndex = 0;
     m_firstVisibleItem = 0;
@@ -173,10 +196,66 @@ bool GenericListScreen::handleInput()
 
 void GenericListScreen::renderList()
 {
+    // If in state mode, run the selection script first
+    if (m_stateMode && !m_selectionScript.empty()) {
+        // Execute the script to get the current state
+        std::string result = executeCommand(m_selectionScript);
+        // Remove trailing newline
+        if (!result.empty() && result.back() == '\n') {
+            result.pop_back();
+        }
+        // Reset all selection states
+        for (auto& item : m_items) {
+            item.isSelected = false;
+        }
+        // Find the matching item
+        for (auto& item : m_items) {
+            if (item.title == result) {
+                item.isSelected = true;
+                break;
+            }
+        }
+    }
     // Calculate visible items
     int lastVisibleItem = std::min(m_firstVisibleItem + m_maxVisibleItems, 
                                   static_cast<int>(m_items.size()));
     
+    // Clear the list area
+    for (int i = 0; i < m_maxVisibleItems; i++) {
+        int yPos = 16 + (i * 8);
+        m_display->drawText(0, yPos, "                ");
+        usleep(Config::DISPLAY_CMD_DELAY);
+    }
+    // Draw visible options
+    for (int i = m_firstVisibleItem; i < lastVisibleItem; i++) {
+        int displayIndex = i - m_firstVisibleItem;
+        int yPos = 16 + (displayIndex * 8);
+        std::string buffer;
+        // Format with selection indicator and/or state highlight
+        if (i == m_selectedIndex) {
+            if (m_items[i].isSelected) {
+                buffer = ">[" + m_items[i].title + "]";
+            } else {
+                buffer = "> " + m_items[i].title;
+            }
+        } else {
+            if (m_items[i].isSelected) {
+                buffer = " [" + m_items[i].title + "]";
+            } else {
+                buffer = "  " + m_items[i].title;
+            }
+        }
+        // Truncate if too long
+        if (buffer.length() > 16) {
+            buffer = buffer.substr(0, 16);
+        }
+        m_display->drawText(0, yPos, buffer);
+        usleep(Config::DISPLAY_CMD_DELAY);
+    }
+
+/*    // Calculate visible items
+    int lastVisibleItem = std::min(m_firstVisibleItem + m_maxVisibleItems,
+                                  static_cast<int>(m_items.size()));
     // Clear the list area
     for (int i = 0; i < m_maxVisibleItems; i++) {
         int yPos = 16 + (i * 10); // Fixed positioning
@@ -205,23 +284,33 @@ void GenericListScreen::renderList()
         m_display->drawText(0, yPos, buffer);
         usleep(Config::DISPLAY_CMD_DELAY);
     }
-    
+*/
     // Show scroll indicators if needed
-    if (m_firstVisibleItem > 0) {
-        m_display->drawText(15, 16, "^");
-    }
-    if (lastVisibleItem < static_cast<int>(m_items.size())) {
-        m_display->drawText(15, 16 + ((m_maxVisibleItems - 1) * 10), "v");
-    }
+    //if (m_firstVisibleItem > 0) {
+    //    m_display->drawText(15, 16, "^");
+    //}
+    //if (lastVisibleItem < static_cast<int>(m_items.size())) {
+    //    m_display->drawText(15, 16 + ((m_maxVisibleItems - 1) * 10), "v");
+    //}
 }
 
 void GenericListScreen::executeAction(const std::string& actionTemplate)
 {
     std::string action = actionTemplate;
+    // Handle $1 parameter substitution
+    size_t paramPos = action.find("$1");
+    if (paramPos != std::string::npos) {
+        action.replace(paramPos, 2, m_items[m_selectedIndex].title);
+    }
     
     // Execute the command
     std::string result = executeCommand(action);
+    Logger::debug("GenericListScreen '" + m_id + "' executed action: " + action); 
     Logger::debug("Executed action: " + action);
+    // If in state mode, redraw the screen to show updated state
+    if (m_stateMode) {
+        renderList();
+    }
 }
 
 std::string GenericListScreen::executeCommand(const std::string& command) const
@@ -240,4 +329,67 @@ std::string GenericListScreen::executeCommand(const std::string& command) const
     
     pclose(pipe);
     return result;
+}
+
+void GenericListScreen::loadDynamicItems()
+{
+    if (m_itemsSource.empty()) {
+        return;  // No dynamic source defined
+    }
+
+    Logger::debug("Loading dynamic items from: " + m_itemsSource);
+
+    // Build the command - include path if specified
+    std::string command = m_itemsSource;
+    if (!m_itemsPath.empty()) {
+        command += " " + m_itemsPath;
+    }
+
+    // Execute the command to get the list of items
+    std::string result = executeCommand(command);
+
+    // Save any static items from list_items (like Stop-Playback and Back)
+    std::vector<ListItem> staticItems;
+    for (const auto& item : m_items) {
+        if (item.title == "Back" || item.title == "Stop-Playback") {
+            staticItems.push_back(item);
+        }
+    }
+
+    // Clear existing items
+    m_items.clear();
+
+    // Parse the result line by line
+    std::istringstream iss(result);
+    std::string line;
+
+    while (std::getline(iss, line)) {
+        // Skip empty lines
+        if (line.empty()) {
+            continue;
+        }
+
+        // Remove trailing newline if present
+        if (line.back() == '\n') {
+            line.pop_back();
+        }
+
+        // Create a new item
+        ListItem item;
+        item.title = line;
+
+        // Set the action using the template
+        if (!m_itemsAction.empty()) {
+            item.action = m_itemsAction;
+        }
+
+        m_items.push_back(item);
+    }
+
+    // Add back the static items in their original order
+    for (const auto& item : staticItems) {
+        m_items.push_back(item);
+    }
+
+    Logger::debug("Loaded " + std::to_string(m_items.size()) + " items (including static items)");
 }
