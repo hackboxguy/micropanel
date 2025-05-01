@@ -9,6 +9,8 @@
 #include <chrono>
 #include <sys/time.h>
 #include "IPSelector.h"
+#include <nlohmann/json.hpp>
+using json = nlohmann::json;
 
 // Forward declarations
 class Display;
@@ -490,4 +492,104 @@ private:
     std::string normalizeIp(const std::string& ip);
     UDPTestResult parseUDPTestResults(const std::string& output);
     void showResultsScreen();
+};
+/**
+ * Generic List Screen
+ * Configurable screen that displays a list of items with associated actions
+ */
+/*class GenericListScreen : public ScreenModule {
+public:
+    GenericListScreen(std::shared_ptr<Display> display, std::shared_ptr<InputDevice> input);
+
+    void enter() override;
+    void update() override;
+    void exit() override;
+    bool handleInput() override;
+    std::string getModuleId() const override { return m_id; }
+    // Set the module ID for identification
+    void setId(const std::string& id) { m_id = id; }
+    // Set configuration from JSON
+    void setConfig(const nlohmann::json& config);
+    // Methods for getting selection results
+    std::string getSelectedItem() const { return m_selectedValue; }
+    bool hasSelectionChanged() const { return m_hasSelectionChanged; }
+    void clearSelectionFlag() { m_hasSelectionChanged = false; }
+    // Methods for controlling selection from parent screens
+    void setSelectedItemByIndex(int index);
+    void setSelectedItemByTitle(const std::string& title);
+    int getSelectedIndex() const { return m_selectedIndex; }
+    bool isItemSelected(int index) const;
+    bool isItemSelected(const std::string& title) const;
+
+private:
+    // Item structure
+    struct ListItem {
+        std::string title;
+        std::string action;
+        bool isSelected = false;
+    };
+
+    void renderOptions();
+    void executeAction(const std::string& action);
+    void processSelectionScript();
+    std::string executeCommand(const std::string& command) const;
+    // Configuration
+    std::string m_id = "genericlist";
+    std::string m_title = "Generic List";
+    std::vector<ListItem> m_items;
+    std::string m_selectionScript;  // Script to determine current selection state
+    int m_selectedIndex = 0;        // Currently highlighted option (cursor position)
+    std::string m_selectedValue;    // Value that was selected (for parent access)
+    bool m_hasSelectionChanged = false;
+    // For multi-page handling
+    int m_firstVisibleItem = 0;
+    int m_maxVisibleItems = 4;  // Adjustable based on display size
+    // State flags
+    bool m_stateMode = false;   // Whether this list shows current state
+    bool m_shouldExit = false;
+    std::chrono::time_point<std::chrono::steady_clock> m_lastDrawTime;
+    //std::chrono::steady_clock::time_point m_lastDrawTime;
+};*/
+/**
+ * Generic List Screen
+ * Configurable screen that displays a list of items with associated actions
+ */
+class GenericListScreen : public ScreenModule {
+public:
+    GenericListScreen(std::shared_ptr<Display> display, std::shared_ptr<InputDevice> input);
+    ~GenericListScreen();
+
+    void enter() override;
+    void update() override;
+    void exit() override;
+    bool handleInput() override;
+    std::string getModuleId() const override { return m_id; }
+    // Set the module ID for identification
+    void setId(const std::string& id) { m_id = id; }
+    // Set configuration from JSON
+    void setConfig(const nlohmann::json& config);
+private:
+    // Item structure
+    struct ListItem {
+        std::string title;
+        std::string action;
+        bool isSelected = false;
+    };
+    void renderList();
+    void executeAction(const std::string& action);
+    std::string executeCommand(const std::string& command) const;
+    // Configuration
+    std::string m_id = "genericlist";
+    std::string m_title = "Generic List";
+    std::vector<ListItem> m_items;
+    std::string m_selectionScript;
+
+    // Navigation state
+    int m_selectedIndex = 0;
+    int m_firstVisibleItem = 0;
+    int m_maxVisibleItems = 4;
+
+    // State flags
+    bool m_stateMode = false;
+    bool m_shouldExit = false;
 };

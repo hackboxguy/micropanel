@@ -9,6 +9,7 @@
         {"id": "invert_display", "title": "Invert Display"},
         {"id": "brightness", "title": "Brightness"},
         {"id": "system", "title": "System Stats"},
+        {"id": "power_settings", "title": "Power Settings"},
         {"id": "back", "title": "Back"}
       ]
     },
@@ -45,6 +46,17 @@
         "default_parallel": "1",
         "default_server_ip": "192.168.1.1"
       }
+    },
+    {
+      "id": "power_settings",
+      "title": "Power Settings",
+      "enabled": false,
+      "type": "GenericList",
+      "list_items": [
+        {"title": "Reboot", "action": "/usr/sbin/reboot"},
+        {"title": "Poweroff", "action": "/usr/sbin/poweroff"},
+        {"title": "Back"}
+      ]
     },
     {
       "id": "network_config",
