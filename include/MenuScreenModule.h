@@ -29,6 +29,11 @@ public:
     void setModuleRegistry(const std::map<std::string, std::shared_ptr<ScreenModule>>* registry);
     void setParentMenu(MenuScreenModule* parent) { m_parentMenu = parent; }
     bool hasSubmenuItems() const { return !m_submenuItems.empty(); }
+    void navigateToMainMenu();
+    void setAsTopLevelMenu(bool isTopLevel) { m_isTopLevelMenu = isTopLevel; }
+    bool isExitingToMainMenu() const { return m_exitToMainMenu; }
+    void clearMainMenuFlag() { m_exitToMainMenu = false; }
+
     
 private:
     struct SubmenuItem {
@@ -43,6 +48,8 @@ private:
     const std::map<std::string, std::shared_ptr<ScreenModule>>* m_moduleRegistry = nullptr;
     MenuScreenModule* m_parentMenu = nullptr;
     bool m_exitToParent = false;
+    bool m_exitToMainMenu = false;
+    bool m_isTopLevelMenu = false;  // New flag to identify top level menu
 
     void buildSubmenu();
     void executeSubmenuAction(const std::string& moduleId);

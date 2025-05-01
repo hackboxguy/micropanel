@@ -22,7 +22,10 @@ MenuScreenModule::~MenuScreenModule() {
 
 void MenuScreenModule::enter() {
     Logger::debug("Entering menu screen: " + m_id);
-    
+    // If this is the top level menu, always clear the exit to main menu flag
+    if (m_isTopLevelMenu) {
+        m_exitToMainMenu = false;
+    }    
     // Clear the display
     m_display->clear();
     usleep(Config::DISPLAY_CMD_DELAY * 5);
@@ -55,6 +58,13 @@ void MenuScreenModule::exit() {
 bool MenuScreenModule::handleInput() {
     // Check if exit to parent is requested
     if (m_exitToParent) {
+        //return false; // Exit this screen and return to parent
+        // If we're exiting to the main menu, tell the parent to also exit
+        if (m_exitToMainMenu && m_parentMenu) {
+            // Propagate the flag to the parent menu
+            m_parentMenu->m_exitToMainMenu = true;
+            m_parentMenu->m_exitToParent = true;
+        }
         return false; // Exit this screen and return to parent
     }
     
@@ -101,6 +111,7 @@ void MenuScreenModule::buildSubmenu() {
         if (m_parentMenu) {
             m_menu->addItem(std::make_shared<ActionMenuItem>("Back", [this]() {
                 m_exitToParent = true;
+                m_exitToMainMenu = false;
             }));
         }
         return;
@@ -112,6 +123,7 @@ void MenuScreenModule::buildSubmenu() {
         if (item.moduleId == "back") {
             m_menu->addItem(std::make_shared<ActionMenuItem>(item.title, [this]() {
                 m_exitToParent = true;
+                m_exitToMainMenu = false;
             }));
             continue;
         }
@@ -131,6 +143,12 @@ void MenuScreenModule::buildSubmenu() {
             executeSubmenuAction(moduleId);
         }));
     }
+    // Add a "Main Menu" option if we're in a nested menu (not the top level)
+    if (m_parentMenu && !m_isTopLevelMenu) {  // Only add if we have a parent and aren't the top level
+        m_menu->addItem(std::make_shared<ActionMenuItem>("Main Menu", [this]() {
+            navigateToMainMenu();
+        }));
+    }
 }
 
 void MenuScreenModule::executeSubmenuAction(const std::string& moduleId) {
@@ -143,6 +161,7 @@ void MenuScreenModule::executeSubmenuAction(const std::string& moduleId) {
     // Special handling for back action
     if (moduleId == "back") {
         m_exitToParent = true;
+        m_exitToMainMenu = false;
         return;
     }
 
@@ -195,6 +214,7 @@ void MenuScreenModule::executeSubmenuAction(const std::string& moduleId) {
     // If this is a MenuScreenModule, set its parent to this
     if (isMenuModule) {
         menuModule->setParentMenu(this);
+        menuModule->clearMainMenuFlag();
     }
 
     // Execute the module
@@ -214,3 +234,11 @@ void MenuScreenModule::executeSubmenuAction(const std::string& moduleId) {
     // Re-render our menu
     m_menu->render();
 }
+void MenuScreenModule::navigateToMainMenu() {
+    Logger::debug("Navigating to main menu from: " + m_id);
+
+    // Set our exit flags to trigger a return to parent menu
+    m_exitToParent = true;
+    m_exitToMainMenu = true;
+}
+

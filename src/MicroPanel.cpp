@@ -418,6 +418,22 @@ bool MicroPanel::loadConfigFromJson() {
         m_mainMenu->render();
         Logger::debug("Menu render called");
 
+	// Mark top-level menu modules
+	for (const auto& modulePair : m_modules) {
+	auto menuModule = std::dynamic_pointer_cast<MenuScreenModule>(modulePair.second);
+    	if (menuModule) {
+        // Check if this is a top-level menu (enabled and in the main menu)
+        for (const auto& module : config["modules"]) {
+            if (module.contains("id") && module["id"].get<std::string>() == modulePair.first &&
+                module.contains("enabled") && module["enabled"].get<bool>()) {
+                menuModule->setAsTopLevelMenu(true);
+                Logger::debug("Marked " + modulePair.first + " as top-level menu");
+                break;
+	    }
+	  }
+    	}
+	}
+
         return true;
     } catch (const std::exception& e) {
         Logger::error("Error parsing JSON config: " + std::string(e.what()));
@@ -453,7 +469,12 @@ void MicroPanel::registerModuleInMenu(const std::string& moduleName, const std::
         std::cout << "Executing action for module: " << moduleName << std::endl;
         auto module = std::dynamic_pointer_cast<ScreenModule>(m_modules[moduleName]);
         if (module) {
-            module->run();
+       	    // Clear main menu flag if this is a menu module
+            auto menuModule = std::dynamic_pointer_cast<MenuScreenModule>(module);
+            if (menuModule) {
+                menuModule->clearMainMenuFlag();
+            }
+	    module->run();
             // Explicitly redraw the main menu when returning
             m_display->clear();
             usleep(Config::DISPLAY_CMD_DELAY * 5);
