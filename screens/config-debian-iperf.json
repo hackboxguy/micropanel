@@ -1,0 +1,135 @@
+{
+  "modules": [
+    {
+      "id": "system_menu",
+      "title": "System",
+      "enabled": true,
+      "type": "menu",
+      "submenus": [
+        {"id": "invert_display", "title": "Invert Display"},
+        {"id": "brightness", "title": "Brightness"},
+        {"id": "system", "title": "System Stats"},
+        {"id": "back", "title": "Back"}
+      ]
+    },
+    {
+      "id": "network_menu",
+      "title": "Network",
+      "enabled": true,
+      "type": "menu",
+      "submenus": [
+        {"id": "network_config", "title": "Config"},
+        {"id": "network_status", "title": "Status"},
+        {"id": "back", "title": "Back"}
+      ]
+    },
+    {
+      "id": "throughputserver",
+      "title": "IPerf3 Server",
+      "enabled": true,
+      "depends": {
+        "iperf3_path": "/usr/bin/iperf3",
+        "default_port": "5201"
+      }
+    },
+    {
+      "id": "throughputclient",
+      "title": "IPerf3 Client",
+      "enabled": true,
+      "depends": {
+        "iperf3_path": "/usr/bin/iperf3",
+        "default_port": "5201",
+        "default_duration": "10",
+        "default_protocol": "tcp",
+        "default_bandwidth": "0",
+        "default_parallel": "1",
+        "default_server_ip": "192.168.1.1"
+      }
+    },
+    {
+      "id": "network_config",
+      "title": "Config",
+      "enabled": false,
+      "type": "menu",
+      "submenus": [
+        {"id": "netsettings", "title": "IP Settings"},
+        {"id": "wifi", "title": "WiFi Settings"},
+        {"id": "back", "title": "Back"}
+      ]
+    },
+    {
+      "id": "network_status",
+      "title": "Status",
+      "enabled": false,
+      "type": "menu",
+      "submenus": [
+        {"id": "netinfo", "title": "Interfaces"},
+        {"id": "ping", "title": "Ping Test"},
+        {"id": "internet", "title": "Internet Test"},
+        {"id": "speedtest", "title": "Speed Test"},
+        {"id": "back", "title": "Back"}
+      ]
+    },
+    {
+      "id": "brightness",
+      "title": "Brightness",
+      "enabled": false
+    },
+    {
+      "id": "system",
+      "title": "System Stats",
+      "enabled": false
+    },
+    {
+      "id": "netsettings",
+      "title": "IP Settings",
+      "enabled": false,
+      "depends": {
+        "action_script": "/mnt/old-nvm/embedded/micropanel-1/micropanel/scripts/dhcp-net-settings.sh",
+        "os_type": "debian",
+        "iface_name": "eth0"
+      }
+    },
+    {
+      "id": "netinfo",
+      "title": "Network Info",
+      "enabled": false
+    },
+    {
+      "id": "ping",
+      "title": "Ping Tool",
+      "enabled": false
+    },
+    {
+      "id": "internet",
+      "title": "Internet Test",
+      "enabled": false
+    },
+    {
+      "id": "speedtest",
+      "title": "Speed Test",
+      "enabled": false,
+      "depends": {
+        "download_url": "https://cachefly.cachefly.net/50mb.test"
+      }
+    },
+    {
+      "id": "wifi",
+      "title": "WiFi Settings",
+      "enabled": false,
+      "depends": {
+        "daemon_script": "/etc/init.d/networking"
+      }
+    },
+    {
+      "id": "invert_display",
+      "title": "Invert Display",
+      "enabled": false,
+      "type": "action",
+      "action": "invert_display"
+    }
+  ],
+  "persistent_data": {
+    "file_path": "/mnt/old-nvm/embedded/micropanel-1/micropanel/settings.json"
+  }
+}

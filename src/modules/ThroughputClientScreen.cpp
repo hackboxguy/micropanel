@@ -21,6 +21,7 @@
 #include <algorithm>
 #include <regex>
 #include <set>
+#include <iomanip>
 
 ThroughputClientScreen::ThroughputClientScreen(std::shared_ptr<Display> display, std::shared_ptr<InputDevice> input)
     : ScreenModule(display, input),
@@ -48,7 +49,7 @@ ThroughputClientScreen::ThroughputClientScreen(std::shared_ptr<Display> display,
     // Initialize menu options
     m_protocolOptions = {"TCP", "UDP"};
     m_durationOptions = {10, 20, 30, 40, 50, 60};
-    m_bandwidthOptions = {0, 10, 20, 50, 100, 500};
+    m_bandwidthOptions = {0, 10, 20, 50, 100, 500, 1000, 2000, 2500, 4500, 5000, 9500, 10000};
     m_parallelOptions = {1, 4, 8, 16, 32};
 
     // Load settings from config
@@ -156,6 +157,8 @@ void ThroughputClientScreen::refreshSettings() {
     }
 
     // Try to get server IP
+    static bool firstLoad=true;
+    if(firstLoad){
     std::string serverIP = dependencies.getDependencyPath("throughputclient", "default_server_ip");
     if (!serverIP.empty()) {
         // Validate IP format (simple check)
@@ -166,6 +169,8 @@ void ThroughputClientScreen::refreshSettings() {
             }
             Logger::debug("ThroughputClientScreen: Using configured server IP: " + m_serverIp);
         }
+      }
+      firstLoad=false;
     }
 }
 
@@ -200,7 +205,8 @@ void ThroughputClientScreen::enter() {
 
     // Reset IP selector
     if (m_ipSelector) {
-        m_ipSelector->reset();
+        //m_ipSelector->reset();
+        m_ipSelector->setIp(m_serverIp);
     }
 
     // Full redraw
@@ -260,10 +266,29 @@ bool ThroughputClientScreen::isAvahiAvailable() const {
 }
 
 std::string ThroughputClientScreen::getBandwidthString(int value) const {
-    if (value <= 0) {
+//    if (value <= 0) {
+//        return "Auto";
+//    }
+//    return std::to_string(value) + " Mbps";
+    if (value == 0) {
         return "Auto";
+    } else if (value >= 1000) {
+        // Format as Gbps with one decimal point if needed
+        double gbps = value / 1000.0;
+        std::ostringstream stream;
+        stream << std::fixed << std::setprecision(1) << gbps;
+        std::string gbpsStr = stream.str();
+        // Remove trailing zeros and decimal point if it's a whole number
+        if (gbpsStr.find('.') != std::string::npos) {
+            gbpsStr = gbpsStr.substr(0, gbpsStr.find_last_not_of('0') + 1);
+            if (gbpsStr.back() == '.') {
+                gbpsStr.pop_back();
+            }
+        }
+        return gbpsStr + "G";
+    } else {
+        return std::to_string(value) + "M";
     }
-    return std::to_string(value) + " Mbps";
 }
 
 std::string ThroughputClientScreen::formatBandwidth(double value) const {
@@ -324,7 +349,7 @@ void ThroughputClientScreen::update() {
         m_statusChanged = false;
     }
 }
-
+/*
 void ThroughputClientScreen::renderMainMenu(bool fullRedraw) {
     // Define all menu states in order
     const std::vector<ThroughputClientState> menuStates = {
@@ -445,6 +470,163 @@ void ThroughputClientScreen::renderMainMenu(bool fullRedraw) {
     } else {
         // Just update the selection markers
         int startIndex = showLast6Items ? 1 : 0;
+
+        // First, clear all selection markers in the visible area
+        for (int i = 0; i < 6; i++) {
+            m_display->drawText(0, 16 + (i * 8), " ");
+            usleep(Config::DISPLAY_CMD_DELAY);
+        }
+
+        // Then draw only the current selection marker
+        // Find which visible position corresponds to current selection
+        int visiblePos = -1;
+        for (size_t i = 0; i < menuStates.size(); i++) {
+            if (menuStates[i] == m_state) {
+                visiblePos = static_cast<int>(i) - startIndex;
+                break;
+            }
+        }
+
+        // Draw the current selection marker if it's visible
+        if (visiblePos >= 0 && visiblePos < 6) {
+            m_display->drawText(0, 16 + (visiblePos * 8), ">");
+            usleep(Config::DISPLAY_CMD_DELAY);
+        }
+    }
+
+    // Update status line if needed
+    if (fullRedraw || m_statusChanged) {
+        updateStatusLine();
+    }
+}
+*/
+void ThroughputClientScreen::renderMainMenu(bool fullRedraw) {
+    // Define all menu states in order - ADD THE NEW STATE
+    const std::vector<ThroughputClientState> menuStates = {
+        ThroughputClientState::MENU_STATE_START,
+        ThroughputClientState::MENU_STATE_START_REVERSE, // Add the new state
+        ThroughputClientState::MENU_STATE_PROTOCOL,
+        ThroughputClientState::MENU_STATE_DURATION,
+        ThroughputClientState::MENU_STATE_BANDWIDTH,
+        ThroughputClientState::MENU_STATE_PARALLEL,
+        ThroughputClientState::MENU_STATE_SERVER_IP,
+        ThroughputClientState::MENU_STATE_BACK
+    };
+
+    if (m_state == ThroughputClientState::MENU_STATE_TESTING ||
+        (m_state == ThroughputClientState::MENU_STATE_RESULTS && m_waitingForButtonPress)) {
+        return;
+    }
+
+    // Find the index of the currently selected item
+    int selectedIndex = 0;
+    for (size_t i = 0; i < menuStates.size(); i++) {
+        if (menuStates[i] == m_state) {
+            selectedIndex = i;
+            break;
+        }
+    }
+
+    // Determine if we need to show the last 6 items
+    // Since we added a new item, we need to adjust this pagination logic
+    bool showLast6Items = (selectedIndex >= 6); // Show last 6 when on item 6 or greater
+
+    // Keep track of whether we've changed pages
+    static bool wasShowingLast6Items = false;
+    bool pageChanged = (wasShowingLast6Items != showLast6Items);
+    wasShowingLast6Items = showLast6Items;
+
+    // Only do a full menu redraw when necessary
+    if (fullRedraw || pageChanged) {
+        // Clear the screen or menu area
+        if (fullRedraw) {
+            m_display->clear();
+            usleep(Config::DISPLAY_CMD_DELAY * 3);
+
+            // Draw header with status
+            std::string headerText = m_testInProgress ? "Client(Running)" : "Client(Ready)";
+            m_display->drawText(0, 0, headerText);
+            usleep(Config::DISPLAY_CMD_DELAY);
+
+            // Draw separator
+            m_display->drawText(0, 8, "----------------");
+            usleep(Config::DISPLAY_CMD_DELAY);
+        } else if (pageChanged) {
+            // Only clear the menu area, not the header
+            for (int i = 0; i < 6; i++) {
+                int yPos = 16 + (i * 8);
+                m_display->drawText(0, yPos, "                ");
+                usleep(Config::DISPLAY_CMD_DELAY);
+            }
+        }
+
+        // Determine the range of menu items to display
+        // We need to adjust this for 8 total menu items instead of 7
+        int startIndex = showLast6Items ? 2 : 0; // Skip first two items when showing last 6
+        int endIndex = showLast6Items ? 8 : 6;   // Show items 2-8 or 0-6
+
+        // Draw the visible menu items
+        int yPos = 16; // Starting Y position after header and separator
+
+        for (int i = startIndex; i < endIndex; i++) {
+            ThroughputClientState itemState = menuStates[i];
+            std::string itemText;
+            bool isSelected = (m_state == itemState);
+
+            // Generate text for each menu item
+            switch (itemState) {
+                case ThroughputClientState::MENU_STATE_START:
+                    itemText = isSelected ? ">Start Test" : " Start Test";
+                    break;
+
+                case ThroughputClientState::MENU_STATE_START_REVERSE:
+                    itemText = isSelected ? ">Reverse Test" : " Reverse Test";
+                    break;
+
+                case ThroughputClientState::MENU_STATE_PROTOCOL:
+                    itemText = isSelected ?
+                            ">Proto: " + m_protocol :
+                            " Proto: " + m_protocol;
+                    break;
+
+                case ThroughputClientState::MENU_STATE_DURATION:
+                    itemText = isSelected ?
+                            ">Duration: " + std::to_string(m_duration) + "s" :
+                            " Duration: " + std::to_string(m_duration) + "s";
+                    break;
+
+                case ThroughputClientState::MENU_STATE_BANDWIDTH:
+                    itemText = isSelected ?
+                            ">BW: " + getBandwidthString(m_bandwidth) :
+                            " BW: " + getBandwidthString(m_bandwidth);
+                    break;
+
+                case ThroughputClientState::MENU_STATE_PARALLEL:
+                    itemText = isSelected ?
+                            ">Parallel: " + std::to_string(m_parallel) :
+                            " Parallel: " + std::to_string(m_parallel);
+                    break;
+
+                case ThroughputClientState::MENU_STATE_SERVER_IP:
+                    itemText = isSelected ?
+                            ">" + normalizeIp(m_serverIp) :
+                            " " + normalizeIp(m_serverIp);
+                    break;
+
+                case ThroughputClientState::MENU_STATE_BACK:
+                    itemText = isSelected ? ">Back" : " Back";
+                    break;
+
+                default:
+                    continue; // Skip submenu states
+            }
+            m_display->drawText(0, yPos, itemText);
+            usleep(Config::DISPLAY_CMD_DELAY);
+            yPos += 8; // 8 pixel spacing
+        }
+    } else {
+        // Just update the selection markers
+        int startIndex = showLast6Items ? 2 : 0;
 
         // First, clear all selection markers in the visible area
         for (int i = 0; i < 6; i++) {
@@ -927,8 +1109,17 @@ bool ThroughputClientScreen::handleInput() {
             switch (m_state) {
                 case ThroughputClientState::MENU_STATE_START:
                     // Start test
-                    if (!m_testInProgress) {
-                        startTest();
+		    if (!m_testInProgress) {
+                        m_reverseMode = false;
+			startTest();
+                        renderMainMenu(true);
+                    }
+                    break;
+                case ThroughputClientState::MENU_STATE_START_REVERSE:
+                    // Start test
+		    if (!m_testInProgress) {
+                        m_reverseMode = true;
+			startTest();
                         renderMainMenu(true);
                     }
                     break;
@@ -1173,6 +1364,7 @@ bool ThroughputClientScreen::handleInput() {
             // If not handled by IP selector, handle menu navigation
             if (!handled) {
                 if (m_state == ThroughputClientState::MENU_STATE_START ||
+                    m_state == ThroughputClientState::MENU_STATE_START_REVERSE ||
                     m_state == ThroughputClientState::MENU_STATE_PROTOCOL ||
                     m_state == ThroughputClientState::MENU_STATE_DURATION ||
                     m_state == ThroughputClientState::MENU_STATE_BANDWIDTH ||
@@ -1187,8 +1379,11 @@ bool ThroughputClientScreen::handleInput() {
                             case ThroughputClientState::MENU_STATE_START:
                                 m_state = ThroughputClientState::MENU_STATE_BACK;
                                 break;
-                            case ThroughputClientState::MENU_STATE_PROTOCOL:
+                            case ThroughputClientState::MENU_STATE_START_REVERSE:
                                 m_state = ThroughputClientState::MENU_STATE_START;
+                                break;
+                            case ThroughputClientState::MENU_STATE_PROTOCOL:
+                                m_state = ThroughputClientState::MENU_STATE_START_REVERSE;
                                 break;
                             case ThroughputClientState::MENU_STATE_DURATION:
                                 m_state = ThroughputClientState::MENU_STATE_PROTOCOL;
@@ -1212,6 +1407,9 @@ bool ThroughputClientScreen::handleInput() {
                         // Down
                         switch (m_state) {
                             case ThroughputClientState::MENU_STATE_START:
+                                m_state = ThroughputClientState::MENU_STATE_START_REVERSE;
+                                break;
+                            case ThroughputClientState::MENU_STATE_START_REVERSE:
                                 m_state = ThroughputClientState::MENU_STATE_PROTOCOL;
                                 break;
                             case ThroughputClientState::MENU_STATE_PROTOCOL:
@@ -1309,6 +1507,7 @@ void ThroughputClientScreen::startTest() {
     if (m_protocol == "UDP") cmdLine += " -u";
     if (m_bandwidth > 0) cmdLine += " -b " + std::to_string(m_bandwidth) + "m";
     if (m_parallel > 1) cmdLine += " -P " + std::to_string(m_parallel);
+    if (m_reverseMode) cmdLine += " -R";
     Logger::debug("ThroughputClientScreen: Executing: " + cmdLine);
 
     if (m_testInProgress) return;
@@ -1363,6 +1562,9 @@ void ThroughputClientScreen::startTest() {
         if (m_parallel > 1) {
             args.push_back("-P");
             args.push_back(std::to_string(m_parallel));
+        }
+        if (m_reverseMode) {
+            args.push_back("-R");
         }
         // Create C-style arguments array
         std::vector<char*> c_args;
@@ -1912,7 +2114,12 @@ void ThroughputClientScreen::showResultsScreen() {
     usleep(Config::DISPLAY_CMD_DELAY * 3);
 
     // Draw header
-    m_display->drawText(0, 0, "   Test Results");
+    if (m_reverseMode) {
+        m_display->drawText(0, 0, " Reverse Results");
+    } else {
+        m_display->drawText(0, 0, "   Test Results");
+    }
+    //m_display->drawText(0, 0, "   Test Results");
     usleep(Config::DISPLAY_CMD_DELAY);
 
     // Draw separator
@@ -1936,6 +2143,13 @@ void ThroughputClientScreen::showResultsScreen() {
         m_display->drawText(0, 40, "Jitter: " + std::to_string(m_jitter_result) + " ms");
     }
     usleep(Config::DISPLAY_CMD_DELAY);
+    // Show direction
+    //if (m_reverseMode) {
+    //    m_display->drawText(0, yPos, "Server -> Client");
+    //} else {
+    //    m_display->drawText(0, yPos, "Client -> Server");
+    //}
+    //usleep(Config::DISPLAY_CMD_DELAY);
 
     // Draw press button message
     m_display->drawText(0, 56, "Enter to continu");
@@ -1947,7 +2161,12 @@ void ThroughputClientScreen::renderTestingScreen() {
     usleep(Config::DISPLAY_CMD_DELAY * 3);
 
     // Draw header
-    m_display->drawText(0, 0, "    Testing");
+    if (m_reverseMode) {
+        m_display->drawText(0, 0, "  Reverse Test");
+    } else {
+        m_display->drawText(0, 0, "    Testing");
+    }
+    //m_display->drawText(0, 0, "    Testing");
     usleep(Config::DISPLAY_CMD_DELAY);
 
     // Draw separator
@@ -1960,6 +2179,13 @@ void ThroughputClientScreen::renderTestingScreen() {
 
     // Show server info
     m_display->drawText(0, 24, "Server: " + m_serverIp);
+    usleep(Config::DISPLAY_CMD_DELAY);
+    // Show direction info
+    if (m_reverseMode) {
+        m_display->drawText(0, 32, "Dir: Server->Client");
+    } else {
+        m_display->drawText(0, 32, "Dir: Client->Server");
+    }
     usleep(Config::DISPLAY_CMD_DELAY);
 
     // Show duration

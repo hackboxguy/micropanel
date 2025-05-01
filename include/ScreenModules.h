@@ -370,6 +370,7 @@ private:
 // Enum for ThroughputClientScreen menu states
 enum class ThroughputClientState {
     MENU_STATE_START,
+    MENU_STATE_START_REVERSE,
     MENU_STATE_PROTOCOL,
     MENU_STATE_DURATION,
     MENU_STATE_BANDWIDTH,
@@ -420,6 +421,7 @@ private:
     std::string m_statusMessage;
     bool m_statusChanged;
     bool m_testCancellationPrompt = false;
+    bool m_reverseMode = false;
 
     // Test parameters
     std::string m_serverIp;
