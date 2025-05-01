@@ -294,13 +294,13 @@ std::string ThroughputClientScreen::getBandwidthString(int value) const {
 std::string ThroughputClientScreen::formatBandwidth(double value) const {
     std::ostringstream oss;
     if (value < 1.0) {
-        oss << value * 1000.0 << " Kbps";
+        oss << value * 1000.0 << "Kbps";
     } else if (value < 1000.0) {
         oss.precision(1);
-        oss << std::fixed << value << " Mbps";
+        oss << std::fixed << value << "Mbps";
     } else {
         oss.precision(2);
-        oss << std::fixed << (value / 1000.0) << " Gbps";
+        oss << std::fixed << (value / 1000.0) << "Gbps";
     }
     return oss.str();
 }
@@ -2117,7 +2117,7 @@ void ThroughputClientScreen::showResultsScreen() {
     if (m_reverseMode) {
         m_display->drawText(0, 0, " Reverse Results");
     } else {
-        m_display->drawText(0, 0, "   Test Results");
+        m_display->drawText(0, 0, "  Test Results");
     }
     //m_display->drawText(0, 0, "   Test Results");
     usleep(Config::DISPLAY_CMD_DELAY);
@@ -2127,20 +2127,26 @@ void ThroughputClientScreen::showResultsScreen() {
     usleep(Config::DISPLAY_CMD_DELAY);
 
     // Draw protocol
-    m_display->drawText(0, 16, "Protocol: " + m_protocol);
+    m_display->drawText(0, 16, "Proto :" + m_protocol);
     usleep(Config::DISPLAY_CMD_DELAY);
 
     // Draw bandwidth result
     std::string bwStr = formatBandwidth(m_bandwidth_result);
-    m_display->drawText(0, 24, "Speed: " + bwStr);
+    m_display->drawText(0, 24, "Speed :" + bwStr);
     usleep(Config::DISPLAY_CMD_DELAY);
 
     // Draw additional results based on protocol
     if (m_protocol == "TCP") {
-        m_display->drawText(0, 32, "Retrans: " + std::to_string(m_retransmits_result));
+        m_display->drawText(0, 32, "Retrns:" + std::to_string(m_retransmits_result));
     } else { // UDP
-        m_display->drawText(0, 32, "Loss: " + std::to_string(m_loss_result) + "%");
-        m_display->drawText(0, 40, "Jitter: " + std::to_string(m_jitter_result) + " ms");
+        //m_display->drawText(0, 32, "Loss  :" + std::to_string(m_loss_result) + "%");
+        //m_display->drawText(0, 40, "Jitter:" + std::to_string(m_jitter_result) + "ms");
+	std::ostringstream lossStream;
+	std::ostringstream jitterStream;
+	lossStream << std::fixed << std::setprecision(4) << m_loss_result;
+	jitterStream << std::fixed << std::setprecision(4) << m_jitter_result;
+        m_display->drawText(0, 32, "Loss  :" + lossStream.str() + "%");
+        m_display->drawText(0, 40, "Jitter:" + jitterStream.str() + "ms");
     }
     usleep(Config::DISPLAY_CMD_DELAY);
     // Show direction
@@ -2166,7 +2172,6 @@ void ThroughputClientScreen::renderTestingScreen() {
     } else {
         m_display->drawText(0, 0, "    Testing");
     }
-    //m_display->drawText(0, 0, "    Testing");
     usleep(Config::DISPLAY_CMD_DELAY);
 
     // Draw separator
@@ -2174,37 +2179,41 @@ void ThroughputClientScreen::renderTestingScreen() {
     usleep(Config::DISPLAY_CMD_DELAY);
 
     // Show test parameters
-    m_display->drawText(0, 16, "Protocol: " + m_protocol);
-    usleep(Config::DISPLAY_CMD_DELAY);
+    //m_display->drawText(0, 24, "Protocol:" + m_protocol);
+    //usleep(Config::DISPLAY_CMD_DELAY);
 
     // Show server info
-    m_display->drawText(0, 24, "Server: " + m_serverIp);
+    m_display->drawText(0, 16, "Srv:" + m_serverIp);
     usleep(Config::DISPLAY_CMD_DELAY);
     // Show direction info
-    if (m_reverseMode) {
-        m_display->drawText(0, 32, "Dir: Server->Client");
-    } else {
-        m_display->drawText(0, 32, "Dir: Client->Server");
-    }
+    //if (m_reverseMode) {
+    //    m_display->drawText(0, 32, "Dir: Server->Client");
+    //} else {
+    //    m_display->drawText(0, 32, "Dir: Client->Server");
+    //}
+    //usleep(Config::DISPLAY_CMD_DELAY);
+    m_display->drawText(0, 24, "Proto  :" + m_protocol);
     usleep(Config::DISPLAY_CMD_DELAY);
 
     // Show duration
-    m_display->drawText(0, 32, "Duration: " + std::to_string(m_duration) + " sec");
+    m_display->drawText(0, 32, "Dur    :" + std::to_string(m_duration) + "sec");
     usleep(Config::DISPLAY_CMD_DELAY);
 
     // Show other parameters
-    if (m_protocol == "UDP" && m_bandwidth > 0) {
-        m_display->drawText(0, 40, "Rate: " + std::to_string(m_bandwidth) + " Mbps");
+    //if (m_protocol == "UDP" && m_bandwidth > 0) {
+    if (m_bandwidth > 0) {
+        m_display->drawText(0, 40, "Rate   :" + std::to_string(m_bandwidth) + "Mbps");
         usleep(Config::DISPLAY_CMD_DELAY);
-    } else if (m_protocol == "UDP") {
-        m_display->drawText(0, 40, "Rate: Auto");
+    //} else if (m_protocol == "UDP") {
+    } else {
+        m_display->drawText(0, 40, "Rate   :Auto");
         usleep(Config::DISPLAY_CMD_DELAY);
     }
 
-    if (m_parallel > 1) {
-        m_display->drawText(0, 48, "Streams: " + std::to_string(m_parallel));
+    //if (m_parallel > 1) {
+        m_display->drawText(0, 48, "Streams:" + std::to_string(m_parallel));
         usleep(Config::DISPLAY_CMD_DELAY);
-    }
+    //}
 
     // Show progress message
     m_display->drawText(0, 56, "Please wait...");
