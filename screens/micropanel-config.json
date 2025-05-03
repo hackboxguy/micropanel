@@ -1,0 +1,194 @@
+{
+  "modules": [
+    {
+      "id": "system_menu",
+      "title": "System",
+      "enabled": true,
+      "type": "menu",
+      "submenus": [
+        {"id": "invert_display", "title": "Invert Display"},
+        {"id": "brightness", "title": "Brightness"},
+        {"id": "system", "title": "System Stats"},
+        {"id": "buzzer_settings", "title": "Buzzer"},
+        {"id": "hdmi_patch", "title": "HDMI Patch"},
+	{"id": "power_settings", "title": "Power Settings"},
+	{"id": "video_player", "title": "Video Player"},
+        {"id": "back", "title": "Back"}
+      ]
+    },
+    {
+      "id": "network_menu",
+      "title": "Network",
+      "enabled": true,
+      "type": "menu",
+      "submenus": [
+        {"id": "network_config", "title": "Config"},
+        {"id": "network_status", "title": "Status"},
+        {"id": "back", "title": "Back"}
+      ]
+    },
+    {
+      "id": "throughputserver",
+      "title": "IPerf3 Server",
+      "enabled": true,
+      "depends": {
+        "iperf3_path": "/usr/bin/iperf3",
+        "default_port": "5201"
+      }
+    },
+    {
+      "id": "throughputclient",
+      "title": "IPerf3 Client",
+      "enabled": true,
+      "depends": {
+        "iperf3_path": "/usr/bin/iperf3",
+        "default_port": "5201",
+        "default_duration": "10",
+        "default_protocol": "tcp",
+        "default_bandwidth": "0",
+        "default_parallel": "1",
+        "default_server_ip": "192.168.1.1"
+      }
+    },
+    {
+      "id": "buzzer_settings",
+      "title": "Buzzer",
+      "enabled": false,
+      "type": "GenericList",
+      "list_items": [
+        {"title": "On", "action": "$MICROPANEL_HOME/scripts/buzzer.sh On"},
+        {"title": "Off", "action": "$MICROPANEL_HOME/scripts/buzzer.sh Off"},
+        {"title": "Back"}
+      ],
+      "list_selection": "$MICROPANEL_HOME/scripts/buzzer.sh"
+    },
+    {
+      "id": "hdmi_patch",
+      "title": "HDMI Patch",
+      "enabled": false,
+      "type": "GenericList",
+      "list_items": [
+        {"title": "Off", "action": "$MICROPANEL_HOME/scripts/hdmi-patch.sh $1"},
+        {"title": "Red", "action": "$MICROPANEL_HOME/scripts/hdmi-patch.sh $1"},
+        {"title": "Green", "action": "$MICROPANEL_HOME/scripts/hdmi-patch.sh $1"},
+        {"title": "Blue", "action": "$MICROPANEL_HOME/scripts/hdmi-patch.sh $1"},
+        {"title": "Cyan", "action": "$MICROPANEL_HOME/scripts/hdmi-patch.sh $1"},
+        {"title": "Magenta", "action": "$MICROPANEL_HOME/scripts/hdmi-patch.sh $1"},
+        {"title": "Yellow", "action": "$MICROPANEL_HOME/scripts/hdmi-patch.sh $1"},
+        {"title": "White", "action": "$MICROPANEL_HOME/scripts/hdmi-patch.sh $1"},
+        {"title": "Back"}
+      ],
+      "list_selection": "$MICROPANEL_HOME/scripts/hdmi-patch.sh"
+    },
+    {
+      "id": "power_settings",
+      "title": "Power Settings",
+      "enabled": false,
+      "type": "GenericList",
+      "list_items": [
+        {"title": "Reboot", "action": "/usr/sbin/reboot"},
+        {"title": "Poweroff", "action": "/usr/sbin/poweroff"},
+        {"title": "Back"}
+      ]
+    },
+    {
+      "id": "video_player",
+      "title": "Video Player",
+      "enabled": false,
+      "type": "GenericList",
+      "items_source": "$MICROPANEL_HOME/scripts/list-videos.sh",
+      "items_path": "$MICROPANEL_HOME/media",
+      "items_action": "$MICROPANEL_HOME/scripts/play-video.sh $1 $MICROPANEL_HOME/media",
+      "list_selection": "$MICROPANEL_HOME/scripts/list-videos.sh",
+      "list_items": [
+        {"title": "Stop-Playback", "action": "$MICROPANEL_HOME/scripts/stop-video.sh"},
+        {"title": "Back"}
+      ]
+    },
+    {
+      "id": "network_config",
+      "title": "Config",
+      "enabled": false,
+      "type": "menu",
+      "submenus": [
+        {"id": "netsettings", "title": "IP Settings"},
+        {"id": "wifi", "title": "WiFi Settings"},
+        {"id": "back", "title": "Back"}
+      ]
+    },
+    {
+      "id": "network_status",
+      "title": "Status",
+      "enabled": false,
+      "type": "menu",
+      "submenus": [
+        {"id": "netinfo", "title": "Interfaces"},
+        {"id": "ping", "title": "Ping Test"},
+        {"id": "internet", "title": "Internet Test"},
+        {"id": "speedtest", "title": "Speed Test"},
+        {"id": "back", "title": "Back"}
+      ]
+    },
+    {
+      "id": "brightness",
+      "title": "Brightness",
+      "enabled": false
+    },
+    {
+      "id": "system",
+      "title": "System Stats",
+      "enabled": false
+    },
+    {
+      "id": "netsettings",
+      "title": "IP Settings",
+      "enabled": false,
+      "depends": {
+        "action_script": "$MICROPANEL_HOME/scripts/dhcp-net-settings.sh",
+        "os_type": "debian",
+        "iface_name": "eth0"
+      }
+    },
+    {
+      "id": "netinfo",
+      "title": "Network Info",
+      "enabled": false
+    },
+    {
+      "id": "ping",
+      "title": "Ping Tool",
+      "enabled": false
+    },
+    {
+      "id": "internet",
+      "title": "Internet Test",
+      "enabled": false
+    },
+    {
+      "id": "speedtest",
+      "title": "Speed Test",
+      "enabled": false,
+      "depends": {
+        "download_url": "https://cachefly.cachefly.net/50mb.test"
+      }
+    },
+    {
+      "id": "wifi",
+      "title": "WiFi Settings",
+      "enabled": false,
+      "depends": {
+        "daemon_script": "/etc/init.d/networking"
+      }
+    },
+    {
+      "id": "invert_display",
+      "title": "Invert Display",
+      "enabled": false,
+      "type": "action",
+      "action": "invert_display"
+    }
+  ],
+  "persistent_data": {
+    "file_path": "$MICROPANEL_HOME/settings.json"
+  }
+}
