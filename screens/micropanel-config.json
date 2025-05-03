@@ -1,6 +1,17 @@
 {
   "modules": [
     {
+      "id": "network_menu",
+      "title": "Network",
+      "enabled": true,
+      "type": "menu",
+      "submenus": [
+        {"id": "network_status", "title": "Status"},
+        {"id": "network_config", "title": "Config"},
+        {"id": "back", "title": "Back"}
+      ]
+    },
+    {
       "id": "system_menu",
       "title": "System",
       "enabled": true,
@@ -9,21 +20,9 @@
         {"id": "invert_display", "title": "Invert Display"},
         {"id": "brightness", "title": "Brightness"},
         {"id": "system", "title": "System Stats"},
-        {"id": "buzzer_settings", "title": "Buzzer"},
         {"id": "hdmi_patch", "title": "HDMI Patch"},
 	{"id": "power_settings", "title": "Power Settings"},
 	{"id": "video_player", "title": "Video Player"},
-        {"id": "back", "title": "Back"}
-      ]
-    },
-    {
-      "id": "network_menu",
-      "title": "Network",
-      "enabled": true,
-      "type": "menu",
-      "submenus": [
-        {"id": "network_config", "title": "Config"},
-        {"id": "network_status", "title": "Status"},
         {"id": "back", "title": "Back"}
       ]
     },
@@ -49,6 +48,17 @@
         "default_parallel": "1",
         "default_server_ip": "192.168.1.1"
       }
+    },
+    {
+      "id": "media_menu",
+      "title": "Multimedia",
+      "enabled": true,
+      "type": "menu",
+      "submenus": [
+        {"id": "hdmi_patch", "title": "Test Patterns"},
+        {"id": "video_player", "title": "Video Player"},
+        {"id": "back", "title": "Back"}
+      ]
     },
     {
       "id": "buzzer_settings",

@@ -1,6 +1,17 @@
 {
   "modules": [
     {
+      "id": "network_menu",
+      "title": "Network",
+      "enabled": true,
+      "type": "menu",
+      "submenus": [
+        {"id": "network_status", "title": "Status"},
+        {"id": "network_config", "title": "Config"},
+        {"id": "back", "title": "Back"}
+      ]
+    },
+    {
       "id": "system_menu",
       "title": "System",
       "enabled": true,
@@ -9,18 +20,97 @@
         {"id": "invert_display", "title": "Invert Display"},
         {"id": "brightness", "title": "Brightness"},
         {"id": "system", "title": "System Stats"},
+	{"id": "power_settings", "title": "Power Settings"},
         {"id": "back", "title": "Back"}
       ]
     },
     {
-      "id": "network_menu",
-      "title": "Network",
+      "id": "throughputserver",
+      "title": "IPerf3 Server",
+      "enabled": true,
+      "depends": {
+        "iperf3_path": "/usr/bin/iperf3",
+        "default_port": "5201"
+      }
+    },
+    {
+      "id": "throughputclient",
+      "title": "IPerf3 Client",
+      "enabled": true,
+      "depends": {
+        "iperf3_path": "/usr/bin/iperf3",
+        "default_port": "5201",
+        "default_duration": "10",
+        "default_protocol": "tcp",
+        "default_bandwidth": "0",
+        "default_parallel": "1",
+        "default_server_ip": "192.168.1.1"
+      }
+    },
+    {
+      "id": "media_menu",
+      "title": "Multimedia",
       "enabled": true,
       "type": "menu",
       "submenus": [
-        {"id": "network_config", "title": "Config"},
-        {"id": "network_status", "title": "Status"},
+        {"id": "hdmi_patch", "title": "Test Patterns"},
+        {"id": "video_player", "title": "Video Player"},
         {"id": "back", "title": "Back"}
+      ]
+    },
+    {
+      "id": "buzzer_settings",
+      "title": "Buzzer",
+      "enabled": false,
+      "type": "GenericList",
+      "list_items": [
+        {"title": "On", "action": "/home/adav/micropanel/scripts/buzzer.sh On"},
+        {"title": "Off", "action": "/home/adav/micropanel/scripts/buzzer.sh Off"},
+        {"title": "Back"}
+      ],
+      "list_selection": "/home/adav/micropanel/scripts/buzzer.sh"
+    },
+    {
+      "id": "hdmi_patch",
+      "title": "HDMI Patch",
+      "enabled": false,
+      "type": "GenericList",
+      "list_items": [
+        {"title": "Off", "action": "/home/adav/micropanel/scripts/hdmi-patch.sh $1"},
+        {"title": "Red", "action": "/home/adav/micropanel/scripts/hdmi-patch.sh $1"},
+        {"title": "Green", "action": "/home/adav/micropanel/scripts/hdmi-patch.sh $1"},
+        {"title": "Blue", "action": "/home/adav/micropanel/scripts/hdmi-patch.sh $1"},
+        {"title": "Cyan", "action": "/home/adav/micropanel/scripts/hdmi-patch.sh $1"},
+        {"title": "Magenta", "action": "/home/adav/micropanel/scripts/hdmi-patch.sh $1"},
+        {"title": "Yellow", "action": "/home/adav/micropanel/scripts/hdmi-patch.sh $1"},
+        {"title": "White", "action": "/home/adav/micropanel/scripts/hdmi-patch.sh $1"},
+        {"title": "Back"}
+      ],
+      "list_selection": "/home/adav/micropanel/scripts/hdmi-patch.sh"
+    },
+    {
+      "id": "power_settings",
+      "title": "Power Settings",
+      "enabled": false,
+      "type": "GenericList",
+      "list_items": [
+        {"title": "Reboot", "action": "/usr/sbin/reboot"},
+        {"title": "Poweroff", "action": "/usr/sbin/poweroff"},
+        {"title": "Back"}
+      ]
+    },
+    {
+      "id": "video_player",
+      "title": "Video Player",
+      "enabled": false,
+      "type": "GenericList",
+      "items_source": "/home/adav/micropanel/scripts/list-videos.sh",
+      "items_path": "/home/adav/micropanel/media",
+      "items_action": "/home/adav/micropanel/scripts/play-video.sh $1 /home/adav/micropanel/media",
+      "list_selection": "/home/adav/micropanel/scripts/list-videos.sh",
+      "list_items": [
+        {"title": "Stop-Playback", "action": "/home/adav/micropanel/scripts/stop-video.sh"},
+        {"title": "Back"}
       ]
     },
     {
@@ -44,34 +134,8 @@
         {"id": "ping", "title": "Ping Test"},
         {"id": "internet", "title": "Internet Test"},
         {"id": "speedtest", "title": "Speed Test"},
-        {"id": "throughputtest", "title": "Throughput"},
         {"id": "back", "title": "Back"}
       ]
-    },
-    {
-      "id": "throughputtest",
-      "title": "Throughput",
-      "enabled": false,
-      "type": "menu",
-      "submenus": [
-        {"id": "throughputserver", "title": "Server"},
-        {"id": "throughputclient", "title": "Client"},
-        {"id": "back", "title": "Back"}
-      ]
-    },
-    {
-      "id": "throughputclient",
-      "title": "Throughput Client",
-      "enabled": false,
-      "depends": {
-        "iperf3_path": "/usr/bin/iperf3",
-        "default_port": "5201",
-        "default_duration": "10",
-        "default_protocol": "tcp",
-        "default_bandwidth": "0",
-        "default_parallel": "1",
-        "default_server_ip": "192.168.1.1"
-      }
     },
     {
       "id": "brightness",
@@ -88,7 +152,7 @@
       "title": "IP Settings",
       "enabled": false,
       "depends": {
-        "action_script": "/mnt/old-nvm/embedded/micropanel-1/micropanel/scripts/dhcp-net-settings.sh",
+        "action_script": "/home/adav/micropanel/scripts/dhcp-net-settings.sh",
         "os_type": "debian",
         "iface_name": "eth0"
       }
@@ -117,15 +181,6 @@
       }
     },
     {
-      "id": "throughputserver",
-      "title": "Throughput Server",
-      "enabled": false,
-      "depends": {
-        "iperf3_path": "/usr/bin/iperf3",
-        "default_port": "5201"
-      }
-    },
-    {
       "id": "wifi",
       "title": "WiFi Settings",
       "enabled": false,
@@ -142,6 +197,6 @@
     }
   ],
   "persistent_data": {
-    "file_path": "/mnt/old-nvm/embedded/micropanel-1/micropanel/settings.json"
+    "file_path": "/home/adav/micropanel/settings.json"
   }
 }

@@ -1,6 +1,17 @@
 {
   "modules": [
     {
+      "id": "network_menu",
+      "title": "Network",
+      "enabled": true,
+      "type": "menu",
+      "submenus": [
+        {"id": "network_status", "title": "Status"},
+        {"id": "network_config", "title": "Config"},
+        {"id": "back", "title": "Back"}
+      ]
+    },
+    {
       "id": "system_menu",
       "title": "System",
       "enabled": true,
@@ -10,17 +21,6 @@
         {"id": "brightness", "title": "Brightness"},
         {"id": "system", "title": "System Stats"},
 	{"id": "power_settings", "title": "Power Settings"},
-        {"id": "back", "title": "Back"}
-      ]
-    },
-    {
-      "id": "network_menu",
-      "title": "Network",
-      "enabled": true,
-      "type": "menu",
-      "submenus": [
-        {"id": "network_config", "title": "Config"},
-        {"id": "network_status", "title": "Status"},
         {"id": "back", "title": "Back"}
       ]
     },
@@ -48,16 +48,27 @@
       }
     },
     {
+      "id": "media_menu",
+      "title": "Multimedia",
+      "enabled": true,
+      "type": "menu",
+      "submenus": [
+        {"id": "hdmi_patch", "title": "Test Patterns"},
+        {"id": "video_player", "title": "Video Player"},
+        {"id": "back", "title": "Back"}
+      ]
+    },
+    {
       "id": "buzzer_settings",
       "title": "Buzzer",
       "enabled": false,
       "type": "GenericList",
       "list_items": [
-        {"title": "On", "action": "/home/pi/micropanel/scripts/buzzer.sh On"},
-        {"title": "Off", "action": "/home/pi/micropanel/scripts/buzzer.sh Off"},
+        {"title": "On", "action": "$MICROPANEL_HOME/scripts/buzzer.sh On"},
+        {"title": "Off", "action": "$MICROPANEL_HOME/scripts/buzzer.sh Off"},
         {"title": "Back"}
       ],
-      "list_selection": "/home/pi/micropanel/scripts/buzzer.sh"
+      "list_selection": "$MICROPANEL_HOME/scripts/buzzer.sh"
     },
     {
       "id": "hdmi_patch",
@@ -65,17 +76,17 @@
       "enabled": false,
       "type": "GenericList",
       "list_items": [
-        {"title": "Off", "action": "/home/pi/micropanel/scripts/hdmi-patch.sh $1"},
-        {"title": "Red", "action": "/home/pi/micropanel/scripts/hdmi-patch.sh $1"},
-        {"title": "Green", "action": "/home/pi/micropanel/scripts/hdmi-patch.sh $1"},
-        {"title": "Blue", "action": "/home/pi/micropanel/scripts/hdmi-patch.sh $1"},
-        {"title": "Cyan", "action": "/home/pi/micropanel/scripts/hdmi-patch.sh $1"},
-        {"title": "Magenta", "action": "/home/pi/micropanel/scripts/hdmi-patch.sh $1"},
-        {"title": "Yellow", "action": "/home/pi/micropanel/scripts/hdmi-patch.sh $1"},
-        {"title": "White", "action": "/home/pi/micropanel/scripts/hdmi-patch.sh $1"},
+        {"title": "Off", "action": "$MICROPANEL_HOME/scripts/hdmi-patch.sh $1"},
+        {"title": "Red", "action": "$MICROPANEL_HOME/scripts/hdmi-patch.sh $1"},
+        {"title": "Green", "action": "$MICROPANEL_HOME/scripts/hdmi-patch.sh $1"},
+        {"title": "Blue", "action": "$MICROPANEL_HOME/scripts/hdmi-patch.sh $1"},
+        {"title": "Cyan", "action": "$MICROPANEL_HOME/scripts/hdmi-patch.sh $1"},
+        {"title": "Magenta", "action": "$MICROPANEL_HOME/scripts/hdmi-patch.sh $1"},
+        {"title": "Yellow", "action": "$MICROPANEL_HOME/scripts/hdmi-patch.sh $1"},
+        {"title": "White", "action": "$MICROPANEL_HOME/scripts/hdmi-patch.sh $1"},
         {"title": "Back"}
       ],
-      "list_selection": "/home/pi/micropanel/scripts/hdmi-patch.sh"
+      "list_selection": "$MICROPANEL_HOME/scripts/hdmi-patch.sh"
     },
     {
       "id": "power_settings",
@@ -93,12 +104,12 @@
       "title": "Video Player",
       "enabled": false,
       "type": "GenericList",
-      "items_source": "/home/pi/micropanel/scripts/list-videos.sh",
-      "items_path": "/home/pi/micropanel/media",
-      "items_action": "/home/pi/micropanel/scripts/play-video.sh $1 /home/pi/micropanel/media",
-      "list_selection": "/home/pi/micropanel/scripts/list-videos.sh",
+      "items_source": "$MICROPANEL_HOME/scripts/list-videos.sh",
+      "items_path": "$MICROPANEL_HOME/media",
+      "items_action": "$MICROPANEL_HOME/scripts/play-video.sh $1 $MICROPANEL_HOME/media",
+      "list_selection": "$MICROPANEL_HOME/scripts/list-videos.sh",
       "list_items": [
-        {"title": "Stop-Playback", "action": "/home/pi/micropanel/scripts/stop-video.sh"},
+        {"title": "Stop-Playback", "action": "$MICROPANEL_HOME/scripts/stop-video.sh"},
         {"title": "Back"}
       ]
     },
@@ -141,7 +152,7 @@
       "title": "IP Settings",
       "enabled": false,
       "depends": {
-        "action_script": "/home/pi/micropanel/scripts/dhcp-net-settings.sh",
+        "action_script": "$MICROPANEL_HOME/scripts/dhcp-net-settings.sh",
         "os_type": "pios",
         "iface_name": "eth0"
       }
@@ -186,6 +197,6 @@
     }
   ],
   "persistent_data": {
-    "file_path": "/home/pi/micropanel/settings.json"
+    "file_path": "$MICROPANEL_HOME/settings.json"
   }
 }
