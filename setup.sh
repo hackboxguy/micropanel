@@ -88,6 +88,16 @@ test 0 -eq $? && echo "[OK]" || { echo "[FAIL]"; exit 1; }
 # Go back to original directory
 cd "$CURRENT_PATH"
 
+# adjust default absolute path of json config as per this installation path
+printf "Fixing paths in json config files....................... "
+# Create backup of original config
+cp "$CONFIG_FILE" "$CONFIG_FILE.original"
+# Update config in place (with temporary file)
+$CURRENT_PATH/screens/update-config-path.sh --input=$CONFIG_FILE --output=$CONFIG_FILE.tmp --path=$CURRENT_PATH
+# Replace original with updated version
+mv "$CONFIG_FILE.tmp" "$CONFIG_FILE"
+test 0 -eq $? && echo "[OK]" || { echo "[FAIL]"; exit 1; }
+
 # Modify service file in-place
 printf "Configuring micropanel service.......................... "
 # Get paths for binary and config
