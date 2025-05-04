@@ -25,20 +25,20 @@ void MenuScreenModule::enter() {
     // If this is the top level menu, always clear the exit to main menu flag
     if (m_isTopLevelMenu) {
         m_exitToMainMenu = false;
-    }    
+    }
     // Clear the display
     m_display->clear();
     usleep(Config::DISPLAY_CMD_DELAY * 5);
-    
+
     // set the menu title to the module title
     m_menu->setTitle(m_title);
 
     // Build the submenu based on registered items
     buildSubmenu();
-    
+
     // Render the menu
     m_menu->render();
-    
+
     // Reset exit flag
     m_exitToParent = false;
 }
@@ -49,7 +49,7 @@ void MenuScreenModule::update() {
 
 void MenuScreenModule::exit() {
     Logger::debug("Exiting menu screen: " + m_id);
-    
+
     // Clear the display
     m_display->clear();
     usleep(Config::DISPLAY_CMD_DELAY * 5);
@@ -67,7 +67,7 @@ bool MenuScreenModule::handleInput() {
         }
         return false; // Exit this screen and return to parent
     }
-    
+
     // Process input
     if (m_input->waitForEvents(100) > 0) {
         m_input->processEvents(
@@ -81,7 +81,7 @@ bool MenuScreenModule::handleInput() {
             }
         );
     }
-    
+
     return true; // Continue running unless exit flag is set
 }
 
@@ -91,7 +91,7 @@ void MenuScreenModule::addSubmenuItem(const std::string& moduleId, const std::st
     item.moduleId = moduleId;
     item.title = title;
     m_submenuItems.push_back(item);
-    
+
     Logger::debug("Added submenu item '" + title + "' with id '" + moduleId + "' to menu " + m_id);
 }
 
@@ -102,11 +102,11 @@ void MenuScreenModule::setModuleRegistry(const std::map<std::string, std::shared
 void MenuScreenModule::buildSubmenu() {
     // Clear any existing menu items
     m_menu->clear();
-    
+
     // Check if we have a registry and items
     if (!m_moduleRegistry || m_submenuItems.empty()) {
         Logger::warning("Menu has no items or module registry not set");
-        
+
         // Add a back option if we have a parent menu
         if (m_parentMenu) {
             m_menu->addItem(std::make_shared<ActionMenuItem>("Back", [this]() {
@@ -116,7 +116,7 @@ void MenuScreenModule::buildSubmenu() {
         }
         return;
     }
-    
+
     // Add each submenu item
     for (const auto& item : m_submenuItems) {
         // Check if this is a Back item
@@ -127,7 +127,7 @@ void MenuScreenModule::buildSubmenu() {
             }));
             continue;
         }
-        
+
 	// Check if this is the special invert_display action
         if (item.moduleId == "invert_display") {
             m_menu->addItem(std::make_shared<ActionMenuItem>(item.title, [this]() {
@@ -188,13 +188,16 @@ void MenuScreenModule::executeSubmenuAction(const std::string& moduleId) {
     // Check if this is a menu module
     auto menuModule = std::dynamic_pointer_cast<MenuScreenModule>(module);
     bool isMenuModule = (menuModule != nullptr);
-    
+
+    // Check if this is a GenericListScreen
+    auto genericListScreen = std::dynamic_pointer_cast<GenericListScreen>(module);
+
     // Check dependencies for regular (non-menu) modules
     if (!isMenuModule) {
         auto& dependencies = ModuleDependency::getInstance();
         if (!dependencies.shouldSkipDependencyCheck(moduleId) && !dependencies.checkDependencies(moduleId)) {
             Logger::warning("Dependencies not satisfied for module: " + moduleId);
-            
+
             // Show a message on display
             m_display->clear();
             usleep(Config::DISPLAY_CMD_DELAY * 5);
@@ -202,7 +205,7 @@ void MenuScreenModule::executeSubmenuAction(const std::string& moduleId) {
             m_display->drawText(0, 10, "Module unavailable:");
             m_display->drawText(0, 20, moduleId);
             usleep(Config::DISPLAY_CMD_DELAY * 2000); // Show for 2 seconds
-            
+
             // Re-render the menu
             m_display->clear();
             usleep(Config::DISPLAY_CMD_DELAY * 5);
@@ -215,6 +218,10 @@ void MenuScreenModule::executeSubmenuAction(const std::string& moduleId) {
     if (isMenuModule) {
         menuModule->setParentMenu(this);
         menuModule->clearMainMenuFlag();
+    }
+    // If this is a GenericListScreen, set its callback to this
+    if (genericListScreen) {
+        genericListScreen->setCallback(this);
     }
 
     // Execute the module
@@ -242,3 +249,21 @@ void MenuScreenModule::navigateToMainMenu() {
     m_exitToMainMenu = true;
 }
 
+void MenuScreenModule::onScreenAction(const std::string& screenId,
+                                    const std::string& action,
+                                    const std::string& value)
+{
+    Logger::debug("Menu received callback from " + screenId +
+                ": Action=" + action + ", Value=" + value);
+
+    // Store the value for later use
+    std::string key = screenId + "." + action;
+    m_callbackValues[key] = value;
+
+    // You can add specific actions here, for example:
+    if (action == "selection_changed") {
+        // Handle selection change
+    } else if (action == "item_activated") {
+        // Handle item activation
+    }
+}

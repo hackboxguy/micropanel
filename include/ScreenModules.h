@@ -379,7 +379,7 @@ enum class ThroughputClientState {
     MENU_STATE_PARALLEL,
     MENU_STATE_SERVER_IP,
     MENU_STATE_BACK,
-    MENU_STATE_TESTING, 
+    MENU_STATE_TESTING,
     MENU_STATE_RESULTS,
     // Submenu states
     SUBMENU_STATE_PROTOCOL,
@@ -493,63 +493,20 @@ private:
     UDPTestResult parseUDPTestResults(const std::string& output);
     void showResultsScreen();
 };
+
 /**
- * Generic List Screen
- * Configurable screen that displays a list of items with associated actions
+ * Interface for screen callback functionality
  */
-/*class GenericListScreen : public ScreenModule {
+class ScreenCallback {
 public:
-    GenericListScreen(std::shared_ptr<Display> display, std::shared_ptr<InputDevice> input);
+    virtual ~ScreenCallback() = default;
 
-    void enter() override;
-    void update() override;
-    void exit() override;
-    bool handleInput() override;
-    std::string getModuleId() const override { return m_id; }
-    // Set the module ID for identification
-    void setId(const std::string& id) { m_id = id; }
-    // Set configuration from JSON
-    void setConfig(const nlohmann::json& config);
-    // Methods for getting selection results
-    std::string getSelectedItem() const { return m_selectedValue; }
-    bool hasSelectionChanged() const { return m_hasSelectionChanged; }
-    void clearSelectionFlag() { m_hasSelectionChanged = false; }
-    // Methods for controlling selection from parent screens
-    void setSelectedItemByIndex(int index);
-    void setSelectedItemByTitle(const std::string& title);
-    int getSelectedIndex() const { return m_selectedIndex; }
-    bool isItemSelected(int index) const;
-    bool isItemSelected(const std::string& title) const;
+    // General callback function that can be used for various purposes
+    virtual void onScreenAction(const std::string& screenId,
+                               const std::string& action,
+                               const std::string& value) = 0;
+};
 
-private:
-    // Item structure
-    struct ListItem {
-        std::string title;
-        std::string action;
-        bool isSelected = false;
-    };
-
-    void renderOptions();
-    void executeAction(const std::string& action);
-    void processSelectionScript();
-    std::string executeCommand(const std::string& command) const;
-    // Configuration
-    std::string m_id = "genericlist";
-    std::string m_title = "Generic List";
-    std::vector<ListItem> m_items;
-    std::string m_selectionScript;  // Script to determine current selection state
-    int m_selectedIndex = 0;        // Currently highlighted option (cursor position)
-    std::string m_selectedValue;    // Value that was selected (for parent access)
-    bool m_hasSelectionChanged = false;
-    // For multi-page handling
-    int m_firstVisibleItem = 0;
-    int m_maxVisibleItems = 4;  // Adjustable based on display size
-    // State flags
-    bool m_stateMode = false;   // Whether this list shows current state
-    bool m_shouldExit = false;
-    std::chrono::time_point<std::chrono::steady_clock> m_lastDrawTime;
-    //std::chrono::steady_clock::time_point m_lastDrawTime;
-};*/
 /**
  * Generic List Screen
  * Configurable screen that displays a list of items with associated actions
@@ -569,6 +526,15 @@ public:
     // Set configuration from JSON
     void setConfig(const nlohmann::json& config);
     void loadDynamicItems();
+
+    //callback
+    void setCallback(ScreenCallback* callback) { m_callback = callback; }
+    // Helper method to trigger callbacks
+    void notifyCallback(const std::string& action, const std::string& value) {
+        if (m_callback) {
+            m_callback->onScreenAction(m_id, action, value);
+        }
+    }
 private:
     // Item structure
     struct ListItem {
@@ -597,4 +563,11 @@ private:
     std::string m_itemsSource;  // Script to generate list items
     std::string m_itemsPath;    // Path parameter for the items source
     std::string m_itemsAction;  // Action template for dynamic items
+
+    ScreenCallback* m_callback = nullptr;
+    // Flag to track if callback should be called when exiting
+    bool m_notifyOnExit = false;
+    std::string m_callbackAction;
+    std::string m_callbackValue;
+    std::string m_selectedValue;
 };

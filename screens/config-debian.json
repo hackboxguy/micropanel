@@ -64,11 +64,11 @@
       "enabled": false,
       "type": "GenericList",
       "list_items": [
-        {"title": "On", "action": "/home/adav/micropanel/scripts/buzzer.sh On"},
-        {"title": "Off", "action": "/home/adav/micropanel/scripts/buzzer.sh Off"},
+        {"title": "On", "action": "$MICROPANEL_HOME/scripts/buzzer.sh On"},
+        {"title": "Off", "action": "$MICROPANEL_HOME/scripts/buzzer.sh Off"},
         {"title": "Back"}
       ],
-      "list_selection": "/home/adav/micropanel/scripts/buzzer.sh"
+      "list_selection": "$MICROPANEL_HOME/scripts/buzzer.sh"
     },
     {
       "id": "hdmi_patch",
@@ -76,17 +76,17 @@
       "enabled": false,
       "type": "GenericList",
       "list_items": [
-        {"title": "Off", "action": "/home/adav/micropanel/scripts/hdmi-patch.sh $1"},
-        {"title": "Red", "action": "/home/adav/micropanel/scripts/hdmi-patch.sh $1"},
-        {"title": "Green", "action": "/home/adav/micropanel/scripts/hdmi-patch.sh $1"},
-        {"title": "Blue", "action": "/home/adav/micropanel/scripts/hdmi-patch.sh $1"},
-        {"title": "Cyan", "action": "/home/adav/micropanel/scripts/hdmi-patch.sh $1"},
-        {"title": "Magenta", "action": "/home/adav/micropanel/scripts/hdmi-patch.sh $1"},
-        {"title": "Yellow", "action": "/home/adav/micropanel/scripts/hdmi-patch.sh $1"},
-        {"title": "White", "action": "/home/adav/micropanel/scripts/hdmi-patch.sh $1"},
+        {"title": "Off", "action": "$MICROPANEL_HOME/scripts/hdmi-patch.sh $1"},
+        {"title": "Red", "action": "$MICROPANEL_HOME/scripts/hdmi-patch.sh $1"},
+        {"title": "Green", "action": "$MICROPANEL_HOME/scripts/hdmi-patch.sh $1"},
+        {"title": "Blue", "action": "$MICROPANEL_HOME/scripts/hdmi-patch.sh $1"},
+        {"title": "Cyan", "action": "$MICROPANEL_HOME/scripts/hdmi-patch.sh $1"},
+        {"title": "Magenta", "action": "$MICROPANEL_HOME/scripts/hdmi-patch.sh $1"},
+        {"title": "Yellow", "action": "$MICROPANEL_HOME/scripts/hdmi-patch.sh $1"},
+        {"title": "White", "action": "$MICROPANEL_HOME/scripts/hdmi-patch.sh $1"},
         {"title": "Back"}
       ],
-      "list_selection": "/home/adav/micropanel/scripts/hdmi-patch.sh"
+      "list_selection": "$MICROPANEL_HOME/scripts/hdmi-patch.sh"
     },
     {
       "id": "power_settings",
@@ -104,12 +104,12 @@
       "title": "Video Player",
       "enabled": false,
       "type": "GenericList",
-      "items_source": "/home/adav/micropanel/scripts/list-videos.sh",
-      "items_path": "/home/adav/micropanel/media",
-      "items_action": "/home/adav/micropanel/scripts/play-video.sh $1 /home/adav/micropanel/media",
-      "list_selection": "/home/adav/micropanel/scripts/list-videos.sh",
+      "items_source": "$MICROPANEL_HOME/scripts/list-videos.sh",
+      "items_path": "$MICROPANEL_HOME/media",
+      "items_action": "$MICROPANEL_HOME/scripts/play-video.sh $1 $MICROPANEL_HOME/media",
+      "list_selection": "$MICROPANEL_HOME/scripts/list-videos.sh",
       "list_items": [
-        {"title": "Stop-Playback", "action": "/home/adav/micropanel/scripts/stop-video.sh"},
+        {"title": "Stop-Playback", "action": "$MICROPANEL_HOME/scripts/stop-video.sh"},
         {"title": "Back"}
       ]
     },
@@ -152,7 +152,7 @@
       "title": "IP Settings",
       "enabled": false,
       "depends": {
-        "action_script": "/home/adav/micropanel/scripts/dhcp-net-settings.sh",
+        "action_script": "$MICROPANEL_HOME/scripts/dhcp-net-settings.sh",
         "os_type": "debian",
         "iface_name": "eth0"
       }
@@ -197,6 +197,6 @@
     }
   ],
   "persistent_data": {
-    "file_path": "/home/adav/micropanel/settings.json"
+    "file_path": "$MICROPANEL_HOME/settings.json"
   }
 }
