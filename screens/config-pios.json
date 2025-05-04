@@ -106,10 +106,10 @@
       "enabled": false,
       "type": "GenericList",
       "list_items": [
-        {"title": "edid", "action": "$MICROPANEL_HOME/scripts/pi-config-txt.sh --input=/boot/firmware/config.txt $1"},
-        {"title": "14.6", "action": "$MICROPANEL_HOME/scripts/pi-config-txt.sh --input=/boot/firmware/config.txt $1"},
-        {"title": "15.6", "action": "$MICROPANEL_HOME/scripts/pi-config-txt.sh --input=/boot/firmware/config.txt $1"},
-        {"title": "27", "action": "$MICROPANEL_HOME/scripts/pi-config-txt.sh --input=/boot/firmware/config.txt $1"},
+        {"title": "edid", "action": "$MICROPANEL_HOME/scripts/pi-config-txt.sh --input=/boot/firmware/config.txt --type=$1"},
+        {"title": "14.6", "action": "$MICROPANEL_HOME/scripts/pi-config-txt.sh --input=/boot/firmware/config.txt --type=$1"},
+        {"title": "15.6", "action": "$MICROPANEL_HOME/scripts/pi-config-txt.sh --input=/boot/firmware/config.txt --type=$1"},
+        {"title": "27", "action": "$MICROPANEL_HOME/scripts/pi-config-txt.sh --input=/boot/firmware/config.txt --type=$1"},
         {"title": "Back"}
       ],
       "list_selection": "$MICROPANEL_HOME/scripts/pi-config-txt.sh --input=/boot/firmware/config.txt"
