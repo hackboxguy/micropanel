@@ -99,34 +99,7 @@ const std::map<std::string, std::string>& ModuleDependency::getModuleDependencie
     // Return all dependencies for the module
     return moduleIt->second;
 }
-/*
-bool ModuleDependency::checkDependencies(const std::string& moduleId) {
-    // Always allow menu modules to pass dependency checks
-    if (shouldSkipDependencyCheck(moduleId)) {
-        return true;
-    }
 
-    // If the module has no dependencies, they're satisfied by default
-    auto moduleIt = m_dependencies.find(moduleId);
-    if (moduleIt == m_dependencies.end()) {
-        return true;
-    }
-
-    // For now, we'll just check if the dependency paths exist
-    // A more sophisticated check might be needed based on your requirements
-    for (const auto& dep : moduleIt->second) {
-        std::string path = dep.second;
-
-        // Check if file exists
-        if (access(path.c_str(), F_OK) != 0) {
-            Logger::warning("Dependency not satisfied: " + path + " for module " + moduleId);
-            return true;//false;TODO
-        }
-    }
-
-    return true;
-}
-*/
 bool ModuleDependency::checkDependencies(const std::string& moduleId) {
     // Always allow menu modules to pass dependency checks
     if (shouldSkipDependencyCheck(moduleId)) {

@@ -268,38 +268,6 @@ void GenericListScreen::renderList()
         usleep(Config::DISPLAY_CMD_DELAY);
     }
 
-/*    // Calculate visible items
-    int lastVisibleItem = std::min(m_firstVisibleItem + m_maxVisibleItems,
-                                  static_cast<int>(m_items.size()));
-    // Clear the list area
-    for (int i = 0; i < m_maxVisibleItems; i++) {
-        int yPos = 16 + (i * 10); // Fixed positioning
-        m_display->drawText(0, yPos, "                ");
-        usleep(Config::DISPLAY_CMD_DELAY);
-    }
-
-    // Draw visible options
-    for (int i = m_firstVisibleItem; i < lastVisibleItem; i++) {
-        int displayIndex = i - m_firstVisibleItem;
-        int yPos = 16 + (displayIndex * 10);
-
-        std::string buffer;
-        // Format with selection indicator
-        if (i == m_selectedIndex) {
-            buffer = "> " + m_items[i].title;
-        } else {
-            buffer = "  " + m_items[i].title;
-        }
-
-        // Truncate if too long
-        if (buffer.length() > 16) {
-            buffer = buffer.substr(0, 16);
-        }
-
-        m_display->drawText(0, yPos, buffer);
-        usleep(Config::DISPLAY_CMD_DELAY);
-    }
-*/
     // Show scroll indicators if needed
     //if (m_firstVisibleItem > 0) {
     //    m_display->drawText(15, 16, "^");
