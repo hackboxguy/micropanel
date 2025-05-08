@@ -59,10 +59,10 @@ log "Using config file: $CONFIG_FILE" force
 printf "Installing dependencies ................................ "
 if [ $VERBOSE -eq 1 ]; then
     DEBIAN_FRONTEND=noninteractive apt-get update
-    DEBIAN_FRONTEND=noninteractive apt-get install -y cmake libudev-dev nlohmann-json3-dev iperf3 libcurl4-openssl-dev avahi-daemon avahi-utils
+    DEBIAN_FRONTEND=noninteractive apt-get install -y cmake libudev-dev nlohmann-json3-dev iperf3 libcurl4-openssl-dev avahi-daemon avahi-utils libraspberrypi-bin
 else
     DEBIAN_FRONTEND=noninteractive apt-get update < /dev/null > /dev/null
-    DEBIAN_FRONTEND=noninteractive apt-get install -y -qq cmake libudev-dev nlohmann-json3-dev iperf3 libcurl4-openssl-dev avahi-daemon avahi-utils < /dev/null > /dev/null
+    DEBIAN_FRONTEND=noninteractive apt-get install -y -qq cmake libudev-dev nlohmann-json3-dev iperf3 libcurl4-openssl-dev avahi-daemon avahi-utils libraspberrypi-bin < /dev/null > /dev/null
 fi
 test 0 -eq $? && echo "[OK]" || { echo "[FAIL]"; exit 1; }
 
@@ -87,6 +87,10 @@ test 0 -eq $? && echo "[OK]" || { echo "[FAIL]"; exit 1; }
 
 # Go back to original directory
 cd "$CURRENT_PATH"
+
+printf "Building utils.......................................... "
+gcc utils/patch-generator.c -o scripts/patch-generator 1> /dev/null 2>/dev/null
+test 0 -eq $? && echo "[OK]" || { echo "[FAIL]"; exit 1; }
 
 # adjust default absolute path of json config as per this installation path
 printf "Fixing paths in json config files....................... "
