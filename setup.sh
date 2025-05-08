@@ -78,10 +78,10 @@ mkdir -p build
 cd build
 if [ $VERBOSE -eq 1 ]; then
     cmake ..
-    make
+    make -j$(nproc)
 else
     cmake .. > /dev/null
-    make > /dev/null
+    make -j$(nproc) > /dev/null
 fi
 test 0 -eq $? && echo "[OK]" || { echo "[FAIL]"; exit 1; }
 
