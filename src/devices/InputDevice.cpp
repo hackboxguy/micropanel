@@ -43,6 +43,15 @@ bool InputDevice::open()
 
     // Set non-blocking mode
     setNonBlocking();
+    // NEW: Grab exclusive access to the device
+    if (ioctl(m_fd, EVIOCGRAB, 1) < 0) {
+        std::cerr << "Failed to get exclusive access to input device: " << strerror(errno) << std::endl;
+        // You can decide whether to continue or fail here
+        // If this is critical, you might want to return false
+        // For now, we'll just log the error and continue
+    } else {
+        std::cout << "Successfully grabbed exclusive access to input device" << std::endl;
+    }
 
     // Test reading device capabilities
     unsigned long evbit[EV_MAX/8/sizeof(long) + 1];
@@ -64,6 +73,7 @@ bool InputDevice::open()
 void InputDevice::close()
 {
     if (isOpen()) {
+        ioctl(m_fd, EVIOCGRAB, 0);
         ::close(m_fd);
         m_fd = -1;
     }
@@ -112,6 +122,12 @@ int InputDevice::waitForEvents(int timeoutMs)
             return -1;
         }
         std::cout << "Successfully reopened input device" << std::endl;
+        // NEW: Re-establish exclusive grab after reopening
+        if (ioctl(m_fd, EVIOCGRAB, 1) < 0) {
+            std::cerr << "Failed to re-grab exclusive access to input device: " << strerror(errno) << std::endl;
+        } else {
+            std::cout << "Successfully re-grabbed exclusive access to input device" << std::endl;
+        }
     }
 
     fd_set readfds;

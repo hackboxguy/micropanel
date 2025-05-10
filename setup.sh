@@ -144,6 +144,9 @@ systemctl enable "$SERVICE_FILE"
 systemctl start micropanel.service
 test 0 -eq $? && echo "[OK]" || { echo "[FAIL]"; exit 1; }
 
+#update our default config.txt for proper operation of media players
+cp configs/config.txt /boot/firmware/
+
 sync
 printf "Installation complete, reboot the system................ \n"
 log "Micropanel configured with:" force
