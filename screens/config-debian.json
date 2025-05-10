@@ -106,8 +106,8 @@
       "enabled": false,
       "type": "GenericList",
       "items_source": "$MICROPANEL_HOME/scripts/list-videos.sh",
-      "items_path": "$MICROPANEL_HOME/media",
-      "items_action": "$MICROPANEL_HOME/scripts/play-video.sh $1 $MICROPANEL_HOME/media",
+      "items_path": "$MICROPANEL_HOME/media/videos",
+      "items_action": "$MICROPANEL_HOME/scripts/play-video.sh $1 $MICROPANEL_HOME/media/videos",
       "list_selection": "$MICROPANEL_HOME/scripts/list-videos.sh",
       "list_items": [
         {"title": "Stop-Playback", "action": "$MICROPANEL_HOME/scripts/stop-video.sh"},
