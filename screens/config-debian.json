@@ -53,8 +53,9 @@
       "enabled": true,
       "type": "menu",
       "submenus": [
-        {"id": "hdmi_patch", "title": "Test Patterns"},
-        {"id": "video_player", "title": "Video Player"},
+        {"id": "test_patches", "title": "Test Patches"},
+        {"id": "video_player", "title": "Videos"},
+        {"id": "image_player", "title": "Images"},
         {"id": "back", "title": "Back"}
       ]
     },
@@ -71,22 +72,22 @@
       "list_selection": "$MICROPANEL_HOME/scripts/buzzer.sh"
     },
     {
-      "id": "hdmi_patch",
-      "title": "HDMI Patch",
+      "id": "test_patches",
+      "title": "Test Patches",
       "enabled": false,
       "type": "GenericList",
       "list_items": [
-        {"title": "Off", "action": "$MICROPANEL_HOME/scripts/hdmi-patch.sh $1"},
-        {"title": "Red", "action": "$MICROPANEL_HOME/scripts/hdmi-patch.sh $1"},
-        {"title": "Green", "action": "$MICROPANEL_HOME/scripts/hdmi-patch.sh $1"},
-        {"title": "Blue", "action": "$MICROPANEL_HOME/scripts/hdmi-patch.sh $1"},
-        {"title": "Cyan", "action": "$MICROPANEL_HOME/scripts/hdmi-patch.sh $1"},
-        {"title": "Magenta", "action": "$MICROPANEL_HOME/scripts/hdmi-patch.sh $1"},
-        {"title": "Yellow", "action": "$MICROPANEL_HOME/scripts/hdmi-patch.sh $1"},
-        {"title": "White", "action": "$MICROPANEL_HOME/scripts/hdmi-patch.sh $1"},
+        {"title": "off", "action": "$MICROPANEL_HOME/scripts/patch-generator --off"},
+        {"title": "red", "action": "$MICROPANEL_HOME/scripts/patch-generator --daemon red"},
+        {"title": "green", "action": "$MICROPANEL_HOME/scripts/patch-generator --daemon green"},
+        {"title": "blue", "action": "$MICROPANEL_HOME/scripts/patch-generator --daemon blue"},
+        {"title": "cyan", "action": "$MICROPANEL_HOME/scripts/patch-generator --daemon cyan"},
+        {"title": "magenta", "action": "$MICROPANEL_HOME/scripts/patch-generator --daemon magenta"},
+        {"title": "yellow", "action": "$MICROPANEL_HOME/scripts/patch-generator --daemon yellow"},
+        {"title": "white", "action": "$MICROPANEL_HOME/scripts/patch-generator --daemon white"},
         {"title": "Back"}
       ],
-      "list_selection": "$MICROPANEL_HOME/scripts/hdmi-patch.sh"
+      "list_selection": "$MICROPANEL_HOME/scripts/patch-generator --read"
     },
     {
       "id": "power_settings",
@@ -101,7 +102,7 @@
     },
     {
       "id": "video_player",
-      "title": "Video Player",
+      "title": "Videos",
       "enabled": false,
       "type": "GenericList",
       "items_source": "$MICROPANEL_HOME/scripts/list-videos.sh",
@@ -110,6 +111,20 @@
       "list_selection": "$MICROPANEL_HOME/scripts/list-videos.sh",
       "list_items": [
         {"title": "Stop-Playback", "action": "$MICROPANEL_HOME/scripts/stop-video.sh"},
+        {"title": "Back"}
+      ]
+    },
+    {
+      "id": "image_player",
+      "title": "Images",
+      "enabled": false,
+      "type": "GenericList",
+      "items_source": "$MICROPANEL_HOME/scripts/list-images.sh",
+      "items_path": "$MICROPANEL_HOME/media/images",
+      "items_action": "$MICROPANEL_HOME/scripts/play-image.sh $1 $MICROPANEL_HOME/media/images",
+      "list_selection": "$MICROPANEL_HOME/scripts/list-images.sh",
+      "list_items": [
+        {"title": "Stop-Playback", "action": "$MICROPANEL_HOME/scripts/stop-image.sh"},
         {"title": "Back"}
       ]
     },

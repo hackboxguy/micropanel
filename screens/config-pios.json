@@ -54,8 +54,9 @@
       "enabled": true,
       "type": "menu",
       "submenus": [
-        {"id": "hdmi_patch", "title": "Test Patterns"},
-        {"id": "video_player", "title": "Video Player"},
+        {"id": "test_patches", "title": "Test Patches"},
+        {"id": "video_player", "title": "Videos"},
+        {"id": "image_player", "title": "Images"},
         {"id": "back", "title": "Back"}
       ]
     },
@@ -72,8 +73,8 @@
       "list_selection": "$MICROPANEL_HOME/scripts/buzzer.sh"
     },
     {
-      "id": "hdmi_patch",
-      "title": "HDMI Patch",
+      "id": "test_patches",
+      "title": "Test Patches",
       "enabled": false,
       "type": "GenericList",
       "list_items": [
@@ -116,7 +117,7 @@
     },
     {
       "id": "video_player",
-      "title": "Video Player",
+      "title": "Videos",
       "enabled": false,
       "type": "GenericList",
       "items_source": "$MICROPANEL_HOME/scripts/list-videos.sh",
@@ -125,6 +126,20 @@
       "list_selection": "$MICROPANEL_HOME/scripts/list-videos.sh",
       "list_items": [
         {"title": "Stop-Playback", "action": "$MICROPANEL_HOME/scripts/stop-video.sh"},
+        {"title": "Back"}
+      ]
+    },
+    {
+      "id": "image_player",
+      "title": "Images",
+      "enabled": false,
+      "type": "GenericList",
+      "items_source": "$MICROPANEL_HOME/scripts/list-images.sh",
+      "items_path": "$MICROPANEL_HOME/media/images",
+      "items_action": "$MICROPANEL_HOME/scripts/play-image.sh $1 $MICROPANEL_HOME/media/images",
+      "list_selection": "$MICROPANEL_HOME/scripts/list-images.sh",
+      "list_items": [
+        {"title": "Stop-Playback", "action": "$MICROPANEL_HOME/scripts/stop-image.sh"},
         {"title": "Back"}
       ]
     },
