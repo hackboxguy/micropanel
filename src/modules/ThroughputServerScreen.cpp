@@ -368,7 +368,7 @@ void ThroughputServerScreen::startServer() {
             close(devNull);
 
             // Execute iperf3 with the port string from this scope
-            execl(iperf3Path.c_str(), "iperf3", "-s", "-p", portStr.c_str(), NULL);
+            execl(iperf3Path.c_str(), "iperf3", "-s", "-p", portStr.c_str(), "--udp-counters-64bit", NULL);
 
             // If execl returns, it failed
             std::exit(1);

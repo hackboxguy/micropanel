@@ -5,6 +5,25 @@ PRINTHELP=0
 VERBOSE=0
 TYPE="none"
 
+# Function to update or add a sysctl parameter
+update_sysctl() {
+    local param=$1
+    local value=$2
+    local config_file="/etc/sysctl.conf"
+    # Check if parameter exists with correct value
+    if grep -q "^$param=$value" "$config_file"; then
+        echo "Parameter $param already set to $value"
+    elif grep -q "^$param=" "$config_file"; then
+        # Parameter exists but with different value - update it
+        echo "Updating $param to $value"
+        sed -i "s|^$param=.*|$param=$value|" "$config_file"
+    else
+        # Parameter doesn't exist - add it
+        echo "Adding $param=$value"
+        echo "$param=$value" >> "$config_file"
+    fi
+}
+
 # Function to print logs based on verbosity
 log() {
     if [ $VERBOSE -eq 1 ] || [ "$2" = "force" ]; then
@@ -135,6 +154,16 @@ else
     exit 1
 fi
 
+test 0 -eq $? && echo "[OK]" || { echo "[FAIL]"; exit 1; }
+
+#following netsocket buffer increase is necessary for iperf3 based udp test
+printf "Updating sysctl file.................................... "
+update_sysctl "net.core.rmem_max" "26214400"
+update_sysctl "net.core.wmem_max" "26214400"
+update_sysctl "net.core.rmem_default" "1310720"
+update_sysctl "net.core.wmem_default" "1310720"
+# Apply changes
+sysctl -p
 test 0 -eq $? && echo "[OK]" || { echo "[FAIL]"; exit 1; }
 
 # Reload systemd, enable and start service

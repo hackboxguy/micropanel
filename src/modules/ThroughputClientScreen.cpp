@@ -1353,7 +1353,7 @@ void ThroughputClientScreen::startTest() {
 
     // In startTest() method, add detailed command logging
     std::string cmdLine = getIperf3Path() + " -c " + m_serverIp + " -p " + std::to_string(m_serverPort) +
-                    " -t " + std::to_string(m_duration) + " -J";
+                    " -t " + std::to_string(m_duration) + " -J -l 9000 -w 1M";
     if (m_protocol == "UDP") cmdLine += " -u";
     if (m_bandwidth > 0) cmdLine += " -b " + std::to_string(m_bandwidth) + "m";
     if (m_parallel > 1) cmdLine += " -P " + std::to_string(m_parallel);
@@ -1399,9 +1399,15 @@ void ThroughputClientScreen::startTest() {
         args.push_back("-t");
         args.push_back(std::to_string(m_duration));
         args.push_back("-J"); // JSON output
-        // Add protocol flag if UDP
+
+	// Add protocol flag if UDP
         if (m_protocol == "UDP") {
             args.push_back("-u");
+	    //following args improve udp test, but need kernel buffer increase in /etc/sysctl.conf
+	    args.push_back("-l");
+            args.push_back("9000");
+            args.push_back("-w");
+            args.push_back("1M");
         }
         // Add bandwidth flag if not Auto
         if (m_bandwidth > 0) {
