@@ -4,566 +4,69 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-µPanel (micropanel) is a C++ daemon that provides a USB-based Human-Machine Interface for embedded Linux devices using an RP2040-based USB HID display dongle with OLED screen, rotary encoder, buttons, and buzzer.
+µPanel (micropanel) is a C++ daemon that provides a USB-based Human-Machine Interface for embedded Linux devices using an RP2040-based USB HID display dongle (VID:1209 PID:0001). The dongle has a SSD1306 128x64 OLED display, rotary encoder with push button, optional directional buttons, and buzzer. It appears as `/dev/ttyACM0` (serial display) and `/dev/input/eventX` (input events) on the host. Raspberry Pi deployments can alternatively use I2C display (`/dev/i2c-1` or `/dev/i2c-3`) and GPIO buttons.
 
-**Hardware Components:**
-- SSD1306 128x64 OLED display
-- Rotary encoder with push button
-- Optional directional push buttons (up/down/left/right/enter)
-- Buzzer for audible feedback
-- Optional sensors (temperature/humidity/gas)
+## Build Commands
 
-**Target Use Cases:**
-- IT and AV professionals finding IP addresses of newly deployed devices in large networks
-- Network administrators diagnosing Ethernet port issues without heavy gear
-- Embedded developers needing minimal local displays for headless devices
+```bash
+# Clean build
+rm -rf build && mkdir build && cd build && cmake .. && make -j$(nproc)
+# Binary: build/micropanel
+
+# Run with verbose output (no automated tests - requires hardware)
+./build/micropanel -v -c screens/config-debian.json
+./build/micropanel -a -i gpio -s /dev/i2c-3 -c screens/config-pios.json -v  # Pi hybrid mode
+
+# Install with systemd service
+cmake -DINSTALL_SYSTEMD_SERVICE=ON -DINSTALL_SCREEN=config-pios.json -DSYSTEMD_UNITFILE_ARGS="-a -i gpio -s /dev/i2c-3" ..
+make && sudo make install
+```
+
+**Dependencies:** `cmake`, `libudev-dev`, `libi2c-dev`, `i2c-tools`, `nlohmann-json3-dev`, `libcurl4-openssl-dev`, `iperf3`
+
+**Compiler:** C++14, `-Wall -Wextra -Wpedantic`, `-Os` with binary stripping.
 
 ## Architecture
 
-The codebase follows a modular architecture with clear separation of concerns:
+### Startup Flow
+1. Parse CLI args → 2. Detect/init display and input devices → 3. Create `Display` wrapper → 4. `initializeModules()` creates all screen modules → 5. `loadConfigFromJson()` registers enabled modules to menu and builds menu hierarchy → 6. Main event loop
 
-### Core Components
-- **MicroPanel**: Main application class that orchestrates the system (`src/MicroPanel.cpp`)
-- **DeviceManager**: Handles USB device detection and communication (`src/devices/DeviceManager.cpp`)
-- **DisplayDevice/I2CDisplayDevice**: Abstracts display communication (`src/devices/`)
-- **InputDevice/MultiInputDevice**: Handles input events from rotary encoder and buttons (`src/devices/`)
-- **MenuSystem**: Core menu navigation logic (`src/menu/`)
-- **ScreenModules**: Individual screen implementations for different functionality (`src/modules/`)
+### Core Classes
+- **MicroPanel** (`src/MicroPanel.cpp`, ~1220 lines): Main orchestrator. Initializes devices, loads JSON config, creates modules, runs event loop. The two key methods are `initializeModules()` (hardcoded module creation) and `loadConfigFromJson()` (JSON-driven registration and menu hierarchy).
+- **DeviceManager** (`src/devices/DeviceManager.cpp`): USB device detection via udev. `detectDevicesWithFallback()` implements hybrid detection (USB first, GPIO/I2C fallback).
+- **DisplayDevice / I2CDisplayDevice** (`src/devices/`): Display communication. `DisplayDevice` uses serial binary protocol; `I2CDisplayDevice` drives SSD1306 directly over I2C.
+- **InputDevice / MultiInputDevice** (`src/devices/`): `InputDevice` reads `/dev/input/eventX` for USB rotary/buttons. `MultiInputDevice` reads GPIO buttons on Pi.
+- **Menu / Display** (`src/menu/`): Menu rendering and navigation. Display wrapper manages brightness, inversion, power save.
+- **MenuScreenModule** (`src/modules/MenuScreenModule.cpp`): Hierarchical submenu container. Holds a registry of all modules and launches child screens. Implements `ScreenCallback` for child-to-parent communication (e.g., "exit_to_main_menu" action triggers `navigateToMainMenu()`).
 
-### Key Directories
-- `src/devices/`: Hardware abstraction layer for display and input devices
-- `src/menu/`: Menu system and display rendering
-- `src/modules/`: Screen modules (network info, system stats, speed tests, etc.)
-- `include/`: Header files with interface definitions
-- `screens/`: JSON configuration files for different deployment types
-- `scripts/`: Shell scripts for system operations (networking, media playback)
-- `configs/`: System configuration files
+### Screen Modules (`src/modules/`)
+All inherit from `ScreenModule` (virtual `enter()`, `update()`, `exit()`, `handleInput()`, `getModuleId()`). Key modules: `NetInfoScreen`, `NetSettingsScreen`, `IPPingScreen`, `SpeedTestScreen`, `ThroughputServerScreen/ClientScreen`, `WiFiSettingsScreen`, `BrightnessScreen`, `SystemStatsScreen`, `GenericListScreen`, `TextBoxScreen`.
 
-### Configuration System
-- JSON-based configuration in `screens/` directory
-- Type-specific configs: `config-debian.json`, `config-pios.json`
-- Additional variants: `config-debian-iperf.json`, `config-pios-iperf.json`
-- Example configs: `screens.json`, `screens-minimal.json`, `screens-all.json`, `nested-screens.json`
-- Modular screen system with dependency management
-- Runtime path adjustment via `screens/update-config-path.sh`
+### JSON Configuration System (`screens/`)
+Configs define which modules are enabled, their menu hierarchy, and dependencies. Module types in JSON:
+- **`"menu"`**: Submenu container with `"submenus"` array
+- **`"GenericList"`**: Configurable list with static `"list_items"` or dynamic `"items_source"` script
+- **`"textbox"`**: Runs a script and displays output (supports `"refresh_sec"` for auto-refresh)
+- **`"action"`**: One-off action (e.g., invert display)
+- **(no type)**: References a module created by `initializeModules()` with matching `"id"`
 
-### Device Communication
-- **Serial Protocol**: Commands sent to `/dev/ttyACM0` for display control (clear, text, brightness, buzzer)
-- **Input Events**: Received from `/dev/input/eventX` for rotary encoder and button presses
-- **I2C Support**: Direct I2C communication for Raspberry Pi deployments (`/dev/i2c-1`, `/dev/i2c-3`)
-- **GPIO Mode**: Alternative input handling using GPIO buttons for Raspberry Pi (`-i gpio`)
-- **Auto-Detection**: Automatic USB device detection and reconnection (enabled by default)
-- **USB Dongle Priority**: When using `-a` with `-i gpio -s /dev/i2c-X`, system automatically prioritizes USB HID dongle if detected, falls back to GPIO/I2C if not found
-- **Hybrid Detection**: Smart device selection that tries USB first, then falls back to specified GPIO/I2C devices seamlessly
+Multiple instances of GenericListScreen or TextBoxScreen use the `"type"` field with unique `"id"` values. Dependencies are read from the `"depends"` object via `ModuleDependency`.
 
 ### Serial Command Protocol
-Core display commands sent to `/dev/ttyACM0`:
-- `0x01`: Clear display
-- `0x02 [X] [Y] Text`: Display text at position
-- `0x03 [X] [Y]`: Set cursor position
-- `0x04 [0/1]`: Invert display ON/OFF
-- `0x05 [0-255]`: Set brightness
-- `0x06`: Draw progress bar
-- `0x07 [0/1]`: Display OFF/ON
-- `0x08 [0/1] [Hz]`: Buzzer control
+Commands to `/dev/ttyACM0`: `0x01` clear, `0x02 [X][Y]Text` draw text, `0x03 [X][Y]` cursor, `0x04 [0/1]` invert, `0x05 [0-255]` brightness, `0x06` progress bar, `0x07 [0/1]` display on/off, `0x08 [0/1][Hz]` buzzer. Minimum 10ms between commands, 50ms after clear.
 
-## Build System
-
-**Build Commands:**
-```bash
-# Clean build
-rm -rf build && mkdir build && cd build
-
-# Configure and build
-cmake ..
-make -j$(nproc)
-
-# Binary location: build/micropanel
-```
-
-**Dependencies:**
-- `libi2c-dev`, `i2c-tools` (I2C communication)
-- `cmake`, `libudev-dev` (build system and USB device detection)
-- `nlohmann-json3-dev` (JSON configuration parsing)
-- `libcurl4-openssl-dev` (HTTP requests for speed tests)
-- `iperf3` (network throughput testing)
-
-**Compiler Requirements:**
-- C++14 standard or higher
-- GCC or Clang with warnings enabled (-Wall -Wextra -Wpedantic)
-- Link-time optimization and binary stripping for minimal size
-
-**Installation:**
-```bash
-# Full system setup (requires root)
-sudo ./setup.sh -t debian  # For Debian/Ubuntu systems
-sudo ./setup.sh -t pios    # For Raspberry Pi OS
-
-# Manual installation with configuration options
-sudo make install  # Installs to /usr/local/bin
-
-# Advanced installation with specific config
-cmake -DINSTALL_SCREEN=config-pios.json -DINSTALL_SYSTEMD_SERVICE=ON ..
-make && sudo make install
-
-# Installation with systemd service and custom arguments
-cmake -DINSTALL_SYSTEMD_SERVICE=ON -DSYSTEMD_UNITFILE_ARGS="-i gpio -s /dev/i2c-3" ..
-make && sudo make install
-
-# Installation with hybrid USB/GPIO detection (RECOMMENDED for Pi)
-cmake -DINSTALL_SYSTEMD_SERVICE=ON -DSYSTEMD_UNITFILE_ARGS="-a -i gpio -s /dev/i2c-3" ..
-make && sudo make install
-
-# Install all configuration files
-cmake -DINSTALL_ALL_CONFIGS=ON ..
-make && sudo make install
-```
-
-**Build Configuration Options:**
-- `INSTALL_ALL_CONFIGS=ON`: Install all JSON config files to `/etc/micropanel/screens/`
-- `INSTALL_SCREEN=config-name.json`: Install specific config as `/etc/micropanel/config.json`
-- `INSTALL_SYSTEMD_SERVICE=ON`: Install systemd service file
-- `SERVICE_USER=username`: Set service user (default: root)
-- `SYSTEMD_UNITFILE_ARGS="args"`: Additional command line arguments for micropanel in systemd service
-- `INSTALL_ADDITIONAL_CONFIGS=ON`: Install configs/ directory if present
-
-## Development Workflow
-
-**Testing the Build:**
-- No automated test suite - testing is done with actual hardware
-- Use verbose mode: `./build/micropanel -v -c screens/config-debian.json`
-- Test GPIO mode (Pi): `./build/micropanel -i gpio -s /dev/i2c-1 -c screens/config-pios.json -v`
-- Test auto-detection: `./build/micropanel -a -c screens/config-debian.json -v`
-- Test hybrid detection: `./build/micropanel -a -i gpio -s /dev/i2c-3 -c screens/config-pios.json -v`
-- Check systemd service: `systemctl status micropanel`
-- Monitor logs: `tail -f /tmp/micropanel.log`
-
-**USB Dongle Auto-Detection System:**
-The system supports intelligent device detection with USB HID dongle priority:
-
-- **Pure USB Mode**: `./micropanel -a` - Waits for USB HID dongle connection
-- **Pure GPIO Mode**: `./micropanel -i gpio -s /dev/i2c-1` - Uses only GPIO buttons and I2C display
-- **Hybrid Mode**: `./micropanel -a -i gpio -s /dev/i2c-3` - **RECOMMENDED** for Raspberry Pi deployments
-  - Tries USB HID dongle detection first (VID:1209 PID:0001)
-  - If USB dongle found: Uses USB input (`/dev/input/eventX`) and display (`/dev/ttyACM0`)
-  - If USB dongle not found: Falls back to GPIO buttons and I2C display
-  - Automatic input mode switching with proper cleanup and exclusive access
-  - Debug logging available with `-v` flag for troubleshooting
-
-**Common Development Tasks:**
-- Modify screen modules in `src/modules/` for new functionality
-- Update JSON configs in `screens/` for menu changes
-- Add new device support in `src/devices/`
-- Extend input handling in `MultiInputDevice.cpp`
-
-**Adding GPIO Support to Screen Modules:**
-When creating new interactive screen modules that need GPIO input support:
-1. Add `handleGPIORotation(int direction)` and `handleGPIOButtonPress()` methods to the class header
-2. Implement both methods in the .cpp file following existing patterns
-3. Add module support to `MicroPanel::simulateRotationForModule()` in `src/MicroPanel.cpp`
-4. Add module support to the button press handling section in `MicroPanel::runModuleWithGPIOInput()`
-5. For PIMPL-based modules (like NetSettingsScreen), add corresponding methods to the Impl class and delegate from public methods
-6. Ensure proper exit handling: GPIO button methods should return `false` when the module should exit (check `m_shouldExit` flags)
-7. Examples: `NetInfoScreen`, `IPPingScreen`, `ThroughputServerScreen`, `ThroughputClientScreen`, `NetSettingsScreen`, `WiFiSettingsScreen`
-
-## Recent Development History
-
-### USB HID Dongle Priority & Hybrid Detection System (Latest)
-- **Intelligent Device Detection**: Implemented hybrid detection mode with USB HID dongle priority and GPIO/I2C fallback
-- **Command Line Integration**: Added support for `-a -i gpio -s /dev/i2c-X` to enable USB-first detection with seamless fallback
-- **Input Mode Auto-Switching**: System automatically disables GPIO mode when USB dongle is detected, prevents device conflicts
-- **Enhanced DeviceManager**: Added `detectDevicesWithFallback()` method for smart device selection based on availability
-- **Exclusive Device Access**: USB input devices get exclusive access with proper cleanup and reconnection handling
-- **Production Ready**: Recommended systemd service configuration for Raspberry Pi deployments with reliable operation
-- **Debug System Enhancement**: All debug messages converted to verbose-only mode using existing Logger system
-- **VID:PID Detection**: Specifically targets µPanel USB dongle (VID:1209 PID:0001) for precise device identification
-- **Zero Configuration**: Works out-of-the-box - plug in USB dongle and it automatically takes priority over GPIO
-
-### TextBoxScreen Periodic Refresh & Multiple Instances
-- **Periodic Script Execution**: Added `refresh_sec` configuration for auto-refreshing script output at configurable intervals (0.5s to 5s+)
-- **Anti-Flicker Updates**: Implemented selective line updates that only refresh changed content, eliminating display artifacts
-- **Multiple Instance Support**: Extended TextBoxScreen to support multiple instances using `"type": "textbox"` pattern (following GenericListScreen approach)
-- **Dynamic Module IDs**: Added `setId()` method and dynamic `getModuleId()` for unique dependency isolation between instances
-- **GPIO Integration**: Fixed TextBoxScreen periodic refresh in GPIO mode by adding proper `handleInput()` calls in `runModuleWithGPIOInput()`
-- **Unicode Character Support**: Added automatic UTF-8 to ASCII conversion for degree symbols (°→*) and other special characters
-- **Generic Script Compatibility**: Enhanced system works with any script output (1-4 lines) without script-specific modifications
-- **Type-Based Module Pattern**: Documented reusable pattern for creating multiple instances of any module class using JSON `type` field
-
-### GPIO Support Expansion
-- **NetSettingsScreen & WiFiSettingsScreen GPIO Support**: Added complete GPIO input support for network configuration screens
-- **Complex Menu Navigation**: Implemented multi-level GPIO navigation for NetSettingsScreen (main menu, mode selection, IP address editing)
-- **IP Selector Integration**: GPIO input now works seamlessly with IP address editing fields in network settings
-- **MicroPanel Integration**: Added proper module type detection and GPIO handling in `MicroPanel::runModuleWithGPIOInput()`
-- **Exit Mechanism Fix**: Fixed "Back" button functionality in NetSettingsScreen GPIO mode by properly handling `m_shouldExit` flag
-- **Bounded Navigation**: Applied consistent non-wraparound navigation patterns across all newly supported modules
-
-### Navigation System Improvements
-- **Eliminated Page Refresh Flicker**: Fixed ThroughputClientScreen page refresh issue when navigating up from end of list by replacing pagination with smooth scrolling
-- **Consistent Navigation Behavior**: Changed from wraparound navigation to bounded navigation (stops at first/last item) to match GenericListScreen pattern
-- **Anti-Flicker Improvements**: Enhanced all screen modules with proper text padding (16 characters) and minimal update rendering
-- **ThroughputServerScreen Optimization**: Added `renderOptions(bool fullRedraw)` overload for selective updates instead of full screen clears
-- **Scroll Indicator Optimization**: Only draw scroll indicators on full redraws to reduce unnecessary screen updates in submenu rendering
-
-### Previous GPIO Support Implementation
-- **ThroughputServerScreen & ThroughputClientScreen**: Added full GPIO support with `handleGPIORotation()` and `handleGPIOButtonPress()` methods
-- **IP Address Picker Fix**: Fixed custom IP selection in ThroughputClientScreen by adding missing `m_ipSelector->handleButton()` call to activate cursor mode
-- **Navigation Arrow Fix**: Fixed Server IP submenu navigation using proper direction checking instead of problematic modulo math
-- **Main Menu Navigation**: Fixed GPIO mode "Main Menu" vs "Back" behavior by adding missing flag propagation logic in `MenuScreenModule::handleGPIOButtonPress()`
-
-### Performance & UI Consistency
-- **GenericListScreen Pattern**: All screen modules now follow consistent navigation patterns with minimal updates and proper text padding
-- **Smooth Scrolling**: Replaced pagination-based navigation with smooth scrolling for better user experience
-- **Reduced Display Commands**: Optimized rendering to minimize display command frequency and reduce flicker
-
-### Busybox Compatibility Improvements
-- **IPPingScreen Busybox Fix**: Fixed ping functionality for minimal Linux environments by replacing GNU-specific `grep -oP` with POSIX-compatible `awk` command pipeline
-- **Cross-Platform Ping**: Updated ping time extraction from `grep -oP 'time=\\K[0-9.]+'` to `grep 'time=' | awk -F'time=' '{print $2}' | awk '{print $1}'`
-- **Enhanced Portability**: Ping functionality now works on busybox, standard Linux, Ubuntu, Raspberry Pi OS, and other Unix-like systems
-
-### Script Optimization & Template System
-- **pi-config-txt.sh Optimization**: Reduced script from 807 lines to ~400 lines (50% reduction) by eliminating 400+ lines of configuration duplication
-- **Template-Based Architecture**: Introduced external template system using `config-base.txt.in` and `display-configs.conf` for maintainable display configurations
-- **Data-Driven Approach**: All display types now defined in single configuration file (`display-configs.conf`) with format: `TYPE:RESOLUTION:HDMI_TIMINGS:PIXEL_FREQ:FB_WIDTH:FB_HEIGHT:DESCRIPTION`
-- **Easy Maintenance**: Adding new display types requires only one line addition to configuration file, no code changes needed
-- **Consistent Output**: All configurations use shared base template ensuring consistency across display types
-
-### Current Status & Capabilities
-- **Complete GPIO Support**: All interactive screen modules now support GPIO input mode (`-i gpio`)
-- **Comprehensive Navigation**: Bounded navigation with anti-flicker rendering across all modules
-- **Network Configuration**: Full GPIO support for IP settings, WiFi settings, and throughput testing
-- **Busybox Compatible**: All network tools work on minimal Linux environments with busybox utilities
-- **Production Ready**: Stable GPIO integration with proper exit handling and state management
-- **Main Menu Navigation**: ScreenCallback pattern enables "Main Menu" functionality in deeply nested screens
-
-### Adding "Main Menu" to Nested Screen Modules
-
-**Problem**: Deep menu navigation (e.g., Main→Network→Status→Interfaces) requires multiple "Back" presses to reach main menu.
-
-**Solution**: Use the proven ScreenCallback pattern that leverages existing MenuScreenModule infrastructure.
-
-#### Implementation Pattern (4 Steps):
-
-**Step 1: Add ScreenCallback Support to Target Module**
-```cpp
-// In include/ScreenModules.h - Add to class declaration:
-class YourScreen : public ScreenModule {
-public:
-    // ... existing methods ...
-
-    // Callback support (same pattern as GenericListScreen)
-    void setCallback(ScreenCallback* callback) { m_callback = callback; }
-    void notifyCallback(const std::string& action, const std::string& value);
-
-private:
-    ScreenCallback* m_callback = nullptr;
-};
-
-// In src/modules/YourScreen.cpp - Implement the method:
-void YourScreen::notifyCallback(const std::string& action, const std::string& value) {
-    if (m_callback) {
-        m_callback->onScreenAction(getModuleId(), action, value);
-    }
-}
-```
-
-**Step 2: Update MenuScreenModule Integration**
-```cpp
-// In src/modules/MenuScreenModule.cpp - Add to executeSubmenuAction():
-// If this is a YourScreen, set its callback to this
-auto yourScreen = std::dynamic_pointer_cast<YourScreen>(module);
-if (yourScreen) {
-    yourScreen->setCallback(this);
-}
-```
-
-**Step 3: Handle Exit to Main Menu Action**
-```cpp
-// In src/modules/MenuScreenModule.cpp - Add to onScreenAction():
-} else if (action == "exit_to_main_menu") {
-    // Handle request to navigate to main menu from child screen
-    Logger::debug("Child screen requested exit to main menu: " + screenId);
-    navigateToMainMenu();  // Uses existing proven mechanism
-}
-```
-
-**Step 4: Add Main Menu Option to Target Screen**
-```cpp
-// Add "Main Menu" as menu option (after "Back")
-// When selected, trigger callback:
-notifyCallback("exit_to_main_menu", "");
-```
-
-#### Complete Working Example (NetInfoScreen):
-
-**Header Addition** (`include/ScreenModules.h`):
-```cpp
-class NetInfoScreen : public ScreenModule {
-    // Callback support
-    void setCallback(ScreenCallback* callback) { m_callback = callback; }
-    void notifyCallback(const std::string& action, const std::string& value);
-private:
-    ScreenCallback* m_callback = nullptr;
-};
-```
-
-**Implementation** (`src/modules/NetInfoScreen.cpp`):
-```cpp
-// Add menu options during interface list building:
-InterfaceInfo backOption;
-backOption.name = "Back";
-backOption.linkUp = false;  // Prevent asterisk indicators on menu items
-m_interfaces.push_back(backOption);
-
-InterfaceInfo mainMenuOption;
-mainMenuOption.name = "Main Menu";
-mainMenuOption.linkUp = false;
-m_interfaces.push_back(mainMenuOption);
-
-// Handle selection in button press logic:
-if (selectedIndex == interfaces.size() - 1) {
-    // "Main Menu" selected
-    notifyCallback("exit_to_main_menu", "");
-    shouldExit = true;
-} else if (selectedIndex == interfaces.size() - 2) {
-    // "Back" selected
-    shouldExit = true;
-}
-```
-
-#### Key Design Principles:
-
-1. **Leverage Existing Infrastructure**: Uses MenuScreenModule's proven `navigateToMainMenu()` mechanism
-2. **ScreenCallback Pattern**: Same communication pattern as GenericListScreen uses successfully
-3. **Defensive Programming**: Always initialize `linkUp = false` for menu items to prevent visual artifacts
-4. **Proper Indexing**: Account for multiple menu items (`size() - 2` for last interface, `size() - 1` for Main Menu)
-5. **Selection Preservation**: Handle all items during refresh cycles to prevent index confusion
-
-#### Benefits:
-- **Reusable**: Works for any ScreenModule (NetInfoScreen, IPPingScreen, etc.)
-- **Proven**: Uses existing, tested MenuScreenModule navigation logic
-- **Consistent**: Matches existing "Main Menu" behavior in other menu levels
-- **Reliable**: Handles edge cases like periodic refresh and selection preservation
-
-### Adding Generic Script Execution with TextBoxScreen
-
-**Problem**: Need to display output from shell scripts (version info, hardware details, CPU temperature, etc.) with both static and auto-refreshing display capabilities.
-
-**Solution**: Use the enhanced TextBoxScreen module that supports multiple instances, periodic refresh, and anti-flicker updates.
-
-#### Enhanced TextBoxScreen Features (Latest):
-- ✅ **Multiple Instances**: Create unlimited TextBoxScreen instances with unique IDs using `"type": "textbox"`
-- ✅ **Periodic Refresh**: Auto-refresh script output at configurable intervals (`refresh_sec`)
-- ✅ **Anti-Flicker Updates**: Selective line updates to minimize display artifacts
-- ✅ **Unicode Support**: Automatic UTF-8 to ASCII conversion (e.g., `°` → `*`)
-- ✅ **Generic Script Support**: Works with any script output (1-4 lines)
-- ✅ **GPIO Full Support**: Complete GPIO mode compatibility
-- ✅ **Backward Compatible**: Static mode when no `refresh_sec` specified
-
-#### Multiple TextBox Instances Pattern (Recommended):
-
-Following the **GenericListScreen pattern**, multiple TextBoxScreen instances are supported using the `"type": "textbox"` field:
-
-**Step 1: Configure Multiple Instances in JSON**
-```json
-{
-  "id": "version_info",
-  "title": "Version",
-  "enabled": false,
-  "type": "textbox",
-  "depends": {
-    "script_path": "$MICROPANEL_HOME/scripts/micropanel-version.sh",
-    "display_title": "Version"
-  }
-},
-{
-  "id": "cpu_temp",
-  "title": "CPU-Temp",
-  "enabled": false,
-  "type": "textbox",
-  "depends": {
-    "script_path": "$MICROPANEL_HOME/scripts/pi-cpu-temp.sh",
-    "refresh_sec": "1.0",
-    "display_title": "CPU-Temp"
-  }
-}
-```
-
-**Step 2: Add to Menu Structure**
-```json
-{
-  "id": "system_menu",
-  "title": "System",
-  "type": "menu",
-  "submenus": [
-    {"id": "version_info", "title": "Version"},
-    {"id": "cpu_temp", "title": "CPU-Temp"},
-    {"id": "back", "title": "Back"}
-  ]
-}
-```
-
-**Step 3: No Code Changes Required**
-The system automatically:
-- Creates separate TextBoxScreen instances for each `"type": "textbox"` entry
-- Assigns unique IDs for dependency isolation
-- Handles both static and refresh modes
-
-#### Periodic Refresh Configuration:
-
-**Static Mode** (Original behavior):
-```json
-"depends": {
-  "script_path": "/path/to/script.sh",
-  "display_title": "Title"
-}
-```
-
-**Refresh Mode** (New capability):
-```json
-"depends": {
-  "script_path": "/path/to/script.sh",
-  "refresh_sec": "0.5",               // Refresh every 0.5 seconds
-  "display_title": "Live Data"
-}
-```
-
-**Refresh Timing Guidelines:**
-- **Minimum recommended**: `"0.5"` (500ms)
-- **CPU monitoring**: `"1.0"` (1 second)
-- **Temperature**: `"2.0"` (2 seconds)
-- **Network stats**: `"5.0"` (5 seconds)
-
-#### Anti-Flicker Implementation:
-
-The enhanced TextBoxScreen uses **selective line updates**:
-```
-Before: Clear entire display → Redraw all 5 lines (flicker)
-After:  Compare old vs new → Update only changed lines (smooth)
-```
-
-**Example**: CPU temperature script output
-- Line 0: `"Temp: 42*C"` → `"Temp: 43*C"` ✅ **Updates**
-- Line 1: `"Freq: 800MHz"` → `"Freq: 800MHz"` ❌ **No update**
-- Line 2: `"Usage: 28.6%"` → `"Usage: 15.2%"` ✅ **Updates**
-- Line 3: `"23:06:31"` → `"23:06:32"` ✅ **Updates**
-
-#### Unicode Character Handling:
-
-**Problem**: SSD1306 displays only support ASCII 0-127, but scripts may output Unicode.
-
-**Solution**: Automatic UTF-8 to ASCII conversion in TextBoxScreen:
-- `°` (degree symbol) → `*` (asterisk)
-- `µ` (micro symbol) → `u` (letter u)
-- Extensible for additional Unicode characters
-
-#### Creating Reusable Module Types Pattern:
-
-**For Any Module Class** (NetSettingsScreen, TextBoxScreen, etc.):
-
-**Step 1: Add Dynamic ID Support**
-```cpp
-// In include/ScreenModules.h
-class YourModuleScreen : public ScreenModule {
-private:
-    std::string m_moduleId;  // Add member variable
-public:
-    void setId(const std::string& id) { m_moduleId = id; }
-    std::string getModuleId() const override { return m_moduleId; }
-};
-
-// Update dependency lookups to use m_moduleId instead of hardcoded strings
-dependencies.getDependencyPath(m_moduleId, "config_key");
-```
-
-**Step 2: Add Type Handling in MicroPanel.cpp**
-```cpp
-// In loadConfigFromJson(), add after existing type checks:
-bool isYourModuleType = moduleType == "your_module_type";
-
-if (isYourModuleType) {
-    auto yourModule = std::make_shared<YourModuleScreen>(m_display, m_inputDevice);
-    yourModule->setId(id);
-    m_modules[id] = yourModule;
-    if (enabled) {
-        registerModuleInMenu(id, title);
-    }
-}
-```
-
-**Step 3: Use in JSON Configuration**
-```json
-{
-  "id": "unique_instance_1",
-  "title": "Instance 1",
-  "type": "your_module_type",
-  "depends": { /* instance-specific config */ }
-},
-{
-  "id": "unique_instance_2",
-  "title": "Instance 2",
-  "type": "your_module_type",
-  "depends": { /* different config */ }
-}
-```
-
-#### TextBoxScreen File Structure:
-- **Header**: `include/ScreenModules.h` - Enhanced class with dynamic ID support
-- **Implementation**: `src/modules/TextBoxScreen.cpp` - Full implementation with refresh and anti-flicker
-- **Integration**: `src/MicroPanel.cpp` - Type-based instantiation logic
-- **Example Scripts**: `scripts/pi-cpu-temp.sh` - Reference implementation for refresh-capable scripts
-- **Registration**: `src/MicroPanel.cpp` - Module registration
-- **Build**: `CMakeLists.txt` - Source file inclusion
-- **Config**: `screens/*.json` - JSON configuration
-
-**Navigation Flow**: Menu → TextBox → (script executes) → (shows output) → (press any key) → Back to Menu
-
-This pattern provides a reusable solution for any script that outputs text information to the OLED display.
-
-### Known Issues & Limitations
-- **Hardware Dependency**: Requires actual µPanel hardware for full testing
-- **Display Command Delays**: Navigation has slight delays due to required 10ms delays between display commands
-
-**Service Management:**
-```bash
-# Control systemd service
-sudo systemctl start/stop/restart micropanel
-sudo systemctl enable/disable micropanel
-journalctl -u micropanel -f  # Follow service logs
-```
-
-**Hardware Debugging:**
-```bash
-# Check USB device detection
-lsusb | grep -i hid
-ls /dev/ttyACM*
-ls /dev/input/event*
-
-# Test I2C (Raspberry Pi)
-i2cdetect -y 1
-i2cdetect -y 3
-
-# Check GPIO buttons (Raspberry Pi)
-dmesg | grep button
-cat /proc/bus/input/devices | grep -A5 "gpio-keys"
-```
+### Display Constraints
+128x64 pixels with 6x8 font = 21 chars wide, 8 lines. Menu shows 6 items per page with scroll indicators. All text should be padded to 16 characters to avoid rendering artifacts.
 
 ## Code Patterns
 
-- **RAII**: Proper resource management for device handles
-- **Factory Pattern**: Screen module creation via ScreenModuleFactory
-- **Observer Pattern**: Input event handling and menu navigation
-- **Dependency Injection**: Module dependencies managed via ModuleDependency.cpp
-- **State Machine**: Menu navigation and screen transitions
-- **GPIO Support Pattern**: Interactive screen modules implement `handleGPIORotation(int direction)` and `handleGPIOButtonPress()` methods for GPIO input compatibility
+### Anti-Flicker Rendering (follow GenericListScreen)
+- Use `render*Method(bool fullRedraw)` overloads
+- On minimal updates: clear only selection markers with `m_display->drawText(0, yPos, " ")`
+- Pad text to 16 chars: `while (text.length() < 16) text += " ";`
+- Draw scroll indicators only on `fullRedraw=true`
 
-### Navigation & Rendering Patterns
-**Anti-Flicker Rendering** (follow GenericListScreen pattern):
-- Use `render*Method(bool fullRedraw)` overloads for all submenu methods
-- Clear only selection markers on minimal updates: `m_display->drawText(0, yPos, " ")`
-- Pad all text to 16 characters: `while (text.length() < 16) text += " ";`
-- Draw scroll indicators only on `fullRedraw=true` to reduce flicker
-
-**Bounded Navigation** (stops at first/last item, no wraparound):
+### Bounded Navigation (no wraparound)
 ```cpp
 if (direction < 0) {
     if (currentIndex > 0) currentIndex--;
@@ -572,51 +75,48 @@ if (direction < 0) {
 }
 ```
 
-**Smooth Scrolling** for long lists:
+### Smooth Scrolling
 ```cpp
-if (selectedIndex < firstVisibleItem) {
+if (selectedIndex < firstVisibleItem)
     firstVisibleItem = selectedIndex;
-} else if (selectedIndex >= firstVisibleItem + MAX_VISIBLE_ITEMS) {
+else if (selectedIndex >= firstVisibleItem + MAX_VISIBLE_ITEMS)
     firstVisibleItem = selectedIndex - MAX_VISIBLE_ITEMS + 1;
-}
 ```
 
-## Important Notes
+### ScreenCallback Pattern (child-to-parent communication)
+Child modules call `notifyCallback("exit_to_main_menu", "")` which `MenuScreenModule::onScreenAction()` handles by calling `navigateToMainMenu()`. To add this to a new module: add `setCallback(ScreenCallback*)` and `notifyCallback()` methods, wire up in `MenuScreenModule::executeSubmenuAction()`, and handle the action in `onScreenAction()`. See `GenericListScreen` and `NetInfoScreen` for examples.
 
-- **Hardware Dependent**: Requires actual µPanel hardware for full testing
-- **Root Privileges**: Many operations require root access for device communication
-- **Platform Specific**: Different configurations for Debian vs Raspberry Pi OS
-- **Real-time Constraints**: Input processing and display updates must be responsive
-- **Serial Communication**: Binary protocol implementation in DisplayDevice classes
-- **Dual Input Modes**: Traditional USB HID vs GPIO button input for different hardware configurations
-- **Auto-Detection**: Default behavior waits for device connection and handles reconnection
-- **Mixed Device Types**: Supports both USB serial and I2C displays simultaneously
-- **GPIO Input Integration**: Screen modules handle GPIO input via dedicated methods rather than traditional input polling
+### Adding GPIO Support to Screen Modules
+1. Add `handleGPIORotation(int direction)` and `handleGPIOButtonPress()` to the class in `include/ScreenModules.h`
+2. Implement both in the .cpp file (`handleGPIOButtonPress()` returns `false` to exit)
+3. Add to `MicroPanel::simulateRotationForModule()` in `src/MicroPanel.cpp`
+4. Add to button press handling in `MicroPanel::runModuleWithGPIOInput()`
+5. For PIMPL modules (like NetSettingsScreen), delegate from public methods to Impl class
+
+### Multiple Module Instances (type-based pattern)
+To support multiple instances of a module class: add `setId()` / dynamic `getModuleId()` to the class, add type handling in `MicroPanel::loadConfigFromJson()`, and use `"type": "your_type"` with unique `"id"` values in JSON config. See `TextBoxScreen` and `GenericListScreen` for reference.
+
+### TextBoxScreen Periodic Refresh
+Set `"refresh_sec"` in the `"depends"` object (minimum 0.5s). Uses selective line updates - compares old vs new output and only redraws changed lines. Automatic UTF-8 to ASCII conversion for SSD1306 compatibility (e.g., `°` → `*`).
 
 ## Command Line Options
 
-**Key Arguments:**
 ```bash
 ./micropanel [OPTIONS]
-  -i DEVICE   Input device (/dev/input/eventX or "gpio" for Pi GPIO buttons)
-  -s DEVICE   Display device (/dev/ttyACM0 or /dev/i2c-1 for I2C)
-  -c FILE     JSON configuration file (screens/config-*.json)
-  -a          Enable auto-detection (default: enabled)
+  -i DEVICE   Input: /dev/input/eventX or "gpio" for Pi GPIO buttons
+  -s DEVICE   Display: /dev/ttyACM0 or /dev/i2c-1 for I2C
+  -c FILE     JSON config file (screens/config-*.json)
+  -a          Auto-detect USB dongle (default: enabled)
   -v          Verbose debug output
   -p          Power save mode (display timeout)
 ```
 
-**Configuration Examples:**
-```bash
-# Raspberry Pi with GPIO and I2C display (pure GPIO mode)
-./micropanel -i gpio -s /dev/i2c-1 -c screens/config-pios.json
+Three device modes: **USB** (`-a`), **GPIO** (`-i gpio -s /dev/i2c-X`), **Hybrid** (`-a -i gpio -s /dev/i2c-X`, recommended for Pi — tries USB first, falls back to GPIO/I2C).
 
-# Hybrid mode: USB dongle priority with GPIO/I2C fallback (RECOMMENDED for Pi)
-./micropanel -a -i gpio -s /dev/i2c-3 -c screens/config-pios.json
+## Important Constraints
 
-# Standard USB setup with auto-detection
-./micropanel -c screens/config-debian.json
-
-# Manual device specification
-./micropanel -i /dev/input/event11 -s /dev/ttyACM0 -c screens/config-debian.json
-```
+- No automated test suite — testing requires actual µPanel hardware
+- Root privileges needed for device communication
+- Different configs for Debian (`config-debian.json`) vs Raspberry Pi OS (`config-pios.json`)
+- Scripts in `scripts/` must be POSIX-compatible (busybox support required, no GNU-specific flags like `grep -oP`)
+- Shell scripts for Pi display configuration use template system: `configs/config-base.txt.in` + `configs/display-configs.conf`
