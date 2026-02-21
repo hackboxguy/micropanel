@@ -53,7 +53,7 @@ Configs define which modules are enabled, their menu hierarchy, and dependencies
 Multiple instances of GenericListScreen or TextBoxScreen use the `"type"` field with unique `"id"` values. Dependencies are read from the `"depends"` object via `ModuleDependency`.
 
 ### Serial Command Protocol
-Commands to `/dev/ttyACM0`: `0x01` clear, `0x02 [X][Y]Text` draw text, `0x03 [X][Y]` cursor, `0x04 [0/1]` invert, `0x05 [0-255]` brightness, `0x06` progress bar, `0x07 [0/1]` display on/off, `0x08 [0/1][Hz]` buzzer. Minimum 10ms between commands, 50ms after clear.
+Commands to `/dev/ttyACM0`: `0x01` clear, `0x02 [X][Y][Len][Text...]` draw text (length-prefixed, max 124 bytes), `0x03 [X][Y]` cursor, `0x04 [0/1]` invert, `0x05 [0-255]` brightness, `0x06` progress bar, `0x07 [0/1]` display on/off, `0x08 [0/1][Hz]` buzzer. Protocol is pure binary — no CR/LF terminators. Minimum 10ms between commands, 50ms after clear.
 
 ### Display Constraints
 128x64 pixels with 6x8 font = 21 chars wide, 8 lines. Menu shows 6 items per page with scroll indicators. All text should be padded to 16 characters to avoid rendering artifacts.

@@ -78,7 +78,7 @@ This companion linux daemon **micropanel** handles USB detection, menu navigatio
 | Command | Purpose               | Format              |
 | ------- | --------------------- | ------------------- |
 | `0x01`  | Clear display         | `\x01`              |
-| `0x02`  | Display text line     | `\x02 [X] [Y] Text` |
+| `0x02`  | Display text line     | `\x02 [X] [Y] [Len] Text` |
 | `0x03`  | Set cursor position   | `\x03 [X] [Y]`      |
 | `0x04`  | Invert display ON/OFF | `\x04 [0 or 1]`        |
 | `0x05`  | Set brightness        | `\x05 [0-255]`      |
@@ -91,8 +91,8 @@ Example Bash commands for sending:
 # Clear the display
 echo -ne "\x01" > /dev/ttyACM0
 
-# Display text on first line
-echo -ne "\x02\x00\x00Line 1" > /dev/ttyACM0
+# Display text on first line (length-prefixed: \x06 = 6 bytes for "Line 1")
+echo -ne "\x02\x00\x00\x06Line 1" > /dev/ttyACM0
 
 # Set cursor position
 echo -ne "\x03\x00\x20" > /dev/ttyACM0

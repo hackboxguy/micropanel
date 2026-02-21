@@ -57,7 +57,7 @@ Two-tier testing framework to validate changes before and after each improvement
 - **Context:** Coordinated protocol upgrade with usb-hid-display RP2040 firmware. Firmware changes happen separately — this is the micropanel daemon side only.
 - **Issue:** `CMD_DRAW_TEXT` (0x02) currently sends `[0x02][x][y][text...]` with no length byte and no terminator. The firmware uses a fragile 5ms timeout to decide when the text payload ends. USB packet coalescing or fragmentation can split or merge payloads unpredictably, causing garbled display output.
 - **Fix:** Change `DisplayDevice::drawText()` to send `[0x02][x][y][len][text...]` where `len` is a single byte. The firmware max buffer is 128 bytes, so max text length is 124 (128 - 4 byte header: cmd + x + y + len). Clamp text to 124 bytes with a log warning if exceeded. Update the command vector from `textLen + 3` to `textLen + 4` and insert the length byte at `cmd[3]`, shifting the text payload to `cmd.data() + 4`. Add a `CMD_DRAW_TEXT_MAX_LEN = 124` constant to `Config.h`.
-- **Status:** [x] Done (daemon side) — added length byte to drawText(), added CMD_DRAW_TEXT_MAX_LEN constant. Requires matching firmware update.
+- **Status:** [x] Done — added length byte to drawText(), added CMD_DRAW_TEXT_MAX_LEN constant. Firmware updated and verified.
 
 ### H0b. Remove CR/LF command terminator dependency
 - **Files:** `src/devices/DisplayDevice.cpp` (all sendCommand/flushBuffer paths)
