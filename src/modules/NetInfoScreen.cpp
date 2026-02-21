@@ -307,15 +307,16 @@ bool NetInfoScreen::Impl::getInterfaceDetails(InterfaceInfo& interface)
         if (ifa->ifa_addr->sa_family == AF_INET) {
             // IPv4 address
             struct sockaddr_in *addr = (struct sockaddr_in *)ifa->ifa_addr;
-            struct sockaddr_in *mask = (struct sockaddr_in *)ifa->ifa_netmask;
-
             // Get IP address
             inet_ntop(AF_INET, &addr->sin_addr, addrStr, sizeof(addrStr));
             interface.ipAddress = addrStr;
 
             // Get netmask
-            inet_ntop(AF_INET, &mask->sin_addr, addrStr, sizeof(addrStr));
-            interface.netmask = addrStr;
+            if (ifa->ifa_netmask) {
+                struct sockaddr_in *mask = (struct sockaddr_in *)ifa->ifa_netmask;
+                inet_ntop(AF_INET, &mask->sin_addr, addrStr, sizeof(addrStr));
+                interface.netmask = addrStr;
+            }
 
             break;
         }

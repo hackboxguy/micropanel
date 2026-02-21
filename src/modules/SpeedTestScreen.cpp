@@ -14,6 +14,7 @@
 #include <chrono>
 #include <iomanip>
 #include <sstream>
+#include <mutex>
 #include <curl/curl.h>
 
 // Callback function for CURL to write downloaded data
@@ -47,12 +48,11 @@ SpeedTestScreen::SpeedTestScreen(std::shared_ptr<Display> display, std::shared_p
     // Initialize configuration
     checkConfiguration();
     
-    // Initialize CURL (will be done only once)
-    static bool curlInitialized = false;
-    if (!curlInitialized) {
+    // Initialize CURL (thread-safe one-time initialization)
+    static std::once_flag curlInitFlag;
+    std::call_once(curlInitFlag, []() {
         curl_global_init(CURL_GLOBAL_ALL);
-        curlInitialized = true;
-    }
+    });
 }
 
 bool SpeedTestScreen::checkConfiguration() {

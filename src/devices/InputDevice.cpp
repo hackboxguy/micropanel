@@ -46,12 +46,10 @@ bool InputDevice::open()
 
     // Set non-blocking mode
     setNonBlocking();
-    // NEW: Grab exclusive access to the device
+    // Grab exclusive access to the device
     if (ioctl(m_fd, EVIOCGRAB, 1) < 0) {
-        std::cerr << "Failed to get exclusive access to input device: " << strerror(errno) << std::endl;
-        // You can decide whether to continue or fail here
-        // If this is critical, you might want to return false
-        // For now, we'll just log the error and continue
+        std::cerr << "[WARNING] Failed to get exclusive access to input device: " << strerror(errno)
+                  << " — other processes may steal input events" << std::endl;
     } else {
         std::cout << "Successfully grabbed exclusive access to input device" << std::endl;
     }

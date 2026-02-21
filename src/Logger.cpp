@@ -1,4 +1,4 @@
 #include "Logger.h"
 
 // Initialize static member
-bool Logger::m_verbose = false;
+std::atomic<bool> Logger::m_verbose{false};

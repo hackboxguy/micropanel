@@ -108,37 +108,37 @@ Two-tier testing framework to validate changes before and after each improvement
 - **File:** `src/devices/I2CDisplayDevice.cpp:164-179`
 - **Issue:** `writeCommand()` called repeatedly in `clear()` and other methods with no return value checks. A failed write leaves the display in an inconsistent state with no indication of failure.
 - **Fix:** Check return value of `writeCommand()` and bail out or retry on failure.
-- **Status:** [ ] Not started
+- **Status:** [x] Done — added return value checks on all writeCommand() calls in clear(), setBrightness(), and updateDisplay().
 
 ### M2. Unchecked netmask null pointer
-- **File:** `src/modules/NetSettingsScreen.cpp:310`
+- **File:** `src/modules/NetInfoScreen.cpp:310`
 - **Issue:** `ifa->ifa_netmask` cast to `struct sockaddr_in*` without null check. Some interfaces may not have a netmask, causing null pointer dereference.
 - **Fix:** Add `if (ifa->ifa_netmask)` guard before the cast.
-- **Status:** [ ] Not started
+- **Status:** [x] Done — added null guard around ifa->ifa_netmask dereference in NetInfoScreen.cpp.
 
 ### M3. Logger verbose flag not thread-safe
 - **File:** `src/Logger.cpp:4`, `include/Logger.h`
 - **Issue:** `static bool m_verbose` read from multiple threads (main thread, signal handler, worker threads) without synchronization.
 - **Fix:** Change to `static std::atomic<bool> m_verbose`.
-- **Status:** [ ] Not started
+- **Status:** [x] Done — changed to std::atomic<bool> in both header and source file.
 
 ### M4. Static curl init without synchronization
 - **File:** `src/modules/SpeedTestScreen.cpp:51-55`
 - **Issue:** `static bool curlInitialized` checked and set without a mutex. Race condition if multiple SpeedTestScreen instances are created concurrently.
 - **Fix:** Use `std::call_once` with `std::once_flag` for thread-safe one-time initialization.
-- **Status:** [ ] Not started
+- **Status:** [x] Done — replaced static bool with std::once_flag and std::call_once.
 
 ### M5. EVIOCGRAB failure silently ignored
 - **File:** `src/devices/InputDevice.cpp:50-54`
 - **Issue:** If exclusive grab fails, execution continues. Other processes can steal input events, leading to missed or duplicated input.
 - **Fix:** Either return false to signal the caller, or document why continuing is acceptable with a more prominent log message.
-- **Status:** [ ] Not started
+- **Status:** [x] Done — added prominent warning message explaining that other processes may steal input events. Continuing is acceptable because the device still functions, just without exclusive access.
 
 ### M6. Integer range not validated for I2C cursor
 - **File:** `src/devices/I2CDisplayDevice.cpp:197-198`
 - **Issue:** `setCursor(int x, int y)` casts to `uint8_t` without validating range. Negative or out-of-range values silently wrap.
 - **Fix:** Clamp values to valid display range (0-127 for x, 0-63 for y) before cast.
-- **Status:** [ ] Not started
+- **Status:** [x] Done — added clamping to DISPLAY_WIDTH-1 and DISPLAY_HEIGHT-1 before uint8_t cast.
 
 ---
 

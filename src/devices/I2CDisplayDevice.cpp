@@ -168,12 +168,12 @@ void I2CDisplayDevice::clear() {
     std::memset(m_displayBuffer, 0, sizeof(m_displayBuffer));
 
     // Set address range for whole display
-    writeCommand(SSD1306_PAGE_ADDR);
-    writeCommand(0);
-    writeCommand(DISPLAY_PAGES - 1);
-    writeCommand(SSD1306_COLUMN_ADDR);
-    writeCommand(0);
-    writeCommand(DISPLAY_WIDTH - 1);
+    if (!writeCommand(SSD1306_PAGE_ADDR)) return;
+    if (!writeCommand(0)) return;
+    if (!writeCommand(DISPLAY_PAGES - 1)) return;
+    if (!writeCommand(SSD1306_COLUMN_ADDR)) return;
+    if (!writeCommand(0)) return;
+    if (!writeCommand(DISPLAY_WIDTH - 1)) return;
 
     // Send cleared buffer to display
     writeData(m_displayBuffer, sizeof(m_displayBuffer));
@@ -194,6 +194,11 @@ void I2CDisplayDevice::drawText(int x, int y, const std::string& text) {
 }
 
 void I2CDisplayDevice::setCursor(int x, int y) {
+    // Clamp to valid display range
+    if (x < 0) x = 0;
+    if (x >= DISPLAY_WIDTH) x = DISPLAY_WIDTH - 1;
+    if (y < 0) y = 0;
+    if (y >= DISPLAY_HEIGHT) y = DISPLAY_HEIGHT - 1;
     m_cursorX = static_cast<uint8_t>(x);
     m_cursorY = static_cast<uint8_t>(y);
 }
@@ -216,7 +221,7 @@ void I2CDisplayDevice::setBrightness(int brightness) {
     // Clamp brightness to valid range
     uint8_t contrast = static_cast<uint8_t>(brightness > 255 ? 255 : (brightness < 0 ? 0 : brightness));
     
-    writeCommand(SSD1306_SET_CONTRAST);
+    if (!writeCommand(SSD1306_SET_CONTRAST)) return;
     writeCommand(contrast);
 }
 
@@ -343,12 +348,12 @@ void I2CDisplayDevice::updateDisplay(int startPage, int endPage, int startCol, i
     // Update each page in the specified region
     for (int page = startPage; page <= endPage; page++) {
         // Set page and column address range
-        writeCommand(SSD1306_PAGE_ADDR);
-        writeCommand(static_cast<uint8_t>(page));
-        writeCommand(static_cast<uint8_t>(page));
-        writeCommand(SSD1306_COLUMN_ADDR);
-        writeCommand(static_cast<uint8_t>(startCol));
-        writeCommand(static_cast<uint8_t>(endCol));
+        if (!writeCommand(SSD1306_PAGE_ADDR)) return;
+        if (!writeCommand(static_cast<uint8_t>(page))) return;
+        if (!writeCommand(static_cast<uint8_t>(page))) return;
+        if (!writeCommand(SSD1306_COLUMN_ADDR)) return;
+        if (!writeCommand(static_cast<uint8_t>(startCol))) return;
+        if (!writeCommand(static_cast<uint8_t>(endCol))) return;
 
         // Send the data for this region
         int dataStart = page * DISPLAY_WIDTH + startCol;
