@@ -177,6 +177,14 @@ target_link_libraries(micropanel
     nlohmann_json::nlohmann_json
 )
 
+# Test targets (build with: cmake -DBUILD_TESTS=ON ..)
+option(BUILD_TESTS "Build unit tests" OFF)
+if(BUILD_TESTS)
+    add_executable(test_protocol tests/test_protocol.cpp)
+    target_include_directories(test_protocol PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
+    message(STATUS "Test targets enabled: test_protocol")
+endif()
+
 # Configuration options
 option(INSTALL_ALL_CONFIGS "Install all configuration files" OFF)
 set(INSTALL_SCREEN "" CACHE STRING "Specific screen config to install (e.g., config-pios.json)")

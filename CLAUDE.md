@@ -113,9 +113,29 @@ Set `"refresh_sec"` in the `"depends"` object (minimum 0.5s). Uses selective lin
 
 Three device modes: **USB** (`-a`), **GPIO** (`-i gpio -s /dev/i2c-X`), **Hybrid** (`-a -i gpio -s /dev/i2c-X`, recommended for Pi — tries USB first, falls back to GPIO/I2C).
 
+## Testing
+
+### Tier 1: Offline Protocol Unit Tests (no hardware)
+```bash
+cd build && cmake -DBUILD_TESTS=ON .. && make test_protocol
+./test_protocol    # 28 tests, runs in <1s
+```
+Tests protocol byte sequences for all serial commands (current + v2 with length byte), CR/LF absence verification, string safety patterns (substr, strncpy), Config.h constant validation, and display dimension sanity checks.
+
+### Tier 2: Hardware Smoke Test (dongle connected)
+```bash
+python3 tests/test_hardware_smoke.py              # Auto-detect, full suite (22 tests)
+python3 tests/test_hardware_smoke.py --check-only  # Just detect dongle
+```
+Tests all display commands (clear, draw text, brightness, invert, progress bar, power cycle, rapid writes, max text length) plus input injection tests if test firmware is present (rotate CW/CCW, button press, nav up/down/left/right — verified by reading HID events from `/dev/input/eventX`).
+
+**Requirements:** pyserial (`pip install pyserial`), user in `dialout` group (serial) and `input` group (HID events). Input injection tests require firmware built with `-DENABLE_TEST_COMMANDS=ON`; gracefully skipped on production firmware.
+
+### Test Firmware Commands
+The dongle firmware supports a test command (`0xF0`) when built with `-DENABLE_TEST_COMMANDS=ON`. Subcommands: `0x00` ping/echo, `0x01` rotate CW, `0x02` rotate CCW, `0x03` button press, `0x04-0x07` nav up/down/left/right. Ping returns `[0xF0][0x00]` over CDC serial; all others inject HID events. See `hw-auto-test-commands.txt` for full spec.
+
 ## Important Constraints
 
-- No automated test suite — testing requires actual µPanel hardware
 - Root privileges needed for device communication
 - Different configs for Debian (`config-debian.json`) vs Raspberry Pi OS (`config-pios.json`)
 - Scripts in `scripts/` must be POSIX-compatible (busybox support required, no GNU-specific flags like `grep -oP`)
