@@ -4,6 +4,8 @@
 #include <map>
 #include <memory>
 #include <mutex>
+#include <thread>
+#include <condition_variable>
 #include <nlohmann/json.hpp>
 
 /**
@@ -70,5 +72,11 @@ private:
     // Delay save mechanism
     void scheduleSave();
     void cancelScheduledSave();
+    void saveThreadFunc();
+
+    std::thread m_saveThread;
+    std::mutex m_saveMutex;
+    std::condition_variable m_saveCv;
     bool m_savePending = false;
+    bool m_shutdownRequested = false;
 };

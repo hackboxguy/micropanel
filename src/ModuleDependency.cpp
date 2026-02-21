@@ -118,7 +118,8 @@ bool ModuleDependency::checkDependencies(const std::string& moduleId) {
         std::string path = dep.second;
 
         // Skip URL dependencies (http:// or https://)
-        if (path.substr(0, 7) == "http://" || path.substr(0, 8) == "https://") {
+        if ((path.length() >= 7 && path.compare(0, 7, "http://") == 0) ||
+            (path.length() >= 8 && path.compare(0, 8, "https://") == 0)) {
             Logger::debug("Skipping URL dependency check for: " + path);
             continue;
         }

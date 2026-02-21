@@ -34,19 +34,19 @@ Two-tier testing framework to validate changes before and after each improvement
 - **File:** `src/PersistentStorage.cpp:209-217`
 - **Issue:** A detached thread captures `this` and sleeps for 2 seconds. If the object is destroyed during that sleep (e.g., shutdown), it dereferences a dangling pointer causing use-after-free.
 - **Fix:** Replace detached thread with a joinable thread managed by the class. Add proper shutdown signaling and join in destructor.
-- **Status:** [ ] Not started
+- **Status:** [x] Done — replaced detached thread with joinable worker thread using condition variable and proper shutdown signaling.
 
 ### C2. Unsafe strcpy() buffer overflow in NetworkInfoScreen
 - **File:** `src/modules/NetworkInfoScreen.cpp:167, 207`
 - **Issue:** `strcpy(ifr.ifr_name, ifa->ifa_name)` with no bounds check. Interface names exceeding `IFNAMSIZ` (16 bytes) cause stack buffer overflow.
 - **Fix:** Replace with `strncpy(ifr.ifr_name, ifa->ifa_name, sizeof(ifr.ifr_name) - 1)` and null-terminate.
-- **Status:** [ ] Not started
+- **Status:** [x] Done — replaced strcpy with strncpy + null-termination at both call sites.
 
 ### C3. substr() out-of-bounds in ModuleDependency
 - **File:** `src/ModuleDependency.cpp:121`
 - **Issue:** `path.substr(0, 7)` throws `std::out_of_range` if path is shorter than 7 characters. Uncaught exception crashes the daemon.
 - **Fix:** Check `path.length()` before substr, or use `path.compare(0, 7, "http://") == 0`.
-- **Status:** [ ] Not started
+- **Status:** [x] Done — replaced substr() with length-checked compare().
 
 ---
 
@@ -70,7 +70,7 @@ Two-tier testing framework to validate changes before and after each improvement
 - **File:** `src/devices/DisplayDevice.cpp:151-154`
 - **Issue:** When `write()` sends fewer bytes than the buffer, the remainder is logged as a warning but discarded when the buffer is cleared. This causes display corruption.
 - **Fix:** Retry unwritten bytes in a loop, or keep them in the buffer for the next flush cycle.
-- **Status:** [ ] Not started
+- **Status:** [x] Done — added write retry loop with EINTR handling in both flushBuffer() and sendCommand().
 
 ### H2. popen() without RAII — pipe leaks on early return/exception
 - **Files:**
@@ -80,25 +80,25 @@ Two-tier testing framework to validate changes before and after each improvement
   - `src/modules/GenericListScreen.cpp:427`
 - **Issue:** If an early return or exception occurs between `popen()` and `pclose()`, the pipe file descriptor leaks.
 - **Fix:** Wrap all `popen()` calls with `std::unique_ptr<FILE, decltype(&pclose)> fp(popen(...), &pclose)`.
-- **Status:** [ ] Not started
+- **Status:** [x] Done — wrapped all 5 bare popen() calls with unique_ptr RAII.
 
 ### H3. Signal handler race condition
 - **File:** `src/MicroPanel.cpp:20-31`
 - **Issue:** `s_instance` is a raw `MicroPanel*` accessed in the signal handler without synchronization. Concurrent access from signal and main thread is undefined behavior.
 - **Fix:** Change to `static std::atomic<MicroPanel*> s_instance{nullptr}` and use `.store()`/`.load()`. Use `m_running.store(false)` instead of direct assignment.
-- **Status:** [ ] Not started
+- **Status:** [x] Done — made s_instance atomic, used .load()/.store() in signal handler. Removed non-async-signal-safe Logger call.
 
 ### H4. fcntl() error not checked
 - **File:** `src/devices/InputDevice.cpp:106-107`
 - **Issue:** `fcntl(m_fd, F_GETFL, 0)` return value not checked. If it returns -1, the subsequent `F_SETFL` call gets garbage flags. Device may stay in blocking mode, hanging the application on reads.
 - **Fix:** Check `flags >= 0` before using, log error and return false on failure.
-- **Status:** [ ] Not started
+- **Status:** [x] Done — added flags < 0 check with error log and early return.
 
 ### H5. Fixed 512-byte buffer for shell command construction
 - **File:** `src/modules/NetSettingsScreen.cpp:278-280, 317`
 - **Issue:** `snprintf` into `char cmd[512]` concatenating script path, interface name, IP addresses, gateway, netmask. Long paths or values silently truncate the command, causing incorrect system configuration.
 - **Fix:** Use `std::string` concatenation or `std::ostringstream` instead of fixed buffer.
-- **Status:** [ ] Not started
+- **Status:** [x] Done — replaced char[512] + snprintf with std::string concatenation.
 
 ---
 

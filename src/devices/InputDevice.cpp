@@ -104,6 +104,10 @@ void InputDevice::setNonBlocking()
 {
     if (isOpen()) {
         int flags = fcntl(m_fd, F_GETFL, 0);
+        if (flags < 0) {
+            std::cerr << "Error getting file flags: " << strerror(errno) << std::endl;
+            return;
+        }
         fcntl(m_fd, F_SETFL, flags | O_NONBLOCK);
     }
 }

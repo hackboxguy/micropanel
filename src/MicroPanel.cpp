@@ -17,24 +17,24 @@
 using json = nlohmann::json;
 
 // Static instance for signal handler
-MicroPanel* MicroPanel::s_instance = nullptr;
+std::atomic<MicroPanel*> MicroPanel::s_instance{nullptr};
 extern std::atomic<bool> g_signalReceived;
 
 // Signal handler function
 void MicroPanel::signalHandler(int signal)
 {
    (void)signal;
-   if (s_instance) {
-        s_instance->m_running = false;
+   MicroPanel* inst = s_instance.load();
+   if (inst) {
+        inst->m_running.store(false);
     }
    g_signalReceived.store(true);
-   Logger::debug("Signal received, initiating shutdown...");
 }
 
 MicroPanel::MicroPanel(int argc, char* argv[])
 {
     // Set static instance for signal handler
-    s_instance = this;
+    s_instance.store(this);
     m_running=true;
     setupSignalHandlers();
     // Default configuration

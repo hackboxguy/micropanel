@@ -558,20 +558,20 @@ std::string DeviceManager::findHmiInputDevice() const
         Logger::debug("Trying alternative detection method...");
         
         // Look for device by dmesg pattern (recent device appears in dmesg)
-        FILE* fp = popen("dmesg | grep -A 2 \"input: DIY Projects Pico Encoder Display as\" | grep -o \"/dev/input/event[0-9]*\"", "r");
+        std::unique_ptr<FILE, decltype(&pclose)> fp(
+            popen("dmesg | grep -A 2 \"input: DIY Projects Pico Encoder Display as\" | grep -o \"/dev/input/event[0-9]*\"", "r"), pclose);
         if (fp) {
             char path[64];
-            if (fgets(path, sizeof(path), fp) != NULL) {
+            if (fgets(path, sizeof(path), fp.get()) != NULL) {
                 // Remove trailing newline
                 size_t len = strlen(path);
                 if (len > 0 && path[len-1] == '\n') {
                     path[len-1] = '\0';
                 }
-                
+
                 Logger::debug("Found input device from dmesg: " + std::string(path));
                 result = path;
             }
-            pclose(fp);
         }
     }
     
@@ -727,20 +727,20 @@ std::string DeviceManager::findHmiSerialDevice() const
         std::cout << "Trying alternative detection method for serial device..." << std::endl;
         
         // Look for device by dmesg pattern
-        FILE* fp = popen("dmesg | grep -A 1 \"Product: Pico Encoder Display\" | grep -o \"/dev/ttyACM[0-9]*\"", "r");
+        std::unique_ptr<FILE, decltype(&pclose)> fp(
+            popen("dmesg | grep -A 1 \"Product: Pico Encoder Display\" | grep -o \"/dev/ttyACM[0-9]*\"", "r"), pclose);
         if (fp) {
             char path[64];
-            if (fgets(path, sizeof(path), fp) != NULL) {
+            if (fgets(path, sizeof(path), fp.get()) != NULL) {
                 // Remove trailing newline
                 size_t len = strlen(path);
                 if (len > 0 && path[len-1] == '\n') {
                     path[len-1] = '\0';
                 }
-                
+
                 std::cout << "Found serial device from dmesg: " << path << std::endl;
                 result = path;
             }
-            pclose(fp);
         }
     }
     

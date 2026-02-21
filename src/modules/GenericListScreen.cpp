@@ -424,16 +424,15 @@ std::string GenericListScreen::executeCommand(const std::string& command) const
     std::array<char, 128> buffer;
     std::string result;
 
-    FILE* pipe = popen(command.c_str(), "r");
+    std::unique_ptr<FILE, decltype(&pclose)> pipe(popen(command.c_str(), "r"), pclose);
     if (!pipe) {
         return "ERROR";
     }
 
-    while (fgets(buffer.data(), buffer.size(), pipe) != nullptr) {
+    while (fgets(buffer.data(), buffer.size(), pipe.get()) != nullptr) {
         result += buffer.data();
     }
 
-    pclose(pipe);
     return result;
 }
 

@@ -77,7 +77,7 @@ private:
     std::map<std::string, std::shared_ptr<ScreenModule>> m_modules;
 
     // Signal handling
-    static MicroPanel* s_instance;
+    static std::atomic<MicroPanel*> s_instance;
     static void signalHandler(int signal);
     std::shared_ptr<BaseDisplayDevice> createDisplayDevice(const std::string& devicePath);
     std::shared_ptr<BaseDisplayDevice> m_baseDisplayDevice;
