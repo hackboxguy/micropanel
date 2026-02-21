@@ -217,16 +217,21 @@ void DisplayDevice::clear()
 }
 
 // Draw text at position
+// Protocol: [0x02][x][y][len][text...] — length-prefixed, max 124 bytes text
 void DisplayDevice::drawText(int x, int y, const std::string& text)
 {
     size_t textLen = text.length();
-    std::vector<uint8_t> cmd(textLen + 3);
-    
+    if (textLen > Config::CMD_DRAW_TEXT_MAX_LEN) {
+        textLen = Config::CMD_DRAW_TEXT_MAX_LEN;
+    }
+    std::vector<uint8_t> cmd(textLen + 4);
+
     cmd[0] = Config::CMD_DRAW_TEXT;
     cmd[1] = static_cast<uint8_t>(x);
     cmd[2] = static_cast<uint8_t>(y);
-    memcpy(cmd.data() + 3, text.c_str(), textLen);
-    
+    cmd[3] = static_cast<uint8_t>(textLen);
+    memcpy(cmd.data() + 4, text.c_str(), textLen);
+
     sendCommand(cmd.data(), cmd.size());
 }
 

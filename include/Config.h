@@ -35,6 +35,8 @@ namespace Config {
     constexpr uint8_t CMD_BRIGHTNESS = 0x05;
     constexpr uint8_t CMD_PROGRESS_BAR = 0x06;
     constexpr uint8_t CMD_POWER_MODE = 0x07;
+    // CMD_DRAW_TEXT max text length: 128-byte firmware buffer minus 4-byte header (cmd+x+y+len)
+    constexpr int CMD_DRAW_TEXT_MAX_LEN = 124;
     // Timing constants
     constexpr int DISPLAY_CMD_DELAY = 10000;       // 10ms delay between display commands
     constexpr int DISPLAY_CLEAR_DELAY = 50000;     // 50ms delay after clear

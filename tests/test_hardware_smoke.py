@@ -51,6 +51,7 @@ BTN_LEFT = 0x110
 
 # Firmware limits
 MAX_CMD_SIZE = 128
+CMD_DRAW_TEXT_MAX_LEN = 124  # max text bytes (128 - 4 byte header: cmd+x+y+len)
 INTER_CMD_DELAY = 0.015  # 15ms between commands (slightly above 10ms spec)
 CLEAR_DELAY = 0.060      # 60ms after clear (slightly above 50ms spec)
 
@@ -86,6 +87,14 @@ def log_skip(name, reason):
     global skipped
     skipped += 1
     print(f"  SKIP  {name}: {reason}")
+
+
+def make_draw_text_cmd(x, y, text_bytes):
+    """Build a CMD_DRAW_TEXT command with length byte: [0x02][x][y][len][text...]"""
+    if isinstance(text_bytes, str):
+        text_bytes = text_bytes.encode()
+    text_len = min(len(text_bytes), CMD_DRAW_TEXT_MAX_LEN)
+    return bytes([CMD_DRAW_TEXT, x, y, text_len]) + text_bytes[:text_len]
 
 
 def find_dongle():
@@ -270,7 +279,7 @@ def test_clear_display(ser):
 def test_draw_text_origin(ser):
     """T3: Draw text at (0,0)."""
     text = b"Smoke Test"
-    cmd = bytes([CMD_DRAW_TEXT, 0, 0]) + text
+    cmd = make_draw_text_cmd(0, 0, text)
     ok, err = send_cmd(ser, cmd, "draw_text_origin")
     if ok:
         log_pass("draw_text_origin")
@@ -294,7 +303,7 @@ def test_draw_text_multiline(ser):
     ]
     all_ok = True
     for x, y, text in lines:
-        cmd = bytes([CMD_DRAW_TEXT, x, y]) + text.encode()
+        cmd = make_draw_text_cmd(x, y, text)
         ok, err = send_cmd(ser, cmd, f"draw_text_y{y}")
         if not ok:
             all_ok = False
@@ -314,7 +323,7 @@ def test_draw_text_crlf_coords(ser):
     time.sleep(CLEAR_DELAY)
 
     text = b"CR/LF coord"
-    cmd = bytes([CMD_DRAW_TEXT, 10, 13]) + text
+    cmd = make_draw_text_cmd(10, 13, text)
     ok, err = send_cmd(ser, cmd, "draw_text_crlf_coords")
     if ok:
         log_pass("draw_text_crlf_coords")
@@ -402,7 +411,7 @@ def test_rapid_commands(ser):
     all_ok = True
     for i in range(50):
         text = f"Rapid #{i:03d}".encode()
-        cmd = bytes([CMD_DRAW_TEXT, 0, 0]) + text
+        cmd = make_draw_text_cmd(0, 0, text)
         ok, err = send_cmd(ser, cmd, f"rapid_{i}")
         if not ok:
             all_ok = False
@@ -422,7 +431,7 @@ def test_max_text_length(ser):
     time.sleep(CLEAR_DELAY)
 
     max_text = b"A" * 120
-    cmd = bytes([CMD_DRAW_TEXT, 0, 0]) + max_text
+    cmd = make_draw_text_cmd(0, 0, max_text)
     ok, err = send_cmd(ser, cmd, "max_text_length")
     time.sleep(INTER_CMD_DELAY)
 
@@ -569,7 +578,7 @@ def test_final_display(ser):
         (0, 48, "Done!"),
     ]
     for x, y, text in lines:
-        cmd = bytes([CMD_DRAW_TEXT, x, y]) + text.encode()
+        cmd = make_draw_text_cmd(x, y, text)
         ser.write(cmd)
         time.sleep(INTER_CMD_DELAY)
 
