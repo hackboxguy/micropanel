@@ -84,7 +84,6 @@ This companion linux daemon **micropanel** handles USB detection, menu navigatio
 | `0x05`  | Set brightness        | `\x05 [0-255]`      |
 | `0x06`  | Draw progress bar     | `\x06 params`       |
 | `0x07`  | Display OFF/ON        | `\x07 [0 or 1]`        |
-| `0x08`  | Buzzer control        | `\x08 [0 or 1] [Hz]`   |
 
 Example Bash commands for sending:
 ```bash
@@ -106,12 +105,6 @@ echo -ne "\x05\xFF" > /dev/ttyACM0
 # Display off/on
 echo -ne "\x07\x00" > /dev/ttyACM0
 echo -ne "\x07\x01" > /dev/ttyACM0
-
-# Buzzer on at 5Hz
-echo -ne "\x08\x01\x05" > /dev/ttyACM0
-
-# Buzzer off
-echo -ne "\x08\x00" > /dev/ttyACM0
 ```
 
 ---
@@ -122,7 +115,7 @@ echo -ne "\x08\x00" > /dev/ttyACM0
 - **Input Event Loop**: Listens to rotary and button events.
 - **Action Execution**: Executes associated system commands.
 - **Idle Management**: After 60 seconds of inactivity, sends sleep command to OLED; wakes on user input.
-- **Auto-Reconnect**: If µPanel is unplugged, hmisrv waits and reconnects automatically.
+- **Auto-Reconnect**: If µPanel is unplugged, micropanel waits and reconnects automatically.
 
 ---
 
