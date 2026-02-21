@@ -470,7 +470,7 @@ void ThroughputClientScreen::renderMainMenu(bool fullRedraw) {
             }
 
             // Pad to ensure line is fully overwritten (like GenericListScreen)
-            while (itemText.length() < 16) {
+            while (itemText.length() < Config::DISPLAY_TEXT_COLUMNS) {
                 itemText += " ";
             }
 
@@ -523,7 +523,7 @@ void ThroughputClientScreen::renderProtocolSubmenu(bool fullRedraw) {
                                 " " + m_protocolOptions[i];
 
         // Pad to ensure line is fully overwritten (like GenericListScreen)
-        while (optionText.length() < 16) {
+        while (optionText.length() < Config::DISPLAY_TEXT_COLUMNS) {
             optionText += " ";
         }
 
@@ -538,7 +538,7 @@ void ThroughputClientScreen::renderProtocolSubmenu(bool fullRedraw) {
                          " Back";
 
     // Pad to ensure line is fully overwritten
-    while (backText.length() < 16) {
+    while (backText.length() < Config::DISPLAY_TEXT_COLUMNS) {
         backText += " ";
     }
 
@@ -611,7 +611,7 @@ void ThroughputClientScreen::renderDurationSubmenu(bool fullRedraw) {
         }
 
         // Pad to ensure line is fully overwritten (like GenericListScreen)
-        while (itemText.length() < 16) {
+        while (itemText.length() < Config::DISPLAY_TEXT_COLUMNS) {
             itemText += " ";
         }
 
@@ -624,19 +624,19 @@ void ThroughputClientScreen::renderDurationSubmenu(bool fullRedraw) {
     if (fullRedraw && totalItems > MAX_VISIBLE_ITEMS) {
         // Up arrow for items above
         if (scrollOffset > 0) {
-            m_display->drawText(122, 16, "^");
+            m_display->drawText(Config::SCROLL_INDICATOR_X, 16, "^");
             usleep(Config::DISPLAY_CMD_DELAY);
         } else {
-            m_display->drawText(122, 16, " ");
+            m_display->drawText(Config::SCROLL_INDICATOR_X, 16, " ");
             usleep(Config::DISPLAY_CMD_DELAY);
         }
 
         // Down arrow for items below
         if (scrollOffset + MAX_VISIBLE_ITEMS < totalItems) {
-            m_display->drawText(122, 16 + ((MAX_VISIBLE_ITEMS - 1) * 8), "v");
+            m_display->drawText(Config::SCROLL_INDICATOR_X, 16 + ((MAX_VISIBLE_ITEMS - 1) * 8), "v");
             usleep(Config::DISPLAY_CMD_DELAY);
         } else {
-            m_display->drawText(122, 16 + ((MAX_VISIBLE_ITEMS - 1) * 8), " ");
+            m_display->drawText(Config::SCROLL_INDICATOR_X, 16 + ((MAX_VISIBLE_ITEMS - 1) * 8), " ");
             usleep(Config::DISPLAY_CMD_DELAY);
         }
     }
@@ -712,7 +712,7 @@ void ThroughputClientScreen::renderBandwidthSubmenu(bool fullRedraw) {
         }
 
         // Pad to ensure line is fully overwritten (like GenericListScreen)
-        while (itemText.length() < 16) {
+        while (itemText.length() < Config::DISPLAY_TEXT_COLUMNS) {
             itemText += " ";
         }
 
@@ -725,19 +725,19 @@ void ThroughputClientScreen::renderBandwidthSubmenu(bool fullRedraw) {
     if (fullRedraw && totalItems > MAX_VISIBLE_ITEMS) {
         // Up arrow for items above
         if (scrollOffset > 0) {
-            m_display->drawText(122, 16, "^");
+            m_display->drawText(Config::SCROLL_INDICATOR_X, 16, "^");
             usleep(Config::DISPLAY_CMD_DELAY);
         } else {
-            m_display->drawText(122, 16, " ");
+            m_display->drawText(Config::SCROLL_INDICATOR_X, 16, " ");
             usleep(Config::DISPLAY_CMD_DELAY);
         }
 
         // Down arrow for items below
         if (scrollOffset + MAX_VISIBLE_ITEMS < totalItems) {
-            m_display->drawText(122, 16 + ((MAX_VISIBLE_ITEMS - 1) * 8), "v");
+            m_display->drawText(Config::SCROLL_INDICATOR_X, 16 + ((MAX_VISIBLE_ITEMS - 1) * 8), "v");
             usleep(Config::DISPLAY_CMD_DELAY);
         } else {
-            m_display->drawText(122, 16 + ((MAX_VISIBLE_ITEMS - 1) * 8), " ");
+            m_display->drawText(Config::SCROLL_INDICATOR_X, 16 + ((MAX_VISIBLE_ITEMS - 1) * 8), " ");
             usleep(Config::DISPLAY_CMD_DELAY);
         }
     }
@@ -775,7 +775,7 @@ void ThroughputClientScreen::renderParallelSubmenu(bool fullRedraw) {
                                 " " + std::to_string(m_parallelOptions[i]);
 
         // Pad to ensure line is fully overwritten (like GenericListScreen)
-        while (optionText.length() < 16) {
+        while (optionText.length() < Config::DISPLAY_TEXT_COLUMNS) {
             optionText += " ";
         }
 
@@ -790,7 +790,7 @@ void ThroughputClientScreen::renderParallelSubmenu(bool fullRedraw) {
                          " Back";
 
     // Pad to ensure line is fully overwritten
-    while (backText.length() < 16) {
+    while (backText.length() < Config::DISPLAY_TEXT_COLUMNS) {
         backText += " ";
     }
 

@@ -197,18 +197,9 @@ void ThroughputServerScreen::renderOptions(bool fullRedraw) {
     bool serverRunning = isServerRunning();
 
     if (fullRedraw) {
-        // Clear display first
-        m_display->clear();
-        usleep(Config::DISPLAY_CMD_DELAY * 3);
-
-        // Draw header with server status
+        // Draw header with dynamic server status
         std::string headerText = serverRunning ? "Server(Running)" : "Server(Stopped)";
-        m_display->drawText(0, 0, headerText);
-        usleep(Config::DISPLAY_CMD_DELAY);
-
-        // Draw separator
-        m_display->drawText(0, 8, "----------------");
-        usleep(Config::DISPLAY_CMD_DELAY);
+        m_display->drawMenuHeader(headerText);
 
         // Draw IP address at position 48
         m_display->drawText(0, 48, m_localIp);
@@ -251,7 +242,7 @@ void ThroughputServerScreen::renderOptions(bool fullRedraw) {
         }
 
         // Pad buffer to ensure line is fully overwritten (16 chars like GenericListScreen)
-        while (buffer.length() < 16) {
+        while (buffer.length() < Config::DISPLAY_TEXT_COLUMNS) {
             buffer += " ";
         }
 

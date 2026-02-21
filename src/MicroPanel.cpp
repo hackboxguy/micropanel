@@ -404,13 +404,7 @@ bool MicroPanel::loadConfigFromJson() {
                 m_modules[id] = menuModule;
 
                 // CRITICAL: Set GPIO handler for ALL menu modules, not just enabled ones
-                if (m_config.useGPIOMode) {
-                    menuModule->setUseGPIOMode(true);
-                    menuModule->setGPIOHandler([this](std::shared_ptr<ScreenModule> submodule) {
-                    this->runModuleWithGPIOInput(submodule);
-                    });
-                    Logger::debug("Set GPIO handler for menu module: " + id);
-                }
+                configureMenuModuleGPIO(menuModule);
 
                 // Add to main menu only if enabled
                 if (enabled) {
@@ -600,13 +594,8 @@ void MicroPanel::registerModuleInMenu(const std::string& moduleName, const std::
             if (menuModule) {
                 menuModule->clearMainMenuFlag();
 
-                // NEW: Configure menu module for GPIO mode
-                if (m_config.useGPIOMode) {
-                    menuModule->setUseGPIOMode(true);
-                    menuModule->setGPIOHandler([this](std::shared_ptr<ScreenModule> submodule) {
-                        this->runModuleWithGPIOInput(submodule);
-                    });
-                }
+                // Configure menu module for GPIO mode
+                configureMenuModuleGPIO(menuModule);
             }
 
             // Use GPIO input for ALL module execution in GPIO mode
@@ -624,6 +613,15 @@ void MicroPanel::registerModuleInMenu(const std::string& moduleName, const std::
             Logger::error("Failed to execute module: " + moduleName);
         }
     }));
+}
+
+void MicroPanel::configureMenuModuleGPIO(std::shared_ptr<MenuScreenModule> menuModule) {
+    if (m_config.useGPIOMode) {
+        menuModule->setUseGPIOMode(true);
+        menuModule->setGPIOHandler([this](std::shared_ptr<ScreenModule> submodule) {
+            this->runModuleWithGPIOInput(submodule);
+        });
+    }
 }
 
 void MicroPanel::setupMenu()

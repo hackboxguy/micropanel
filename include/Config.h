@@ -17,6 +17,9 @@ namespace Config {
     constexpr const char* MENU_SEPARATOR = "----------------";
     constexpr int MENU_VISIBLE_ITEMS = 6;
     constexpr int MENU_SCROLL_INDICATOR_WIDTH = 3;
+    // Display layout derived constants
+    constexpr int DISPLAY_TEXT_COLUMNS = 16;                           // Characters per line (DISPLAY_WIDTH / CHAR_WIDTH rounded)
+    constexpr int SCROLL_INDICATOR_X = DISPLAY_WIDTH - CHAR_WIDTH;    // X position for scroll arrows (122)
     constexpr int STAT_UPDATE_SEC = 1;
     // Device detection
     constexpr const char* DEFAULT_INPUT_DEVICE = "/dev/input/event0";

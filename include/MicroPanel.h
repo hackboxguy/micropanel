@@ -51,6 +51,7 @@ private:
     void runModuleWithGPIOInput(std::shared_ptr<ScreenModule> module);
     void simulateRotationForModule(std::shared_ptr<ScreenModule> module, int direction);
     void simulateButtonPressForModule(std::shared_ptr<ScreenModule> module,bool& moduleRunning);
+    void configureMenuModuleGPIO(std::shared_ptr<class MenuScreenModule> menuModule);
 
     struct {
         std::string inputDevice;

@@ -348,7 +348,7 @@ void GenericListScreen::renderList()
             buffer = buffer.substr(0, 16);
         }
         // Pad to ensure line is fully overwritten (avoids need for separate clear)
-        while (buffer.length() < 16) {
+        while (buffer.length() < Config::DISPLAY_TEXT_COLUMNS) {
             buffer += " ";
         }
         m_display->drawText(0, yPos, buffer);

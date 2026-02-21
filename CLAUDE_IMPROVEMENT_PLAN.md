@@ -148,34 +148,34 @@ Two-tier testing framework to validate changes before and after each improvement
 - **File:** `src/MicroPanel.cpp:406-413, 604-609`
 - **Issue:** Identical GPIO handler configuration code repeated in two places.
 - **Fix:** Extract to a helper method like `configureGPIOHandler(MenuScreenModule*, const std::string& id)`.
-- **Status:** [ ] Not started
+- **Status:** [x] Done — extracted `configureMenuModuleGPIO()` helper method, both call sites now use it.
 
 ### L2. Duplicated device detection methods
 - **File:** `src/devices/DeviceManager.cpp`
 - **Issue:** `checkDevicePresent()` and `checkDevicePresentSilent()` are nearly identical, differing only in logging.
 - **Fix:** Merge into one method with a `bool silent` parameter, or extract shared logic into a private helper.
-- **Status:** [ ] Not started
+- **Status:** [x] Done — merged into single `checkDevicePresent(bool silent = false)` method. Removed separate `checkDevicePresentSilent()`.
 
 ### L3. Repeated menu rendering patterns across modules
 - **Files:** `NetInfoScreen.cpp`, `NetSettingsScreen.cpp`, `ThroughputServerScreen.cpp`, `WiFiSettingsScreen.cpp`
 - **Issue:** Very similar `renderOptions()` / `renderMenu()` loops with selection markers, text padding, and scroll indicators duplicated across ~200 lines.
 - **Fix:** Create a shared rendering utility function or base class with common menu rendering logic.
-- **Status:** [ ] Not started
+- **Status:** [x] Done — added `Display::drawMenuHeader(title)` convenience method that handles clear+title+separator. Replaced duplicated header rendering in all 4 target files.
 
 ### L4. Inconsistent navigation (wraparound vs bounded)
 - **File:** `src/modules/NetSettingsScreen.cpp` (sub-menus)
 - **Issue:** Some NetSettingsScreen sub-menus use wraparound navigation while the rest of the codebase uses bounded navigation (stops at first/last item).
 - **Fix:** Standardize on bounded navigation to match the GenericListScreen pattern.
-- **Status:** [ ] Not started
+- **Status:** [x] Done — replaced wraparound modulo navigation with bounded navigation in both main menu and mode menu (USB/HID input mode).
 
 ### L5. Hardcoded temp file paths
 - **File:** `src/modules/IPPingScreen.cpp:90, 287`
 - **Issue:** `"/tmp/micropanel_ping_result.txt"` hardcoded in two places. Potential file collision in multi-instance scenarios.
 - **Fix:** Use a constant, or generate unique temp paths with `mkstemp()` or pid-based naming.
-- **Status:** [ ] Not started
+- **Status:** [x] Done — replaced all 4 occurrences with a file-level `PING_TEMP_FILE` constant.
 
 ### L6. Magic numbers for display layout
 - **Files:** Multiple modules
 - **Issue:** `16 + (i * 8)`, `16 + (i * 10)`, buffer sizes like `128`, `512`, `64` scattered throughout without named constants.
 - **Fix:** Define constants in `Config.h`: `DISPLAY_HEADER_Y`, `DISPLAY_LINE_HEIGHT`, `CMD_BUFFER_SIZE`, etc.
-- **Status:** [ ] Not started
+- **Status:** [x] Done — added `DISPLAY_TEXT_COLUMNS` (16) and `SCROLL_INDICATOR_X` (122) to Config.h. Replaced text padding magic number (9 uses across 3 files) and scroll indicator X position (12 uses across 2 files).

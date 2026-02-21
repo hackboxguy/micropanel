@@ -16,6 +16,8 @@
 #include <fstream>
 #include <sstream>
 
+static const std::string PING_TEMP_FILE = "/tmp/micropanel_ping_result.txt";
+
 IPPingScreen::IPPingScreen(std::shared_ptr<Display> display, std::shared_ptr<InputDevice> input)
     : ScreenModule(display, input)
 {
@@ -87,8 +89,7 @@ void IPPingScreen::exit() {
     }
 
     // Clean up temporary file if it exists
-    std::string tempFile = "/tmp/micropanel_ping_result.txt";
-    unlink(tempFile.c_str());
+    unlink(PING_TEMP_FILE.c_str());
 
     // Clear display
     m_display->clear();
@@ -284,7 +285,7 @@ void IPPingScreen::checkPingStatus() {
 
             // If ping succeeded, try to read the ping time from temp file
             if (m_pingResult == 0) {
-                std::ifstream pingFile("/tmp/micropanel_ping_result.txt");
+                std::ifstream pingFile(PING_TEMP_FILE);
                 if (pingFile.is_open()) {
                     std::string line;
                     if (std::getline(pingFile, line) && !line.empty()) {
@@ -314,7 +315,7 @@ void IPPingScreen::checkPingStatus() {
                 }
 
                 // Clean up temporary file
-                unlink("/tmp/micropanel_ping_result.txt");
+                unlink(PING_TEMP_FILE.c_str());
             }
         } else {
             m_pingResult = 1; // Error
@@ -348,12 +349,9 @@ void IPPingScreen::startPing() {
 
     if (child_pid == 0) {
         // Child process - run ping
-        char command[256];
-        // Use busybox-compatible ping command to extract time value
-        snprintf(command, sizeof(command),
-                "ping -c 1 -W 2 %s | grep 'time=' | awk -F'time=' '{print $2}' | awk '{print $1}' > /tmp/micropanel_ping_result.txt",
-                ipAddress.c_str());
-        int result = system(command);
+        std::string command = "ping -c 1 -W 2 " + ipAddress +
+            " | grep 'time=' | awk -F'time=' '{print $2}' | awk '{print $1}' > " + PING_TEMP_FILE;
+        int result = system(command.c_str());
         std::quick_exit(result == 0 ? 0 : 1);
     } else if (child_pid < 0) {
         // Fork failed

@@ -379,17 +379,7 @@ bool NetInfoScreen::Impl::getMacAddress(const std::string& interfaceName, std::s
 void NetInfoScreen::Impl::renderMenu(bool fullRedraw)
 {
     if (fullRedraw) {
-        // Clear the screen
-        m_display->clear();
-        usleep(Config::DISPLAY_CMD_DELAY * 3);
-
-        // Draw header
-        m_display->drawText(0, 0, "   Net Info");
-        usleep(Config::DISPLAY_CMD_DELAY);
-
-        // Draw separator
-        m_display->drawText(0, 8, "----------------");
-        usleep(Config::DISPLAY_CMD_DELAY);
+        m_display->drawMenuHeader("   Net Info");
     }
 
     // Calculate scroll offset to ensure selection is visible
@@ -449,18 +439,18 @@ void NetInfoScreen::Impl::renderMenu(bool fullRedraw)
     // Draw scroll indicators if needed
     if (static_cast<int>(m_interfaces.size()) > MAX_VISIBLE_ITEMS) {
         // Clear indicator positions first
-        m_display->drawText(122, 16, " ");
-        m_display->drawText(122, 16 + ((MAX_VISIBLE_ITEMS - 1) * 8), " ");
+        m_display->drawText(Config::SCROLL_INDICATOR_X, 16, " ");
+        m_display->drawText(Config::SCROLL_INDICATOR_X, 16 + ((MAX_VISIBLE_ITEMS - 1) * 8), " ");
 
         // Draw up arrow if there are items above
         if (m_scrollOffset > 0) {
-            m_display->drawText(122, 16, "^");
+            m_display->drawText(Config::SCROLL_INDICATOR_X, 16, "^");
             usleep(Config::DISPLAY_CMD_DELAY);
         }
 
         // Draw down arrow if there are items below
         if (m_scrollOffset + MAX_VISIBLE_ITEMS < static_cast<int>(m_interfaces.size())) {
-            m_display->drawText(122, 16 + ((MAX_VISIBLE_ITEMS - 1) * 8), "v");
+            m_display->drawText(Config::SCROLL_INDICATOR_X, 16 + ((MAX_VISIBLE_ITEMS - 1) * 8), "v");
             usleep(Config::DISPLAY_CMD_DELAY);
         }
     }

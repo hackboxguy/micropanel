@@ -17,16 +17,7 @@ void WiFiSettingsScreen::enter()
     m_currentWiFiState = getWiFiStatus();
     
     // Clear display and show submenu
-    m_display->clear();
-    usleep(Config::DISPLAY_CMD_DELAY * 3);
-    
-    // Draw title
-    m_display->drawText(0, 0, " WiFi Settings");
-    usleep(Config::DISPLAY_CMD_DELAY);
-    
-    // Draw separator
-    m_display->drawText(0, 8, "----------------");
-    usleep(Config::DISPLAY_CMD_DELAY);
+    m_display->drawMenuHeader(" WiFi Settings");
     
     // Draw menu options
     renderOptions();

@@ -471,17 +471,7 @@ void NetSettingsScreen::Impl::handleAddrMenuButton() {
 
 void NetSettingsScreen::Impl::drawMainMenu(bool fullRedraw) {
     if (fullRedraw) {
-        // Clear screen
-        m_display->clear();
-        usleep(Config::DISPLAY_CMD_DELAY * 3);
-        
-        // Draw header
-        m_display->drawText(0, 0, "  Net Settings");
-        usleep(Config::DISPLAY_CMD_DELAY);
-        
-        // Draw separator
-        m_display->drawText(0, 8, "----------------");
-        usleep(Config::DISPLAY_CMD_DELAY);
+        m_display->drawMenuHeader("  Net Settings");
     }
 
     // Draw each menu item with proper formatting
@@ -1061,15 +1051,13 @@ bool NetSettingsScreen::handleInput() {
                             int oldSelection = m_pImpl->m_mainSelection;
                             int numItems = static_cast<int>(MainMenuSelection::MAIN_ITEM_COUNT);
                             
-                            // Navigate menu
+                            // Navigate menu (bounded, no wraparound)
                             if (rotationDirection < 0) {
-                                // Move up (with wrap)
-                                m_pImpl->m_mainSelection = (m_pImpl->m_mainSelection > 0) ? 
-                                                        m_pImpl->m_mainSelection - 1 : 
-                                                        numItems - 1;
+                                if (m_pImpl->m_mainSelection > 0)
+                                    m_pImpl->m_mainSelection--;
                             } else {
-                                // Move down (with wrap)
-                                m_pImpl->m_mainSelection = (m_pImpl->m_mainSelection + 1) % numItems;
+                                if (m_pImpl->m_mainSelection < numItems - 1)
+                                    m_pImpl->m_mainSelection++;
                             }
                             
                             // Update display if selection changed
@@ -1084,15 +1072,13 @@ bool NetSettingsScreen::handleInput() {
                             int oldSelection = m_pImpl->m_modeSelection;
                             int numItems = static_cast<int>(ModeMenuSelection::MODE_ITEM_COUNT);
                             
-                            // Navigate menu
+                            // Navigate menu (bounded, no wraparound)
                             if (rotationDirection < 0) {
-                                // Move up (with wrap)
-                                m_pImpl->m_modeSelection = (m_pImpl->m_modeSelection > 0) ? 
-                                                        m_pImpl->m_modeSelection - 1 : 
-                                                        numItems - 1;
+                                if (m_pImpl->m_modeSelection > 0)
+                                    m_pImpl->m_modeSelection--;
                             } else {
-                                // Move down (with wrap)
-                                m_pImpl->m_modeSelection = (m_pImpl->m_modeSelection + 1) % numItems;
+                                if (m_pImpl->m_modeSelection < numItems - 1)
+                                    m_pImpl->m_modeSelection++;
                             }
                             
                             // Update display if selection changed
