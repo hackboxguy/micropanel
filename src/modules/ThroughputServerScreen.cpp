@@ -404,8 +404,8 @@ void ThroughputServerScreen::startServer() {
         }
     });
 
-    // Detach thread to let it run independently
-    m_serverThread.detach();
+    // Keep thread joinable for safe lifecycle management
+    // (destructor calls stopServer() which kills the process, allowing waitpid to return)
 
     // Give it a moment to start up to ensure iperf3 is listening
     usleep(100000); // 100ms
@@ -486,6 +486,11 @@ void ThroughputServerScreen::stopServer() {
 
         // Reset PID
         m_serverPid = -1;
+    }
+
+    // Join the server thread (waitpid in thread will return after process is killed)
+    if (m_serverThread.joinable()) {
+        m_serverThread.join();
     }
 }
 

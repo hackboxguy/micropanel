@@ -119,25 +119,30 @@ bool DisplayDevice::checkConnection() const
 void DisplayDevice::bufferCommand(const uint8_t* data, size_t length)
 {
     std::lock_guard<std::mutex> lock(m_mutex);
-    
+
     // If buffer would overflow, flush it first
     if (m_cmdBuffer.used + length > Config::CMD_BUFFER_SIZE) {
-        flushBuffer();
+        flushBufferInternal();
     }
-    
+
     // Copy new command to buffer
     memcpy(m_cmdBuffer.buffer + m_cmdBuffer.used, data, length);
     m_cmdBuffer.used += length;
-    
+
     // Update last action timestamp
     gettimeofday(&m_cmdBuffer.lastFlush, nullptr);
 }
 
-// Flush the command buffer to the serial device
+// Flush the command buffer to the serial device (public, acquires lock)
 void DisplayDevice::flushBuffer()
 {
     std::lock_guard<std::mutex> lock(m_mutex);
-    
+    flushBufferInternal();
+}
+
+// Internal flush without locking (caller must hold m_mutex)
+void DisplayDevice::flushBufferInternal()
+{
     if (m_cmdBuffer.used > 0 && isOpen()) {
         size_t totalWritten = 0;
         while (totalWritten < m_cmdBuffer.used) {

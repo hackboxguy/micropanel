@@ -79,8 +79,7 @@ void InternetTestScreen::startTest()
         m_progress = 100;
     });
 
-    // Detach the thread to allow it to run independently
-    m_testThread.detach();
+    // Keep thread joinable for safe lifecycle management
 }
 
 void InternetTestScreen::update()
@@ -162,9 +161,15 @@ void InternetTestScreen::update()
 void InternetTestScreen::exit()
 {
     Logger::debug("InternetTestScreen: Exiting");
-    
+
     // Clean up
     m_running = false;
+
+    // Wait for test thread to complete (ping has a timeout so this won't block forever)
+    if (m_testThread.joinable()) {
+        m_testThread.join();
+    }
+
     m_display->clear();
     usleep(Config::DISPLAY_CMD_DELAY * 3);
 }

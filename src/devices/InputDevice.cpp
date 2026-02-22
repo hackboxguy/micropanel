@@ -380,7 +380,7 @@ bool InputDevice::processEvents(std::function<void(int)> onRotation, std::functi
     // 1. We've received 2 or more events (paired_event_count >= 2), which means we've seen both events from one rotation
     // 2. OR if it's been more than 30ms since the last event, which means we might not get a paired event
     gettimeofday(&now, nullptr);
-    long timeSinceLastMs = (m_state.lastEventTime.tv_sec - m_state.lastEventTime.tv_sec) * 1000 +
+    long timeSinceLastMs = (now.tv_sec - m_state.lastEventTime.tv_sec) * 1000 +
                          (now.tv_usec - m_state.lastEventTime.tv_usec) / 1000;
 
     if ((pendingMovement || pendingVerticalMovement) &&

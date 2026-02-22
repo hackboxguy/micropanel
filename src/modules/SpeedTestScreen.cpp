@@ -431,9 +431,8 @@ void SpeedTestScreen::startDownloadTest() {
         // Mark test as completed
         m_testCompleted = true;
     });
-    
-    // Detach thread to run independently
-    m_testThread.detach();
+
+    // Keep thread joinable for safe lifecycle management
 }
 
 void SpeedTestScreen::startUploadTest() {
@@ -453,6 +452,11 @@ void SpeedTestScreen::startUploadTest() {
     // Record start time
     m_startTime = std::chrono::steady_clock::now();
     
+    // Join previous thread before creating new one (download thread should be done)
+    if (m_testThread.joinable()) {
+        m_testThread.join();
+    }
+
     // Start test in separate thread
     m_testThread = std::thread([this]() {
         // Create a temporary file to capture the script output
@@ -495,9 +499,8 @@ void SpeedTestScreen::startUploadTest() {
         // Mark test as completed
         m_testCompleted = true;
     });
-    
-    // Detach thread to run independently
-    m_testThread.detach();
+
+    // Keep thread joinable for safe lifecycle management
 }
 
 double SpeedTestScreen::calculateSpeed(size_t bytes, std::chrono::milliseconds duration) {

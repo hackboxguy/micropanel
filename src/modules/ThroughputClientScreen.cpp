@@ -934,8 +934,7 @@ void ThroughputClientScreen::renderAutoDiscoverScreen(bool fullRedraw) {
 
 void ThroughputClientScreen::updateStatusLine() {
     std::string statusText;
-    int yPos = 76; // Position for status line
-    //int yPos = 56; // Position for status line
+    int yPos = 56; // Position for status line (last valid line on 64px display)
 
     // Clear status line
     m_display->drawText(0, yPos, "                ");
@@ -996,7 +995,6 @@ bool ThroughputClientScreen::handleInput() {
 		    if (!m_testInProgress) {
                         m_reverseMode = false;
 			startTest();
-                        renderMainMenu(true);
                     }
                     break;
                 case ThroughputClientState::MENU_STATE_START_REVERSE:
@@ -1004,7 +1002,6 @@ bool ThroughputClientScreen::handleInput() {
 		    if (!m_testInProgress) {
                         m_reverseMode = true;
 			startTest();
-                        renderMainMenu(true);
                     }
                     break;
 
@@ -1847,15 +1844,24 @@ std::string ThroughputClientScreen::normalizeIp(const std::string& ip) {
     std::istringstream iss(ip);
     std::string octet;
 
-    while (std::getline(iss, octet, '.')) {
-        // Remove leading zeros and convert back to integer
-        int value = std::stoi(octet);
+    try {
+        while (std::getline(iss, octet, '.')) {
+            // Remove leading zeros and convert back to integer
+            int value = std::stoi(octet);
+            if (value < 0 || value > 255) {
+                Logger::warning("ThroughputClientScreen: Invalid IP octet value: " + octet);
+                return ip;  // Return original on invalid octet
+            }
 
-        // Add to normalized string with dots
-        if (!normalized.empty()) {
-            normalized += ".";
+            // Add to normalized string with dots
+            if (!normalized.empty()) {
+                normalized += ".";
+            }
+            normalized += std::to_string(value);
         }
-        normalized += std::to_string(value);
+    } catch (const std::exception& e) {
+        Logger::warning("ThroughputClientScreen: Failed to normalize IP '" + ip + "': " + e.what());
+        return ip;  // Return original on parse failure
     }
 
     return normalized;
@@ -2250,7 +2256,6 @@ bool ThroughputClientScreen::handleGPIOButtonPress() {
             if (!m_testInProgress) {
                 m_reverseMode = false;
                 startTest();
-                renderMainMenu(true);
             }
             break;
 
@@ -2259,7 +2264,6 @@ bool ThroughputClientScreen::handleGPIOButtonPress() {
             if (!m_testInProgress) {
                 m_reverseMode = true;
                 startTest();
-                renderMainMenu(true);
             }
             break;
 

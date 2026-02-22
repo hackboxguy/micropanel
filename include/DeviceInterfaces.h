@@ -97,6 +97,8 @@ public:
     }
 
 private:
+    void flushBufferInternal();  // Internal flush without locking (caller must hold m_mutex)
+
     struct {
         uint8_t buffer[Config::CMD_BUFFER_SIZE];
         size_t used;

@@ -817,10 +817,19 @@ void MicroPanel::run()
 
 void MicroPanel::shutdown()
 {
+    // Make shutdown idempotent - only run once
+    static bool shutdownDone = false;
+    if (shutdownDone) {
+        return;
+    }
+    shutdownDone = true;
+
     // Stop disconnection monitor - only if it was started
-    bool isI2CMode = (m_config.serialDevice.find("/dev/i2c-") == 0);
-    if (!isI2CMode) {
-        m_deviceManager->stopDisconnectionMonitor();
+    if (m_deviceManager) {
+        bool isI2CMode = (m_config.serialDevice.find("/dev/i2c-") == 0);
+        if (!isI2CMode) {
+            m_deviceManager->stopDisconnectionMonitor();
+        }
     }
 
     // Display shutdown message

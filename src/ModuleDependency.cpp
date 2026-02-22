@@ -127,7 +127,7 @@ bool ModuleDependency::checkDependencies(const std::string& moduleId) {
         // Check if file exists
         if (access(path.c_str(), F_OK) != 0) {
             Logger::warning("Dependency not satisfied: " + path + " for module " + moduleId);
-            return true;  // Changed to true as per your code comment
+            return false;
         }
     }
 
