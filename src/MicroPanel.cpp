@@ -1107,14 +1107,14 @@ void MicroPanel::simulateRotationForModule(std::shared_ptr<ScreenModule> module,
         // Calculate percentage (0-255 -> 0-100%)
         int percentage = (currentBrightness * 100) / 255;
 
-        // Clear the previous text area first
-        m_display->drawText(50, 20, "    ");
+        // Clear the previous text area first (page-aligned Y for portrait compatibility)
+        m_display->drawText(50, 16, "    ");
         usleep(Config::DISPLAY_CMD_DELAY);
 
         // Format and draw new value
         char text[16];
         snprintf(text, sizeof(text), "%d%%", percentage);
-        m_display->drawText(50, 20, text);
+        m_display->drawText(50, 16, text);
         usleep(Config::DISPLAY_CMD_DELAY);
 
         // Update progress bar

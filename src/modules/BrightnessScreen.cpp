@@ -95,8 +95,9 @@ void BrightnessScreen::setupScreen()
     m_display->clear();
     usleep(Config::DISPLAY_CMD_DELAY * 3);
     
-    // Draw title
-    m_display->drawText(25, 5, "Brightness");
+    // Draw title — use page-aligned Y values (multiples of 8) so portrait
+    // mode 180° flip doesn't cause elements to share SSD1306 display pages
+    m_display->drawText(25, 0, "Brightness");
     usleep(Config::DISPLAY_CMD_DELAY);
     m_display->drawText(0, 8, "----------------");
     usleep(Config::DISPLAY_CMD_DELAY);
@@ -112,11 +113,11 @@ void BrightnessScreen::updateBrightnessValue(int brightness)
     snprintf(text, sizeof(text), "%d%%", percentage);
     
     // Clear the previous text area first
-    m_display->drawText(50, 20, "    ");
+    m_display->drawText(50, 16, "    ");
     usleep(Config::DISPLAY_CMD_DELAY);
-    
+
     // Draw new value
-    m_display->drawText(50, 20, text);
+    m_display->drawText(50, 16, text);
     usleep(Config::DISPLAY_CMD_DELAY);
     
     // Update progress bar
