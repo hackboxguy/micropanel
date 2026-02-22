@@ -818,11 +818,10 @@ void MicroPanel::run()
 void MicroPanel::shutdown()
 {
     // Make shutdown idempotent - only run once
-    static bool shutdownDone = false;
-    if (shutdownDone) {
+    if (m_shutdownDone) {
         return;
     }
-    shutdownDone = true;
+    m_shutdownDone = true;
 
     // Stop disconnection monitor - only if it was started
     if (m_deviceManager) {

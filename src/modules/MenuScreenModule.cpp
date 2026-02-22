@@ -205,7 +205,23 @@ void MenuScreenModule::executeSubmenuAction(const std::string& moduleId) {
             m_display->drawText(0, 0, "Dependency Error");
             m_display->drawText(0, 10, "Module unavailable:");
             m_display->drawText(0, 20, moduleId);
-            usleep(Config::DISPLAY_CMD_DELAY * 2000); // Show for 2 seconds
+            m_display->drawText(0, 40, "Press any key...");
+
+            // Drain any pending input events (from the button press that got us here)
+            if (m_input) {
+                while (m_input->waitForEvents(50) > 0) {
+                    m_input->processEvents([](int){}, [](){});
+                }
+            }
+
+            // Now wait for a fresh key press (no timeout - wait indefinitely)
+            if (m_input) {
+                while (m_input->waitForEvents(500) <= 0) {
+                    // Keep waiting until user presses something
+                }
+                // Consume the event so it doesn't propagate
+                m_input->processEvents([](int){}, [](){});
+            }
 
             // Re-render the menu
             m_display->clear();

@@ -73,6 +73,7 @@ private:
 
     // Application state
     std::atomic<bool> m_running{false};
+    bool m_shutdownDone{false};
 
     // Module registry
     std::map<std::string, std::shared_ptr<ScreenModule>> m_modules;

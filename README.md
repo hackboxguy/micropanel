@@ -186,13 +186,15 @@ Requires: `pip install pyserial`, user in `dialout` and `input` groups.
 Menu screens are configured via JSON files in `screens/`. Each module can be enabled/disabled and may declare dependencies:
 
 ```json
-[
-  { "id": "netinfo","title": "Network Info","enabled": false},
-  { "id": "ping", "title": "Ping Tool","enabled": false},
-  { "id": "internet", "title": "Internet Test", "enabled": false},
-  { "id": "speedtest","title": "Speed Test", "enabled": false,"depends": {"download_url": "https://cachefly.cachefly.net/50mb.test"}},
-  { "id": "wifi", "title": "WiFi Settings","enabled": false,"depends": {"daemon_script": "/etc/init.d/networking"}},
-]
+{
+  "modules": [
+    { "id": "netinfo", "title": "Network Info", "enabled": false },
+    { "id": "ping", "title": "Ping Tool", "enabled": false },
+    { "id": "internet", "title": "Internet Test", "enabled": false },
+    { "id": "speedtest", "title": "Speed Test", "enabled": false, "depends": { "download_url": "https://cachefly.cachefly.net/50mb.test" } },
+    { "id": "wifi", "title": "WiFi Settings", "enabled": false, "depends": { "daemon_script": "/etc/init.d/networking" } }
+  ]
+}
 ```
 
 Different configs are provided for Debian (`config-debian.json`) vs Raspberry Pi OS (`config-pios.json`).
