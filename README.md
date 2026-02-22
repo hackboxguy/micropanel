@@ -263,6 +263,16 @@ ls -l /dev/input/by-id/      # Check input device
 
 ---
 
+## Security and Deployment Notes
+
+- The micropanel service runs as **root** by default to access serial and input devices.
+- Several modules execute shell commands and scripts defined in the JSON configuration files (e.g., network settings, system stats, generic list actions).
+- **Config and script files must be owned by root and not writable by untrusted users.** A compromised config file could lead to arbitrary command execution.
+- On production deployments, review all custom scripts in `scripts/` before enabling modules that reference them.
+- micropanel has no network-facing interface — all interaction is via local USB/GPIO hardware input.
+
+---
+
 ## Why µPanel?
 
 - Works on any Linux system with USB host support

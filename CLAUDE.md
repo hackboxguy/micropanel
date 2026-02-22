@@ -96,6 +96,9 @@ Child modules call `notifyCallback("exit_to_main_menu", "")` which `MenuScreenMo
 ### Multiple Module Instances (type-based pattern)
 To support multiple instances of a module class: add `setId()` / dynamic `getModuleId()` to the class, add type handling in `MicroPanel::loadConfigFromJson()`, and use `"type": "your_type"` with unique `"id"` values in JSON config. See `TextBoxScreen` and `GenericListScreen` for reference.
 
+### Dependency Error Handling (MenuScreenModule)
+When a module fails its dependency check, `executeSubmenuAction()` shows an error screen and waits for any key press before returning to the menu. The pattern drains pending input events first (to avoid instant dismissal from the triggering button press), then polls `m_input->waitForEvents()` in a loop. This is the standard approach for "press any key to continue" screens.
+
 ### TextBoxScreen Periodic Refresh
 Set `"refresh_sec"` in the `"depends"` object (minimum 0.5s). Uses selective line updates - compares old vs new output and only redraws changed lines. Automatic UTF-8 to ASCII conversion for SSD1306 compatibility (e.g., `°` → `*`).
 
@@ -106,7 +109,7 @@ Set `"refresh_sec"` in the `"depends"` object (minimum 0.5s). Uses selective lin
   -i DEVICE   Input: /dev/input/eventX or "gpio" for Pi GPIO buttons
   -s DEVICE   Display: /dev/ttyACM0 or /dev/i2c-1 for I2C
   -c FILE     JSON config file (screens/config-*.json)
-  -a          Auto-detect USB dongle (default: enabled)
+  -a          Auto-detect USB dongle via VID:PID
   -v          Verbose debug output
   -p          Power save mode (display timeout)
 ```
