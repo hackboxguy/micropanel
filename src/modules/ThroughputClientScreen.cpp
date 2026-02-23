@@ -378,7 +378,8 @@ void ThroughputClientScreen::renderMainMenu(bool fullRedraw) {
     }
 
     // Use smooth scrolling like GenericListScreen instead of pagination
-    const int MAX_VISIBLE_ITEMS = 6;
+    // 5 items (Y16-Y48) leaves Y56 free for updateStatusLine()
+    const int MAX_VISIBLE_ITEMS = 5;
     static int firstVisibleItem = 0;
 
     // Calculate scroll position to keep selected item visible (like GenericListScreen)
