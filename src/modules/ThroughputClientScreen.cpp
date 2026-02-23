@@ -1188,6 +1188,7 @@ bool ThroughputClientScreen::handleInput() {
 		    if (buttonPressed) {
 		        // Return to main menu when any button is pressed
 		        m_waitingForButtonPress = false;
+			m_testResult = -1; // Clear result so status line doesn't overwrite 6th menu item
 			m_state = ThroughputClientState::MENU_STATE_START;
 		        Logger::debug("ThroughputClientScreen: Button pressed on results screen, returning to main menu");
 			renderMainMenu(true);
@@ -2449,6 +2450,7 @@ bool ThroughputClientScreen::handleGPIOButtonPress() {
             if (m_waitingForButtonPress) {
                 // Return to main menu when any button is pressed
                 m_waitingForButtonPress = false;
+                m_testResult = -1; // Clear result so status line doesn't overwrite 6th menu item
                 m_state = ThroughputClientState::MENU_STATE_START;
                 Logger::debug("ThroughputClientScreen: Button pressed on results screen, returning to main menu");
                 renderMainMenu(true);
