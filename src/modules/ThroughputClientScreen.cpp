@@ -378,8 +378,7 @@ void ThroughputClientScreen::renderMainMenu(bool fullRedraw) {
     }
 
     // Use smooth scrolling like GenericListScreen instead of pagination
-    // 5 items (Y16-Y48) leaves Y56 free for updateStatusLine()
-    const int MAX_VISIBLE_ITEMS = 5;
+    const int MAX_VISIBLE_ITEMS = 6;
     static int firstVisibleItem = 0;
 
     // Calculate scroll position to keep selected item visible (like GenericListScreen)
@@ -937,10 +936,6 @@ void ThroughputClientScreen::updateStatusLine() {
     std::string statusText;
     int yPos = 56; // Position for status line (last valid line on 64px display)
 
-    // Clear status line
-    m_display->drawText(0, yPos, "                ");
-    usleep(Config::DISPLAY_CMD_DELAY);
-
     // Show different status based on current state
     if (m_testInProgress) {
         // Show test progress
@@ -959,8 +954,11 @@ void ThroughputClientScreen::updateStatusLine() {
         }
     }
 
-    // Draw the status text
+    // Only touch Y=56 when there's actual status to show,
+    // otherwise leave it for the 6th menu item
     if (!statusText.empty()) {
+        m_display->drawText(0, yPos, "                ");
+        usleep(Config::DISPLAY_CMD_DELAY);
         m_display->drawText(0, yPos, statusText);
         usleep(Config::DISPLAY_CMD_DELAY);
     }
