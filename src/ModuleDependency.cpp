@@ -117,10 +117,10 @@ bool ModuleDependency::checkDependencies(const std::string& moduleId) {
         std::string key = dep.first;
         std::string path = dep.second;
 
-        // Skip URL dependencies (http:// or https://)
-        if ((path.length() >= 7 && path.compare(0, 7, "http://") == 0) ||
-            (path.length() >= 8 && path.compare(0, 8, "https://") == 0)) {
-            Logger::debug("Skipping URL dependency check for: " + path);
+        // Only validate dependencies whose values look like file paths
+        // Skip URLs (http://, https://) and non-path values (e.g. "buildroot", "end0")
+        if (path.empty() || path[0] != '/') {
+            Logger::debug("Skipping non-path dependency for " + moduleId + ": " + key + " -> " + path);
             continue;
         }
 
