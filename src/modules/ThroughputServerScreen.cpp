@@ -212,7 +212,7 @@ void ThroughputServerScreen::renderOptions(bool fullRedraw) {
     } else {
         // Just clear selection markers for minimal update
         for (size_t i = 0; i < m_options.size(); i++) {
-            int yPos = 16 + (i * 10);
+            int yPos = 16 + (i * 8);
             m_display->drawText(0, yPos, " "); // Clear selection marker
             usleep(Config::DISPLAY_CMD_DELAY);
         }
@@ -224,7 +224,7 @@ void ThroughputServerScreen::renderOptions(bool fullRedraw) {
         bool isActiveOption = (i == 0 && serverRunning) || (i == 1 && !serverRunning);
 
         std::string buffer;
-        int yPos = 16 + (i * 10);  // Start at y=16 with 10px spacing
+        int yPos = 16 + (i * 8);  // Start at y=16 with 8px (page-aligned) spacing
 
         // Format with selection indicator and/or state highlight
         if (static_cast<int>(i) == m_selectedOption) {

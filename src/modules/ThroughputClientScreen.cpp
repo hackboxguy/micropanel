@@ -509,7 +509,7 @@ void ThroughputClientScreen::renderProtocolSubmenu(bool fullRedraw) {
     // If not full redraw, just clear selection markers
     if (!fullRedraw) {
         for (size_t i = 0; i <= m_protocolOptions.size(); i++) { // +1 for Back option
-            m_display->drawText(0, 16 + (i * 10), " ");
+            m_display->drawText(0, 16 + (i * 8), " ");
             usleep(Config::DISPLAY_CMD_DELAY);
         }
     }
@@ -529,7 +529,7 @@ void ThroughputClientScreen::renderProtocolSubmenu(bool fullRedraw) {
 
         m_display->drawText(0, yPos, optionText);
         usleep(Config::DISPLAY_CMD_DELAY);
-        yPos += 10;
+        yPos += 8;
     }
 
     // Draw Back option
@@ -880,7 +880,7 @@ void ThroughputClientScreen::renderAutoDiscoverScreen(bool fullRedraw) {
                                       " " + m_discoveredServers[i].first;
                 m_display->drawText(0, yPos, serverText);
                 usleep(Config::DISPLAY_CMD_DELAY);
-                yPos += 10;
+                yPos += 8;
             }
 
             // Draw Back option
@@ -922,7 +922,7 @@ void ThroughputClientScreen::renderAutoDiscoverScreen(bool fullRedraw) {
                     m_display->drawText(0, yPos, ">");
                 }
                 usleep(Config::DISPLAY_CMD_DELAY);
-                yPos += 10;
+                yPos += 8;
             }
 
             // Update Back selection

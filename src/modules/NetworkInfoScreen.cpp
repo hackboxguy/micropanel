@@ -59,9 +59,9 @@ void NetworkInfoScreen::enter()
         
         pos += chunk;
         remaining -= chunk;
-        yPos += 10;
+        yPos += 8;
     }
-    
+
     yPos += 8;
     
     // Format MAC address

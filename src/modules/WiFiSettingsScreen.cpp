@@ -102,7 +102,7 @@ void WiFiSettingsScreen::renderOptions()
                              (i == 1 && !m_currentWiFiState);
         
         std::string buffer;
-        int yPos = 16 + (i * 10);  // Start at y=16 with 10px spacing
+        int yPos = 16 + (i * 8);  // Start at y=16 with 8px (page-aligned) spacing
         
         // Clear the line first to avoid display artifacts
         m_display->drawText(0, yPos, "                ");
