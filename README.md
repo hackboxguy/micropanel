@@ -49,12 +49,16 @@ micropanel works with two different types of HMI hardware interfaces. The same d
 - Display: USB CDC serial exposed as `/dev/ttyACM*`
 - Auto-detected by VID:PID (`1209:0001`)
 
+![USB HMI Dongle](images/usb-hmi-dongle.jpg)
+
 **2. Direct GPIO + I2C** — for Raspberry Pi and SBCs with exposed pins
 - Designed for single-board computers that expose GPIO and I2C pins directly
 - SSD1306 OLED and navigation buttons are wired directly to the board's GPIO/I2C
 - No USB dongle needed — the display and buttons are part of the device itself
 - Input: GPIO-backed directional buttons (via linux input event nodes)
 - Display: I2C SSD1306 (`/dev/i2c-1` or `/dev/i2c-3`)
+
+![Pi HMI HAT](images/pi-hmi-hat.jpg)
 
 **3. Hybrid** (recommended for Pi)
 - For SBCs that have both GPIO/I2C pins and USB ports
