@@ -17,6 +17,9 @@ namespace Config {
     constexpr const char* MENU_SEPARATOR = "----------------";
     constexpr int MENU_VISIBLE_ITEMS = 6;
     constexpr int MENU_SCROLL_INDICATOR_WIDTH = 3;
+    // Display layout derived constants
+    constexpr int DISPLAY_TEXT_COLUMNS = 16;                           // Characters per line (DISPLAY_WIDTH / CHAR_WIDTH rounded)
+    constexpr int SCROLL_INDICATOR_X = DISPLAY_WIDTH - CHAR_WIDTH;    // X position for scroll arrows (122)
     constexpr int STAT_UPDATE_SEC = 1;
     // Device detection
     constexpr const char* DEFAULT_INPUT_DEVICE = "/dev/input/event0";
@@ -35,6 +38,8 @@ namespace Config {
     constexpr uint8_t CMD_BRIGHTNESS = 0x05;
     constexpr uint8_t CMD_PROGRESS_BAR = 0x06;
     constexpr uint8_t CMD_POWER_MODE = 0x07;
+    // CMD_DRAW_TEXT max text length: 128-byte firmware buffer minus 4-byte header (cmd+x+y+len)
+    constexpr int CMD_DRAW_TEXT_MAX_LEN = 124;
     // Timing constants
     constexpr int DISPLAY_CMD_DELAY = 10000;       // 10ms delay between display commands
     constexpr int DISPLAY_CLEAR_DELAY = 50000;     // 50ms delay after clear

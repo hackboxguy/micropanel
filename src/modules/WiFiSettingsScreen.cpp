@@ -17,16 +17,7 @@ void WiFiSettingsScreen::enter()
     m_currentWiFiState = getWiFiStatus();
     
     // Clear display and show submenu
-    m_display->clear();
-    usleep(Config::DISPLAY_CMD_DELAY * 3);
-    
-    // Draw title
-    m_display->drawText(0, 0, " WiFi Settings");
-    usleep(Config::DISPLAY_CMD_DELAY);
-    
-    // Draw separator
-    m_display->drawText(0, 8, "----------------");
-    usleep(Config::DISPLAY_CMD_DELAY);
+    m_display->drawMenuHeader(" WiFi Settings");
     
     // Draw menu options
     renderOptions();
@@ -111,7 +102,7 @@ void WiFiSettingsScreen::renderOptions()
                              (i == 1 && !m_currentWiFiState);
         
         std::string buffer;
-        int yPos = 16 + (i * 10);  // Start at y=16 with 10px spacing
+        int yPos = 16 + (i * 8);  // Start at y=16 with 8px (page-aligned) spacing
         
         // Clear the line first to avoid display artifacts
         m_display->drawText(0, yPos, "                ");

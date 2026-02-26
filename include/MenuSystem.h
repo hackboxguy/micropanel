@@ -89,7 +89,10 @@ public:
     void setBrightness(int brightness);
     void drawProgressBar(int x, int y, int width, int height, int percentage);
     void setPower(bool on);
-    
+
+    // Convenience: clear display and draw title + separator
+    void drawMenuHeader(const std::string& title);
+
     // State accessors
     bool isInverted() const { return m_inverted; }
     int getBrightness() const { return m_brightness; }

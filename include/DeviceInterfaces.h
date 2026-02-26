@@ -97,6 +97,8 @@ public:
     }
 
 private:
+    void flushBufferInternal();  // Internal flush without locking (caller must hold m_mutex)
+
     struct {
         uint8_t buffer[Config::CMD_BUFFER_SIZE];
         size_t used;
@@ -245,7 +247,7 @@ public:
     // Device detection functions
     std::pair<std::string, std::string> detectDevices();
     std::pair<std::string, std::string> detectDevicesWithFallback(const std::string& fallbackInput, const std::string& fallbackSerial);
-    bool checkDevicePresent() const;
+    bool checkDevicePresent(bool silent = false) const;
     bool monitorDeviceUntilConnected(std::atomic<bool>& runningFlag);
 
     // Disconnection monitoring
@@ -256,7 +258,6 @@ public:
 private:
     std::string findHmiInputDevice() const;
     std::string findHmiSerialDevice() const;
-    bool checkDevicePresentSilent() const;
     void disconnectionMonitorThread();
 
     std::atomic<bool> m_deviceDisconnected{false};

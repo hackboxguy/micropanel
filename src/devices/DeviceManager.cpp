@@ -57,158 +57,115 @@ std::pair<std::string, std::string> DeviceManager::detectDevicesWithFallback(con
     return std::make_pair(fallbackInput, fallbackSerial);
 }
 
-bool DeviceManager::checkDevicePresent() const
+bool DeviceManager::checkDevicePresent(bool silent) const
 {
     struct udev* udev;
     struct udev_enumerate* enumerate;
     struct udev_list_entry* devices, *devListEntry;
     bool found = false;
-    
+
     // Create udev context
     udev = udev_new();
     if (!udev) {
-        Logger::error("Failed to create udev context");
+        if (!silent) Logger::error("Failed to create udev context");
         return false;
     }
-    
-    Logger::debug("Looking for HMI device with VID:PID " + std::string(Config::HMI_VENDOR_ID) + ":" + 
-                std::string(Config::HMI_PRODUCT_ID));
-    
-    // List all input devices for debugging
-    if (Logger::isVerbose()) {
-        Logger::debug("Available input devices:");
-        DIR* dir = opendir("/dev/input");
-        if (dir) {
-            struct dirent* entry;
-            while ((entry = readdir(dir)) != NULL) {
-                if (strncmp(entry->d_name, "event", 5) == 0) {
-                    std::string path = "/dev/input/";
-                    path += entry->d_name;
-                    
-                    // Try to get device name
-                    int fd = open(path.c_str(), O_RDONLY | O_NONBLOCK);
-                    if (fd >= 0) {
-                        char name[256] = "Unknown";
-                        if (ioctl(fd, EVIOCGNAME(sizeof(name)), name) >= 0) {
-                            Logger::debug("  " + path + ": " + name);
+
+    if (!silent) {
+        Logger::debug("Looking for HMI device with VID:PID " + std::string(Config::HMI_VENDOR_ID) + ":" +
+                    std::string(Config::HMI_PRODUCT_ID));
+
+        // List all input devices for debugging
+        if (Logger::isVerbose()) {
+            Logger::debug("Available input devices:");
+            DIR* dir = opendir("/dev/input");
+            if (dir) {
+                struct dirent* entry;
+                while ((entry = readdir(dir)) != NULL) {
+                    if (strncmp(entry->d_name, "event", 5) == 0) {
+                        std::string path = "/dev/input/";
+                        path += entry->d_name;
+
+                        // Try to get device name
+                        int fd = open(path.c_str(), O_RDONLY | O_NONBLOCK);
+                        if (fd >= 0) {
+                            char name[256] = "Unknown";
+                            if (ioctl(fd, EVIOCGNAME(sizeof(name)), name) >= 0) {
+                                Logger::debug("  " + path + ": " + name);
+                            } else {
+                                Logger::debug("  " + path + ": <unknown>");
+                            }
+                            close(fd);
                         } else {
-                            Logger::debug("  " + path + ": <unknown>");
+                            Logger::debug("  " + path + ": <cannot open>");
                         }
-                        close(fd);
-                    } else {
-                        Logger::debug("  " + path + ": <cannot open>");
+                    }
+                }
+                closedir(dir);
+            }
+        }
+    }
+
+    // Create enumerate object
+    enumerate = udev_enumerate_new(udev);
+    udev_enumerate_add_match_subsystem(enumerate, "usb");
+    udev_enumerate_scan_devices(enumerate);
+
+    // Get the list of matching devices
+    devices = udev_enumerate_get_list_entry(enumerate);
+
+    // Iterate through devices
+    udev_list_entry_foreach(devListEntry, devices) {
+        const char* path = udev_list_entry_get_name(devListEntry);
+        struct udev_device* dev = udev_device_new_from_syspath(udev, path);
+
+        if (dev) {
+            const char* vendor = udev_device_get_sysattr_value(dev, "idVendor");
+            const char* product = udev_device_get_sysattr_value(dev, "idProduct");
+
+            // Check VID:PID match
+            if (vendor && product &&
+                strcmp(vendor, Config::HMI_VENDOR_ID) == 0 &&
+                strcmp(product, Config::HMI_PRODUCT_ID) == 0) {
+
+                if (silent) {
+                    // Silent mode: VID:PID match is sufficient
+                    found = true;
+                } else {
+                    // Verbose mode: also verify manufacturer and product name
+                    const char* manufacturer = udev_device_get_sysattr_value(dev, "manufacturer");
+                    const char* productName = udev_device_get_sysattr_value(dev, "product");
+
+                    if (Logger::isVerbose()) {
+                        std::string deviceInfo = "USB Device: " + std::string(vendor) + ":" + std::string(product);
+                        if (manufacturer || productName) {
+                            deviceInfo += " - " + std::string(manufacturer ? manufacturer : "") + " " +
+                                       std::string(productName ? productName : "");
+                        }
+                        Logger::debug(deviceInfo);
+                    }
+
+                    if (manufacturer && productName &&
+                        strstr(manufacturer, Config::HMI_MANUFACTURER) != NULL &&
+                        strstr(productName, Config::HMI_PRODUCT_NAME) != NULL) {
+
+                        Logger::info("Found device: " + std::string(manufacturer) + " " +
+                                  std::string(productName) + " (VID:PID " + vendor + ":" + product + ")");
+                        found = true;
                     }
                 }
             }
-            closedir(dir);
-        }
-    }
-    
-    // Create enumerate object
-    enumerate = udev_enumerate_new(udev);
-    udev_enumerate_add_match_subsystem(enumerate, "usb");
-    udev_enumerate_scan_devices(enumerate);
-    
-    // Get the list of matching devices
-    devices = udev_enumerate_get_list_entry(enumerate);
-    
-    // Iterate through devices
-    udev_list_entry_foreach(devListEntry, devices) {
-        const char* path = udev_list_entry_get_name(devListEntry);
-        struct udev_device* dev = udev_device_new_from_syspath(udev, path);
-        
-        if (dev) {
-            const char* vendor = udev_device_get_sysattr_value(dev, "idVendor");
-            const char* product = udev_device_get_sysattr_value(dev, "idProduct");
-            const char* manufacturer = udev_device_get_sysattr_value(dev, "manufacturer");
-            const char* productName = udev_device_get_sysattr_value(dev, "product");
-            
-            // Print USB device info for debugging
-            if (Logger::isVerbose() && vendor && product) {
-                std::string deviceInfo = "USB Device: " + std::string(vendor ? vendor : "?") + ":" + 
-                                      std::string(product ? product : "?");
-                if (manufacturer || productName) {
-                    deviceInfo += " - " + std::string(manufacturer ? manufacturer : "") + " " + 
-                               std::string(productName ? productName : "");
-                }
-                Logger::debug(deviceInfo);
-            }
-            
-            // Check if this is our HMI device
-            if (vendor && product &&
-                strcmp(vendor, Config::HMI_VENDOR_ID) == 0 &&
-                strcmp(product, Config::HMI_PRODUCT_ID) == 0) {
-                
-                if (manufacturer && productName &&
-                    strstr(manufacturer, Config::HMI_MANUFACTURER) != NULL &&
-                    strstr(productName, Config::HMI_PRODUCT_NAME) != NULL) {
-                    
-                    Logger::info("Found device: " + std::string(manufacturer) + " " + 
-                              std::string(productName) + " (VID:PID " + vendor + ":" + product + ")");
-                    found = true;
-                }
-            }
-            
-            udev_device_unref(dev);
-            
-            if (found) break;
-        }
-    }
-    
-    // Clean up
-    udev_enumerate_unref(enumerate);
-    udev_unref(udev);
-    
-    return found;
-}
 
-bool DeviceManager::checkDevicePresentSilent() const
-{
-    struct udev* udev;
-    struct udev_enumerate* enumerate;
-    struct udev_list_entry* devices, *devListEntry;
-    bool found = false;
-    
-    // Create udev context
-    udev = udev_new();
-    if (!udev) {
-        return false;
-    }
-    
-    // Create enumerate object
-    enumerate = udev_enumerate_new(udev);
-    udev_enumerate_add_match_subsystem(enumerate, "usb");
-    udev_enumerate_scan_devices(enumerate);
-    
-    // Get the list of matching devices
-    devices = udev_enumerate_get_list_entry(enumerate);
-    
-    // Iterate through devices
-    udev_list_entry_foreach(devListEntry, devices) {
-        const char* path = udev_list_entry_get_name(devListEntry);
-        struct udev_device* dev = udev_device_new_from_syspath(udev, path);
-        
-        if (dev) {
-            const char* vendor = udev_device_get_sysattr_value(dev, "idVendor");
-            const char* product = udev_device_get_sysattr_value(dev, "idProduct");
-            
-            // Check if this is our HMI device
-            if (vendor && product &&
-                strcmp(vendor, Config::HMI_VENDOR_ID) == 0 &&
-                strcmp(product, Config::HMI_PRODUCT_ID) == 0) {
-                found = true;
-            }
-            
             udev_device_unref(dev);
-            
+
             if (found) break;
         }
     }
-    
+
     // Clean up
     udev_enumerate_unref(enumerate);
     udev_unref(udev);
-    
+
     return found;
 }
 
@@ -405,7 +362,7 @@ void DeviceManager::disconnectionMonitorThread()
         time_t now = time(NULL);
         if (now - lastCheckTime >= 5) {
             // Check that the device is still present
-            if (!checkDevicePresentSilent()) {
+            if (!checkDevicePresent(true)) {
                 std::cout << "Device disconnected (periodic check)" << std::endl;
                 m_deviceDisconnected = true;
                 break;
@@ -558,20 +515,20 @@ std::string DeviceManager::findHmiInputDevice() const
         Logger::debug("Trying alternative detection method...");
         
         // Look for device by dmesg pattern (recent device appears in dmesg)
-        FILE* fp = popen("dmesg | grep -A 2 \"input: DIY Projects Pico Encoder Display as\" | grep -o \"/dev/input/event[0-9]*\"", "r");
+        std::unique_ptr<FILE, decltype(&pclose)> fp(
+            popen("dmesg | grep -A 2 \"input: DIY Projects Pico Encoder Display as\" | grep -o \"/dev/input/event[0-9]*\"", "r"), pclose);
         if (fp) {
             char path[64];
-            if (fgets(path, sizeof(path), fp) != NULL) {
+            if (fgets(path, sizeof(path), fp.get()) != NULL) {
                 // Remove trailing newline
                 size_t len = strlen(path);
                 if (len > 0 && path[len-1] == '\n') {
                     path[len-1] = '\0';
                 }
-                
+
                 Logger::debug("Found input device from dmesg: " + std::string(path));
                 result = path;
             }
-            pclose(fp);
         }
     }
     
@@ -727,20 +684,20 @@ std::string DeviceManager::findHmiSerialDevice() const
         std::cout << "Trying alternative detection method for serial device..." << std::endl;
         
         // Look for device by dmesg pattern
-        FILE* fp = popen("dmesg | grep -A 1 \"Product: Pico Encoder Display\" | grep -o \"/dev/ttyACM[0-9]*\"", "r");
+        std::unique_ptr<FILE, decltype(&pclose)> fp(
+            popen("dmesg | grep -A 1 \"Product: Pico Encoder Display\" | grep -o \"/dev/ttyACM[0-9]*\"", "r"), pclose);
         if (fp) {
             char path[64];
-            if (fgets(path, sizeof(path), fp) != NULL) {
+            if (fgets(path, sizeof(path), fp.get()) != NULL) {
                 // Remove trailing newline
                 size_t len = strlen(path);
                 if (len > 0 && path[len-1] == '\n') {
                     path[len-1] = '\0';
                 }
-                
+
                 std::cout << "Found serial device from dmesg: " << path << std::endl;
                 result = path;
             }
-            pclose(fp);
         }
     }
     

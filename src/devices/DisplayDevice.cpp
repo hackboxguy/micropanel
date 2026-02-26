@@ -119,45 +119,52 @@ bool DisplayDevice::checkConnection() const
 void DisplayDevice::bufferCommand(const uint8_t* data, size_t length)
 {
     std::lock_guard<std::mutex> lock(m_mutex);
-    
+
     // If buffer would overflow, flush it first
     if (m_cmdBuffer.used + length > Config::CMD_BUFFER_SIZE) {
-        flushBuffer();
+        flushBufferInternal();
     }
-    
+
     // Copy new command to buffer
     memcpy(m_cmdBuffer.buffer + m_cmdBuffer.used, data, length);
     m_cmdBuffer.used += length;
-    
+
     // Update last action timestamp
     gettimeofday(&m_cmdBuffer.lastFlush, nullptr);
 }
 
-// Flush the command buffer to the serial device
+// Flush the command buffer to the serial device (public, acquires lock)
 void DisplayDevice::flushBuffer()
 {
     std::lock_guard<std::mutex> lock(m_mutex);
-    
+    flushBufferInternal();
+}
+
+// Internal flush without locking (caller must hold m_mutex)
+void DisplayDevice::flushBufferInternal()
+{
     if (m_cmdBuffer.used > 0 && isOpen()) {
-        ssize_t bytesWritten = write(m_fd, m_cmdBuffer.buffer, m_cmdBuffer.used);
-        if (bytesWritten < 0) {
-            std::cerr << "Error writing to serial device: " << strerror(errno) << std::endl;
-            
-            // If error indicates device disconnection, set the flag
-            if (errno == EIO || errno == ENODEV || errno == ENXIO) {
-                std::cerr << "Serial buffer write error indicates device disconnection" << std::endl;
-                m_disconnected = true;
+        size_t totalWritten = 0;
+        while (totalWritten < m_cmdBuffer.used) {
+            ssize_t bytesWritten = write(m_fd, m_cmdBuffer.buffer + totalWritten,
+                                         m_cmdBuffer.used - totalWritten);
+            if (bytesWritten < 0) {
+                if (errno == EINTR) continue;
+                std::cerr << "Error writing to serial device: " << strerror(errno) << std::endl;
+                if (errno == EIO || errno == ENODEV || errno == ENXIO) {
+                    std::cerr << "Serial buffer write error indicates device disconnection" << std::endl;
+                    m_disconnected = true;
+                }
+                break;
             }
-        } else if ((size_t)bytesWritten < m_cmdBuffer.used) {
-            std::cerr << "Warning: Only wrote " << bytesWritten << " of " 
-                      << m_cmdBuffer.used << " bytes" << std::endl;
+            totalWritten += bytesWritten;
         }
-        
+
         // Flush the output only if device still connected
         if (!m_disconnected) {
             if (tcdrain(m_fd) < 0) {
                 std::cerr << "Error draining serial output: " << strerror(errno) << std::endl;
-                
+
                 // Check if tcdrain error indicates device disconnection
                 if (errno == EIO || errno == ENODEV || errno == ENXIO) {
                     std::cerr << "Serial buffer drain error indicates device disconnection" << std::endl;
@@ -165,7 +172,7 @@ void DisplayDevice::flushBuffer()
                 }
             }
         }
-        
+
         m_cmdBuffer.used = 0;
     }
 }
@@ -176,27 +183,27 @@ void DisplayDevice::sendCommand(const uint8_t* data, size_t length)
     std::lock_guard<std::mutex> lock(m_mutex);
     
     if (isOpen()) {
-        // Write the data and check return value
-        ssize_t bytesWritten = write(m_fd, data, length);
-        if (bytesWritten < 0) {
-            std::cerr << "Error writing to serial device: " << strerror(errno) << std::endl;
-            
-            // If error indicates device disconnection, set the flag
-            if (errno == EIO || errno == ENODEV || errno == ENXIO) {
-                std::cerr << "Serial write error indicates device disconnection" << std::endl;
-                m_disconnected = true;
+        size_t totalWritten = 0;
+        while (totalWritten < length) {
+            ssize_t bytesWritten = write(m_fd, data + totalWritten, length - totalWritten);
+            if (bytesWritten < 0) {
+                if (errno == EINTR) continue;
+                std::cerr << "Error writing to serial device: " << strerror(errno) << std::endl;
+                if (errno == EIO || errno == ENODEV || errno == ENXIO) {
+                    std::cerr << "Serial write error indicates device disconnection" << std::endl;
+                    m_disconnected = true;
+                }
+                break;
             }
-        } else if ((size_t)bytesWritten < length) {
-            std::cerr << "Warning: Only wrote " << bytesWritten << " of " 
-                      << length << " bytes" << std::endl;
+            totalWritten += bytesWritten;
         }
-        
+
         // Flush the output buffer to ensure command is sent immediately
         // But only if the device hasn't been disconnected
         if (!m_disconnected) {
             if (tcdrain(m_fd) < 0) {
                 std::cerr << "Error draining serial output: " << strerror(errno) << std::endl;
-                
+
                 // Check if tcdrain error indicates device disconnection
                 if (errno == EIO || errno == ENODEV || errno == ENXIO) {
                     std::cerr << "Serial drain error indicates device disconnection" << std::endl;
@@ -215,16 +222,21 @@ void DisplayDevice::clear()
 }
 
 // Draw text at position
+// Protocol: [0x02][x][y][len][text...] — length-prefixed, max 124 bytes text
 void DisplayDevice::drawText(int x, int y, const std::string& text)
 {
     size_t textLen = text.length();
-    std::vector<uint8_t> cmd(textLen + 3);
-    
+    if (textLen > Config::CMD_DRAW_TEXT_MAX_LEN) {
+        textLen = Config::CMD_DRAW_TEXT_MAX_LEN;
+    }
+    std::vector<uint8_t> cmd(textLen + 4);
+
     cmd[0] = Config::CMD_DRAW_TEXT;
     cmd[1] = static_cast<uint8_t>(x);
     cmd[2] = static_cast<uint8_t>(y);
-    memcpy(cmd.data() + 3, text.c_str(), textLen);
-    
+    cmd[3] = static_cast<uint8_t>(textLen);
+    memcpy(cmd.data() + 4, text.c_str(), textLen);
+
     sendCommand(cmd.data(), cmd.size());
 }
 

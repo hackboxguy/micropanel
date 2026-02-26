@@ -2,6 +2,7 @@
 
 #include <string>
 #include <iostream>
+#include <atomic>
 
 /**
  * Simple logging utility for MicroPanel
@@ -66,5 +67,5 @@ public:
     }
     
 private:
-    static bool m_verbose;
+    static std::atomic<bool> m_verbose;
 };

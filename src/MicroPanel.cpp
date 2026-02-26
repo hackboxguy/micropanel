@@ -17,24 +17,24 @@
 using json = nlohmann::json;
 
 // Static instance for signal handler
-MicroPanel* MicroPanel::s_instance = nullptr;
+std::atomic<MicroPanel*> MicroPanel::s_instance{nullptr};
 extern std::atomic<bool> g_signalReceived;
 
 // Signal handler function
 void MicroPanel::signalHandler(int signal)
 {
    (void)signal;
-   if (s_instance) {
-        s_instance->m_running = false;
+   MicroPanel* inst = s_instance.load();
+   if (inst) {
+        inst->m_running.store(false);
     }
    g_signalReceived.store(true);
-   Logger::debug("Signal received, initiating shutdown...");
 }
 
 MicroPanel::MicroPanel(int argc, char* argv[])
 {
     // Set static instance for signal handler
-    s_instance = this;
+    s_instance.store(this);
     m_running=true;
     setupSignalHandlers();
     // Default configuration
@@ -404,13 +404,7 @@ bool MicroPanel::loadConfigFromJson() {
                 m_modules[id] = menuModule;
 
                 // CRITICAL: Set GPIO handler for ALL menu modules, not just enabled ones
-                if (m_config.useGPIOMode) {
-                    menuModule->setUseGPIOMode(true);
-                    menuModule->setGPIOHandler([this](std::shared_ptr<ScreenModule> submodule) {
-                    this->runModuleWithGPIOInput(submodule);
-                    });
-                    Logger::debug("Set GPIO handler for menu module: " + id);
-                }
+                configureMenuModuleGPIO(menuModule);
 
                 // Add to main menu only if enabled
                 if (enabled) {
@@ -600,13 +594,8 @@ void MicroPanel::registerModuleInMenu(const std::string& moduleName, const std::
             if (menuModule) {
                 menuModule->clearMainMenuFlag();
 
-                // NEW: Configure menu module for GPIO mode
-                if (m_config.useGPIOMode) {
-                    menuModule->setUseGPIOMode(true);
-                    menuModule->setGPIOHandler([this](std::shared_ptr<ScreenModule> submodule) {
-                        this->runModuleWithGPIOInput(submodule);
-                    });
-                }
+                // Configure menu module for GPIO mode
+                configureMenuModuleGPIO(menuModule);
             }
 
             // Use GPIO input for ALL module execution in GPIO mode
@@ -624,6 +613,15 @@ void MicroPanel::registerModuleInMenu(const std::string& moduleName, const std::
             Logger::error("Failed to execute module: " + moduleName);
         }
     }));
+}
+
+void MicroPanel::configureMenuModuleGPIO(std::shared_ptr<MenuScreenModule> menuModule) {
+    if (m_config.useGPIOMode) {
+        menuModule->setUseGPIOMode(true);
+        menuModule->setGPIOHandler([this](std::shared_ptr<ScreenModule> submodule) {
+            this->runModuleWithGPIOInput(submodule);
+        });
+    }
 }
 
 void MicroPanel::setupMenu()
@@ -819,10 +817,18 @@ void MicroPanel::run()
 
 void MicroPanel::shutdown()
 {
+    // Make shutdown idempotent - only run once
+    if (m_shutdownDone) {
+        return;
+    }
+    m_shutdownDone = true;
+
     // Stop disconnection monitor - only if it was started
-    bool isI2CMode = (m_config.serialDevice.find("/dev/i2c-") == 0);
-    if (!isI2CMode) {
-        m_deviceManager->stopDisconnectionMonitor();
+    if (m_deviceManager) {
+        bool isI2CMode = (m_config.serialDevice.find("/dev/i2c-") == 0);
+        if (!isI2CMode) {
+            m_deviceManager->stopDisconnectionMonitor();
+        }
     }
 
     // Display shutdown message
@@ -1101,14 +1107,14 @@ void MicroPanel::simulateRotationForModule(std::shared_ptr<ScreenModule> module,
         // Calculate percentage (0-255 -> 0-100%)
         int percentage = (currentBrightness * 100) / 255;
 
-        // Clear the previous text area first
-        m_display->drawText(50, 20, "    ");
+        // Clear the previous text area first (page-aligned Y for portrait compatibility)
+        m_display->drawText(50, 16, "    ");
         usleep(Config::DISPLAY_CMD_DELAY);
 
         // Format and draw new value
         char text[16];
         snprintf(text, sizeof(text), "%d%%", percentage);
-        m_display->drawText(50, 20, text);
+        m_display->drawText(50, 16, text);
         usleep(Config::DISPLAY_CMD_DELAY);
 
         // Update progress bar

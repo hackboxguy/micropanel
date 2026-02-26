@@ -117,16 +117,17 @@ bool ModuleDependency::checkDependencies(const std::string& moduleId) {
         std::string key = dep.first;
         std::string path = dep.second;
 
-        // Skip URL dependencies (http:// or https://)
-        if (path.substr(0, 7) == "http://" || path.substr(0, 8) == "https://") {
-            Logger::debug("Skipping URL dependency check for: " + path);
+        // Only validate dependencies whose values look like file paths
+        // Skip URLs (http://, https://) and non-path values (e.g. "buildroot", "end0")
+        if (path.empty() || path[0] != '/') {
+            Logger::debug("Skipping non-path dependency for " + moduleId + ": " + key + " -> " + path);
             continue;
         }
 
         // Check if file exists
         if (access(path.c_str(), F_OK) != 0) {
             Logger::warning("Dependency not satisfied: " + path + " for module " + moduleId);
-            return true;  // Changed to true as per your code comment
+            return false;
         }
     }
 

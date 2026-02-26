@@ -46,12 +46,21 @@ PersistentStorage& PersistentStorage::getInstance() {
     return instance;
 }
 
-PersistentStorage::PersistentStorage() 
-    : m_initialized(false), m_isDirty(false), m_savePending(false) {
-    // Nothing to do in constructor
+PersistentStorage::PersistentStorage()
+    : m_initialized(false), m_isDirty(false), m_savePending(false), m_shutdownRequested(false) {
+    m_saveThread = std::thread(&PersistentStorage::saveThreadFunc, this);
 }
 
 PersistentStorage::~PersistentStorage() {
+    // Signal the save thread to stop and wait for it
+    {
+        std::lock_guard<std::mutex> lock(m_saveMutex);
+        m_shutdownRequested = true;
+    }
+    m_saveCv.notify_one();
+    if (m_saveThread.joinable()) {
+        m_saveThread.join();
+    }
     // Ensure pending changes are saved when object is destroyed
     if (m_isDirty && m_initialized) {
         saveToFile();
@@ -189,7 +198,6 @@ bool PersistentStorage::saveToFile() {
         
         Logger::debug("Successfully saved persistent storage to " + m_storageFilePath);
         m_isDirty = false;
-        m_savePending = false;
         return true;
     } catch (const std::exception& e) {
         Logger::error("Error saving storage file: " + std::string(e.what()));
@@ -198,27 +206,36 @@ bool PersistentStorage::saveToFile() {
 }
 
 void PersistentStorage::scheduleSave() {
-    // If a save is already pending, don't schedule another one
-    if (m_savePending) {
-        return;
+    {
+        std::lock_guard<std::mutex> lock(m_saveMutex);
+        m_savePending = true;
     }
-    
-    m_savePending = true;
-    
-    // Start a thread that waits a bit then saves
-    std::thread([this]() {
-        // Wait 2 seconds before saving
-        std::this_thread::sleep_for(std::chrono::seconds(2));
-        
-        // Check if save is still pending (could have been canceled)
-        if (m_savePending) {
-            saveToFile();
-        }
-    }).detach();
+    m_saveCv.notify_one();
 }
 
 void PersistentStorage::cancelScheduledSave() {
+    std::lock_guard<std::mutex> lock(m_saveMutex);
     m_savePending = false;
+}
+
+void PersistentStorage::saveThreadFunc() {
+    std::unique_lock<std::mutex> lock(m_saveMutex);
+    while (!m_shutdownRequested) {
+        // Wait for a save request or shutdown signal
+        m_saveCv.wait(lock, [this] { return m_savePending || m_shutdownRequested; });
+        if (m_shutdownRequested) break;
+
+        // Coalesce: wait 2s for more writes, but stop early on shutdown
+        m_saveCv.wait_for(lock, std::chrono::seconds(2),
+                          [this] { return m_shutdownRequested; });
+
+        if (m_savePending) {
+            m_savePending = false;
+            lock.unlock();
+            saveToFile();
+            lock.lock();
+        }
+    }
 }
 
 // String values

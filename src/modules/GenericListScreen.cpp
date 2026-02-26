@@ -348,7 +348,7 @@ void GenericListScreen::renderList()
             buffer = buffer.substr(0, 16);
         }
         // Pad to ensure line is fully overwritten (avoids need for separate clear)
-        while (buffer.length() < 16) {
+        while (buffer.length() < Config::DISPLAY_TEXT_COLUMNS) {
             buffer += " ";
         }
         m_display->drawText(0, yPos, buffer);
@@ -424,16 +424,15 @@ std::string GenericListScreen::executeCommand(const std::string& command) const
     std::array<char, 128> buffer;
     std::string result;
 
-    FILE* pipe = popen(command.c_str(), "r");
+    std::unique_ptr<FILE, decltype(&pclose)> pipe(popen(command.c_str(), "r"), pclose);
     if (!pipe) {
         return "ERROR";
     }
 
-    while (fgets(buffer.data(), buffer.size(), pipe) != nullptr) {
+    while (fgets(buffer.data(), buffer.size(), pipe.get()) != nullptr) {
         result += buffer.data();
     }
 
-    pclose(pipe);
     return result;
 }
 

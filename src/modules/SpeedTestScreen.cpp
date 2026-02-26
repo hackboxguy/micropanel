@@ -14,6 +14,7 @@
 #include <chrono>
 #include <iomanip>
 #include <sstream>
+#include <mutex>
 #include <curl/curl.h>
 
 // Callback function for CURL to write downloaded data
@@ -47,12 +48,11 @@ SpeedTestScreen::SpeedTestScreen(std::shared_ptr<Display> display, std::shared_p
     // Initialize configuration
     checkConfiguration();
     
-    // Initialize CURL (will be done only once)
-    static bool curlInitialized = false;
-    if (!curlInitialized) {
+    // Initialize CURL (thread-safe one-time initialization)
+    static std::once_flag curlInitFlag;
+    std::call_once(curlInitFlag, []() {
         curl_global_init(CURL_GLOBAL_ALL);
-        curlInitialized = true;
-    }
+    });
 }
 
 bool SpeedTestScreen::checkConfiguration() {
@@ -431,9 +431,8 @@ void SpeedTestScreen::startDownloadTest() {
         // Mark test as completed
         m_testCompleted = true;
     });
-    
-    // Detach thread to run independently
-    m_testThread.detach();
+
+    // Keep thread joinable for safe lifecycle management
 }
 
 void SpeedTestScreen::startUploadTest() {
@@ -453,6 +452,11 @@ void SpeedTestScreen::startUploadTest() {
     // Record start time
     m_startTime = std::chrono::steady_clock::now();
     
+    // Join previous thread before creating new one (download thread should be done)
+    if (m_testThread.joinable()) {
+        m_testThread.join();
+    }
+
     // Start test in separate thread
     m_testThread = std::thread([this]() {
         // Create a temporary file to capture the script output
@@ -495,9 +499,8 @@ void SpeedTestScreen::startUploadTest() {
         // Mark test as completed
         m_testCompleted = true;
     });
-    
-    // Detach thread to run independently
-    m_testThread.detach();
+
+    // Keep thread joinable for safe lifecycle management
 }
 
 double SpeedTestScreen::calculateSpeed(size_t bytes, std::chrono::milliseconds duration) {

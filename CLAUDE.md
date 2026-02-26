@@ -53,7 +53,7 @@ Configs define which modules are enabled, their menu hierarchy, and dependencies
 Multiple instances of GenericListScreen or TextBoxScreen use the `"type"` field with unique `"id"` values. Dependencies are read from the `"depends"` object via `ModuleDependency`.
 
 ### Serial Command Protocol
-Commands to `/dev/ttyACM0`: `0x01` clear, `0x02 [X][Y]Text` draw text, `0x03 [X][Y]` cursor, `0x04 [0/1]` invert, `0x05 [0-255]` brightness, `0x06` progress bar, `0x07 [0/1]` display on/off, `0x08 [0/1][Hz]` buzzer. Minimum 10ms between commands, 50ms after clear.
+Commands to `/dev/ttyACM0`: `0x01` clear, `0x02 [X][Y][Len][Text...]` draw text (length-prefixed, max 124 bytes), `0x03 [X][Y]` cursor, `0x04 [0/1]` invert, `0x05 [0-255]` brightness, `0x06` progress bar, `0x07 [0/1]` display on/off, `0x08 [0/1][Hz]` buzzer. Protocol is pure binary — no CR/LF terminators. Minimum 10ms between commands, 50ms after clear.
 
 ### Display Constraints
 128x64 pixels with 6x8 font = 21 chars wide, 8 lines. Menu shows 6 items per page with scroll indicators. All text should be padded to 16 characters to avoid rendering artifacts.
@@ -96,6 +96,9 @@ Child modules call `notifyCallback("exit_to_main_menu", "")` which `MenuScreenMo
 ### Multiple Module Instances (type-based pattern)
 To support multiple instances of a module class: add `setId()` / dynamic `getModuleId()` to the class, add type handling in `MicroPanel::loadConfigFromJson()`, and use `"type": "your_type"` with unique `"id"` values in JSON config. See `TextBoxScreen` and `GenericListScreen` for reference.
 
+### Dependency Error Handling (MenuScreenModule)
+When a module fails its dependency check, `executeSubmenuAction()` shows an error screen and waits for any key press before returning to the menu. The pattern drains pending input events first (to avoid instant dismissal from the triggering button press), then polls `m_input->waitForEvents()` in a loop. This is the standard approach for "press any key to continue" screens.
+
 ### TextBoxScreen Periodic Refresh
 Set `"refresh_sec"` in the `"depends"` object (minimum 0.5s). Uses selective line updates - compares old vs new output and only redraws changed lines. Automatic UTF-8 to ASCII conversion for SSD1306 compatibility (e.g., `°` → `*`).
 
@@ -106,16 +109,36 @@ Set `"refresh_sec"` in the `"depends"` object (minimum 0.5s). Uses selective lin
   -i DEVICE   Input: /dev/input/eventX or "gpio" for Pi GPIO buttons
   -s DEVICE   Display: /dev/ttyACM0 or /dev/i2c-1 for I2C
   -c FILE     JSON config file (screens/config-*.json)
-  -a          Auto-detect USB dongle (default: enabled)
+  -a          Auto-detect USB dongle via VID:PID
   -v          Verbose debug output
   -p          Power save mode (display timeout)
 ```
 
 Three device modes: **USB** (`-a`), **GPIO** (`-i gpio -s /dev/i2c-X`), **Hybrid** (`-a -i gpio -s /dev/i2c-X`, recommended for Pi — tries USB first, falls back to GPIO/I2C).
 
+## Testing
+
+### Tier 1: Offline Protocol Unit Tests (no hardware)
+```bash
+cd build && cmake -DBUILD_TESTS=ON .. && make test_protocol
+./test_protocol    # 28 tests, runs in <1s
+```
+Tests protocol byte sequences for all serial commands (current + v2 with length byte), CR/LF absence verification, string safety patterns (substr, strncpy), Config.h constant validation, and display dimension sanity checks.
+
+### Tier 2: Hardware Smoke Test (dongle connected)
+```bash
+python3 tests/test_hardware_smoke.py              # Auto-detect, full suite (22 tests)
+python3 tests/test_hardware_smoke.py --check-only  # Just detect dongle
+```
+Tests all display commands (clear, draw text, brightness, invert, progress bar, power cycle, rapid writes, max text length) plus input injection tests if test firmware is present (rotate CW/CCW, button press, nav up/down/left/right — verified by reading HID events from `/dev/input/eventX`).
+
+**Requirements:** pyserial (`pip install pyserial`), user in `dialout` group (serial) and `input` group (HID events). Input injection tests require firmware built with `-DENABLE_TEST_COMMANDS=ON`; gracefully skipped on production firmware.
+
+### Test Firmware Commands
+The dongle firmware supports a test command (`0xF0`) when built with `-DENABLE_TEST_COMMANDS=ON`. Subcommands: `0x00` ping/echo, `0x01` rotate CW, `0x02` rotate CCW, `0x03` button press, `0x04-0x07` nav up/down/left/right. Ping returns `[0xF0][0x00]` over CDC serial; all others inject HID events. See `hw-auto-test-commands.txt` for full spec.
+
 ## Important Constraints
 
-- No automated test suite — testing requires actual µPanel hardware
 - Root privileges needed for device communication
 - Different configs for Debian (`config-debian.json`) vs Raspberry Pi OS (`config-pios.json`)
 - Scripts in `scripts/` must be POSIX-compatible (busybox support required, no GNU-specific flags like `grep -oP`)

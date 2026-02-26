@@ -56,6 +56,16 @@ void Display::drawProgressBar(int x, int y, int width, int height, int percentag
     }
 }
 
+void Display::drawMenuHeader(const std::string& title)
+{
+    clear();
+    usleep(Config::DISPLAY_CMD_DELAY * 3);
+    drawText(0, 0, title);
+    usleep(Config::DISPLAY_CMD_DELAY);
+    drawText(0, Config::CHAR_HEIGHT, Config::MENU_SEPARATOR);
+    usleep(Config::DISPLAY_CMD_DELAY);
+}
+
 void Display::setPower(bool on)
 {
     // Only send command if the state is changing

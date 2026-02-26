@@ -197,18 +197,9 @@ void ThroughputServerScreen::renderOptions(bool fullRedraw) {
     bool serverRunning = isServerRunning();
 
     if (fullRedraw) {
-        // Clear display first
-        m_display->clear();
-        usleep(Config::DISPLAY_CMD_DELAY * 3);
-
-        // Draw header with server status
+        // Draw header with dynamic server status
         std::string headerText = serverRunning ? "Server(Running)" : "Server(Stopped)";
-        m_display->drawText(0, 0, headerText);
-        usleep(Config::DISPLAY_CMD_DELAY);
-
-        // Draw separator
-        m_display->drawText(0, 8, "----------------");
-        usleep(Config::DISPLAY_CMD_DELAY);
+        m_display->drawMenuHeader(headerText);
 
         // Draw IP address at position 48
         m_display->drawText(0, 48, m_localIp);
@@ -221,7 +212,7 @@ void ThroughputServerScreen::renderOptions(bool fullRedraw) {
     } else {
         // Just clear selection markers for minimal update
         for (size_t i = 0; i < m_options.size(); i++) {
-            int yPos = 16 + (i * 10);
+            int yPos = 16 + (i * 8);
             m_display->drawText(0, yPos, " "); // Clear selection marker
             usleep(Config::DISPLAY_CMD_DELAY);
         }
@@ -233,7 +224,7 @@ void ThroughputServerScreen::renderOptions(bool fullRedraw) {
         bool isActiveOption = (i == 0 && serverRunning) || (i == 1 && !serverRunning);
 
         std::string buffer;
-        int yPos = 16 + (i * 10);  // Start at y=16 with 10px spacing
+        int yPos = 16 + (i * 8);  // Start at y=16 with 8px (page-aligned) spacing
 
         // Format with selection indicator and/or state highlight
         if (static_cast<int>(i) == m_selectedOption) {
@@ -251,7 +242,7 @@ void ThroughputServerScreen::renderOptions(bool fullRedraw) {
         }
 
         // Pad buffer to ensure line is fully overwritten (16 chars like GenericListScreen)
-        while (buffer.length() < 16) {
+        while (buffer.length() < Config::DISPLAY_TEXT_COLUMNS) {
             buffer += " ";
         }
 
@@ -413,8 +404,8 @@ void ThroughputServerScreen::startServer() {
         }
     });
 
-    // Detach thread to let it run independently
-    m_serverThread.detach();
+    // Keep thread joinable for safe lifecycle management
+    // (destructor calls stopServer() which kills the process, allowing waitpid to return)
 
     // Give it a moment to start up to ensure iperf3 is listening
     usleep(100000); // 100ms
@@ -495,6 +486,11 @@ void ThroughputServerScreen::stopServer() {
 
         // Reset PID
         m_serverPid = -1;
+    }
+
+    // Join the server thread (waitpid in thread will return after process is killed)
+    if (m_serverThread.joinable()) {
+        m_serverThread.join();
     }
 }
 

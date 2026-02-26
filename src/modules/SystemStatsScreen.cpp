@@ -38,11 +38,12 @@ void SystemStatsScreen::enter()
 
 void SystemStatsScreen::update()
 {
-    // Configure Y positions for the display elements
+    // Configure Y positions — page-aligned (multiples of 8) so portrait
+    // mode 180° flip doesn't cause elements to share SSD1306 display pages
     const int CPU_LABEL_Y = 16;
-    const int CPU_BAR_Y = 25;
-    const int MEM_LABEL_Y = 42;
-    const int MEM_BAR_Y = 51;
+    const int CPU_BAR_Y = 24;
+    const int MEM_LABEL_Y = 40;
+    const int MEM_BAR_Y = 48;
     
     // Update stats every STAT_UPDATE_SEC seconds
     struct timeval now;

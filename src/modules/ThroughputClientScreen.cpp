@@ -470,7 +470,7 @@ void ThroughputClientScreen::renderMainMenu(bool fullRedraw) {
             }
 
             // Pad to ensure line is fully overwritten (like GenericListScreen)
-            while (itemText.length() < 16) {
+            while (itemText.length() < Config::DISPLAY_TEXT_COLUMNS) {
                 itemText += " ";
             }
 
@@ -509,7 +509,7 @@ void ThroughputClientScreen::renderProtocolSubmenu(bool fullRedraw) {
     // If not full redraw, just clear selection markers
     if (!fullRedraw) {
         for (size_t i = 0; i <= m_protocolOptions.size(); i++) { // +1 for Back option
-            m_display->drawText(0, 16 + (i * 10), " ");
+            m_display->drawText(0, 16 + (i * 8), " ");
             usleep(Config::DISPLAY_CMD_DELAY);
         }
     }
@@ -523,13 +523,13 @@ void ThroughputClientScreen::renderProtocolSubmenu(bool fullRedraw) {
                                 " " + m_protocolOptions[i];
 
         // Pad to ensure line is fully overwritten (like GenericListScreen)
-        while (optionText.length() < 16) {
+        while (optionText.length() < Config::DISPLAY_TEXT_COLUMNS) {
             optionText += " ";
         }
 
         m_display->drawText(0, yPos, optionText);
         usleep(Config::DISPLAY_CMD_DELAY);
-        yPos += 10;
+        yPos += 8;
     }
 
     // Draw Back option
@@ -538,7 +538,7 @@ void ThroughputClientScreen::renderProtocolSubmenu(bool fullRedraw) {
                          " Back";
 
     // Pad to ensure line is fully overwritten
-    while (backText.length() < 16) {
+    while (backText.length() < Config::DISPLAY_TEXT_COLUMNS) {
         backText += " ";
     }
 
@@ -611,7 +611,7 @@ void ThroughputClientScreen::renderDurationSubmenu(bool fullRedraw) {
         }
 
         // Pad to ensure line is fully overwritten (like GenericListScreen)
-        while (itemText.length() < 16) {
+        while (itemText.length() < Config::DISPLAY_TEXT_COLUMNS) {
             itemText += " ";
         }
 
@@ -624,19 +624,19 @@ void ThroughputClientScreen::renderDurationSubmenu(bool fullRedraw) {
     if (fullRedraw && totalItems > MAX_VISIBLE_ITEMS) {
         // Up arrow for items above
         if (scrollOffset > 0) {
-            m_display->drawText(122, 16, "^");
+            m_display->drawText(Config::SCROLL_INDICATOR_X, 16, "^");
             usleep(Config::DISPLAY_CMD_DELAY);
         } else {
-            m_display->drawText(122, 16, " ");
+            m_display->drawText(Config::SCROLL_INDICATOR_X, 16, " ");
             usleep(Config::DISPLAY_CMD_DELAY);
         }
 
         // Down arrow for items below
         if (scrollOffset + MAX_VISIBLE_ITEMS < totalItems) {
-            m_display->drawText(122, 16 + ((MAX_VISIBLE_ITEMS - 1) * 8), "v");
+            m_display->drawText(Config::SCROLL_INDICATOR_X, 16 + ((MAX_VISIBLE_ITEMS - 1) * 8), "v");
             usleep(Config::DISPLAY_CMD_DELAY);
         } else {
-            m_display->drawText(122, 16 + ((MAX_VISIBLE_ITEMS - 1) * 8), " ");
+            m_display->drawText(Config::SCROLL_INDICATOR_X, 16 + ((MAX_VISIBLE_ITEMS - 1) * 8), " ");
             usleep(Config::DISPLAY_CMD_DELAY);
         }
     }
@@ -712,7 +712,7 @@ void ThroughputClientScreen::renderBandwidthSubmenu(bool fullRedraw) {
         }
 
         // Pad to ensure line is fully overwritten (like GenericListScreen)
-        while (itemText.length() < 16) {
+        while (itemText.length() < Config::DISPLAY_TEXT_COLUMNS) {
             itemText += " ";
         }
 
@@ -725,19 +725,19 @@ void ThroughputClientScreen::renderBandwidthSubmenu(bool fullRedraw) {
     if (fullRedraw && totalItems > MAX_VISIBLE_ITEMS) {
         // Up arrow for items above
         if (scrollOffset > 0) {
-            m_display->drawText(122, 16, "^");
+            m_display->drawText(Config::SCROLL_INDICATOR_X, 16, "^");
             usleep(Config::DISPLAY_CMD_DELAY);
         } else {
-            m_display->drawText(122, 16, " ");
+            m_display->drawText(Config::SCROLL_INDICATOR_X, 16, " ");
             usleep(Config::DISPLAY_CMD_DELAY);
         }
 
         // Down arrow for items below
         if (scrollOffset + MAX_VISIBLE_ITEMS < totalItems) {
-            m_display->drawText(122, 16 + ((MAX_VISIBLE_ITEMS - 1) * 8), "v");
+            m_display->drawText(Config::SCROLL_INDICATOR_X, 16 + ((MAX_VISIBLE_ITEMS - 1) * 8), "v");
             usleep(Config::DISPLAY_CMD_DELAY);
         } else {
-            m_display->drawText(122, 16 + ((MAX_VISIBLE_ITEMS - 1) * 8), " ");
+            m_display->drawText(Config::SCROLL_INDICATOR_X, 16 + ((MAX_VISIBLE_ITEMS - 1) * 8), " ");
             usleep(Config::DISPLAY_CMD_DELAY);
         }
     }
@@ -775,7 +775,7 @@ void ThroughputClientScreen::renderParallelSubmenu(bool fullRedraw) {
                                 " " + std::to_string(m_parallelOptions[i]);
 
         // Pad to ensure line is fully overwritten (like GenericListScreen)
-        while (optionText.length() < 16) {
+        while (optionText.length() < Config::DISPLAY_TEXT_COLUMNS) {
             optionText += " ";
         }
 
@@ -790,7 +790,7 @@ void ThroughputClientScreen::renderParallelSubmenu(bool fullRedraw) {
                          " Back";
 
     // Pad to ensure line is fully overwritten
-    while (backText.length() < 16) {
+    while (backText.length() < Config::DISPLAY_TEXT_COLUMNS) {
         backText += " ";
     }
 
@@ -880,7 +880,7 @@ void ThroughputClientScreen::renderAutoDiscoverScreen(bool fullRedraw) {
                                       " " + m_discoveredServers[i].first;
                 m_display->drawText(0, yPos, serverText);
                 usleep(Config::DISPLAY_CMD_DELAY);
-                yPos += 10;
+                yPos += 8;
             }
 
             // Draw Back option
@@ -922,7 +922,7 @@ void ThroughputClientScreen::renderAutoDiscoverScreen(bool fullRedraw) {
                     m_display->drawText(0, yPos, ">");
                 }
                 usleep(Config::DISPLAY_CMD_DELAY);
-                yPos += 10;
+                yPos += 8;
             }
 
             // Update Back selection
@@ -934,12 +934,7 @@ void ThroughputClientScreen::renderAutoDiscoverScreen(bool fullRedraw) {
 
 void ThroughputClientScreen::updateStatusLine() {
     std::string statusText;
-    int yPos = 76; // Position for status line
-    //int yPos = 56; // Position for status line
-
-    // Clear status line
-    m_display->drawText(0, yPos, "                ");
-    usleep(Config::DISPLAY_CMD_DELAY);
+    int yPos = 56; // Position for status line (last valid line on 64px display)
 
     // Show different status based on current state
     if (m_testInProgress) {
@@ -959,8 +954,11 @@ void ThroughputClientScreen::updateStatusLine() {
         }
     }
 
-    // Draw the status text
+    // Only touch Y=56 when there's actual status to show,
+    // otherwise leave it for the 6th menu item
     if (!statusText.empty()) {
+        m_display->drawText(0, yPos, "                ");
+        usleep(Config::DISPLAY_CMD_DELAY);
         m_display->drawText(0, yPos, statusText);
         usleep(Config::DISPLAY_CMD_DELAY);
     }
@@ -996,7 +994,6 @@ bool ThroughputClientScreen::handleInput() {
 		    if (!m_testInProgress) {
                         m_reverseMode = false;
 			startTest();
-                        renderMainMenu(true);
                     }
                     break;
                 case ThroughputClientState::MENU_STATE_START_REVERSE:
@@ -1004,7 +1001,6 @@ bool ThroughputClientScreen::handleInput() {
 		    if (!m_testInProgress) {
                         m_reverseMode = true;
 			startTest();
-                        renderMainMenu(true);
                     }
                     break;
 
@@ -1192,6 +1188,7 @@ bool ThroughputClientScreen::handleInput() {
 		    if (buttonPressed) {
 		        // Return to main menu when any button is pressed
 		        m_waitingForButtonPress = false;
+			m_testResult = -1; // Clear result so status line doesn't overwrite 6th menu item
 			m_state = ThroughputClientState::MENU_STATE_START;
 		        Logger::debug("ThroughputClientScreen: Button pressed on results screen, returning to main menu");
 			renderMainMenu(true);
@@ -1847,15 +1844,24 @@ std::string ThroughputClientScreen::normalizeIp(const std::string& ip) {
     std::istringstream iss(ip);
     std::string octet;
 
-    while (std::getline(iss, octet, '.')) {
-        // Remove leading zeros and convert back to integer
-        int value = std::stoi(octet);
+    try {
+        while (std::getline(iss, octet, '.')) {
+            // Remove leading zeros and convert back to integer
+            int value = std::stoi(octet);
+            if (value < 0 || value > 255) {
+                Logger::warning("ThroughputClientScreen: Invalid IP octet value: " + octet);
+                return ip;  // Return original on invalid octet
+            }
 
-        // Add to normalized string with dots
-        if (!normalized.empty()) {
-            normalized += ".";
+            // Add to normalized string with dots
+            if (!normalized.empty()) {
+                normalized += ".";
+            }
+            normalized += std::to_string(value);
         }
-        normalized += std::to_string(value);
+    } catch (const std::exception& e) {
+        Logger::warning("ThroughputClientScreen: Failed to normalize IP '" + ip + "': " + e.what());
+        return ip;  // Return original on parse failure
     }
 
     return normalized;
@@ -2250,7 +2256,6 @@ bool ThroughputClientScreen::handleGPIOButtonPress() {
             if (!m_testInProgress) {
                 m_reverseMode = false;
                 startTest();
-                renderMainMenu(true);
             }
             break;
 
@@ -2259,7 +2264,6 @@ bool ThroughputClientScreen::handleGPIOButtonPress() {
             if (!m_testInProgress) {
                 m_reverseMode = true;
                 startTest();
-                renderMainMenu(true);
             }
             break;
 
@@ -2446,6 +2450,7 @@ bool ThroughputClientScreen::handleGPIOButtonPress() {
             if (m_waitingForButtonPress) {
                 // Return to main menu when any button is pressed
                 m_waitingForButtonPress = false;
+                m_testResult = -1; // Clear result so status line doesn't overwrite 6th menu item
                 m_state = ThroughputClientState::MENU_STATE_START;
                 Logger::debug("ThroughputClientScreen: Button pressed on results screen, returning to main menu");
                 renderMainMenu(true);

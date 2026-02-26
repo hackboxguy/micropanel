@@ -428,7 +428,7 @@ private:
     int m_selectedOption = 0;
     int m_port = 5201;             // Default port
     std::string m_localIp;         // Local IP address
-    pid_t m_serverPid = -1;        // PID of the iperf3 server process
+    std::atomic<pid_t> m_serverPid{-1};  // PID of the iperf3 server process
     std::thread m_serverThread;    // Thread for server operation
     pid_t m_avahiPid = -1;  // PID for the Avahi announcement process
 };
@@ -463,8 +463,6 @@ struct UDPTestResult {
     bool valid = false;  // To indicate whether parsing was successful
 };
 
-// Add the function declaration in header file
-UDPTestResult parseUDPTestResults(const std::string& output);
 // Forward declare the IPSelector class if not already included
 class IPSelector;
 

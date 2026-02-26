@@ -160,7 +160,7 @@ bool NetSettingsScreen::Impl::initNetworkSettingsFromScript() {
 
     Logger::debug("Initializing network settings from script: " + cmd);
 
-    FILE* fp = popen(cmd.c_str(), "r");
+    std::unique_ptr<FILE, decltype(&pclose)> fp(popen(cmd.c_str(), "r"), pclose);
     if (!fp) {
         Logger::info("Network settings script not available, using defaults");
         return false;
@@ -173,7 +173,7 @@ bool NetSettingsScreen::Impl::initNetworkSettingsFromScript() {
     bool foundResult = false;
 
     // Parse script output
-    while (fgets(line, sizeof(line), fp) != nullptr) {
+    while (fgets(line, sizeof(line), fp.get()) != nullptr) {
         // Remove newline
         size_t len = strlen(line);
         if (len > 0 && line[len-1] == '\n') {
@@ -187,7 +187,6 @@ bool NetSettingsScreen::Impl::initNetworkSettingsFromScript() {
             foundResult = true;
             if (strstr(line, "ERROR") != nullptr) {
                 Logger::error("Error reading network settings");
-                pclose(fp);
                 return false;
             }
         }
@@ -215,8 +214,6 @@ bool NetSettingsScreen::Impl::initNetworkSettingsFromScript() {
             m_netmaskSelector->setIp(line + 8);
         }
     }
-
-    pclose(fp);
 
     // Check if we got all needed information
     if (!foundResult) {
@@ -260,13 +257,11 @@ void NetSettingsScreen::Impl::refreshSettings() {
 }
 
 void NetSettingsScreen::Impl::applyNetworkSettings() {
-    char cmd[512];
     char line[128];
     bool success = false;
-    std::string scriptPath = getNetSettingsScriptPath(); 
+    std::string scriptPath = getNetSettingsScriptPath();
     std::string ostype = getNetSettingsOsType();
     std::string iface  = getNetSettingsInterface();
-    FILE* fp = nullptr;
 
     if (m_mode == NetworkMode::NET_MODE_STATIC) {
         // Get current IP values from selectors
@@ -275,14 +270,13 @@ void NetSettingsScreen::Impl::applyNetworkSettings() {
         const std::string& gateway = m_gatewaySelector->getIp();
 
         // Construct command with all parameters
-        snprintf(cmd, sizeof(cmd),
-                "%s --os=%s --interface=%s --mode=static --ip=%s --gateway=%s --netmask=%s",
-                scriptPath.c_str(), ostype.c_str(),iface.c_str(),ip.c_str(), gateway.c_str(), netmask.c_str());
+        std::string cmd = scriptPath + " --os=" + ostype + " --interface=" + iface
+            + " --mode=static --ip=" + ip + " --gateway=" + gateway + " --netmask=" + netmask;
 
-        Logger::debug("Running command: " + std::string(cmd));
+        Logger::debug("Running command: " + cmd);
 
         // Execute the command and check result
-        fp = popen(cmd, "r");
+        std::unique_ptr<FILE, decltype(&pclose)> fp(popen(cmd.c_str(), "r"), pclose);
         if (!fp) {
             Logger::error("Failed to run dhcp-net-settings.sh");
             m_settingsApplied = false;
@@ -290,7 +284,7 @@ void NetSettingsScreen::Impl::applyNetworkSettings() {
         }
 
         // Parse output to check if successful
-        while (fgets(line, sizeof(line), fp) != nullptr) {
+        while (fgets(line, sizeof(line), fp.get()) != nullptr) {
             // Remove newline
             size_t len = strlen(line);
             if (len > 0 && line[len-1] == '\n') {
@@ -314,12 +308,12 @@ void NetSettingsScreen::Impl::applyNetworkSettings() {
     }
     else {
         // DHCP mode - simpler command
-        snprintf(cmd, sizeof(cmd), "%s --os=%s --interface=%s --mode=dhcp", scriptPath.c_str(),ostype.c_str(),iface.c_str());//NET_SETTINGS_SCRIPT);
+        std::string cmd = scriptPath + " --os=" + ostype + " --interface=" + iface + " --mode=dhcp";
 
-        Logger::debug("Running command: " + std::string(cmd));
+        Logger::debug("Running command: " + cmd);
 
         // Execute the command and check result
-        fp = popen(cmd, "r");
+        std::unique_ptr<FILE, decltype(&pclose)> fp(popen(cmd.c_str(), "r"), pclose);
         if (!fp) {
             Logger::error("Failed to run dhcp-net-settings.sh");
             m_settingsApplied = false;
@@ -327,7 +321,7 @@ void NetSettingsScreen::Impl::applyNetworkSettings() {
         }
 
         // Parse output to check if successful
-        while (fgets(line, sizeof(line), fp) != nullptr) {
+        while (fgets(line, sizeof(line), fp.get()) != nullptr) {
             // Remove newline
             size_t len = strlen(line);
             if (len > 0 && line[len-1] == '\n') {
@@ -345,10 +339,6 @@ void NetSettingsScreen::Impl::applyNetworkSettings() {
         }
 
         Logger::debug("Applied DHCP configuration");
-    }
-
-    if (fp) {
-        pclose(fp);
     }
 
     // Mark settings as applied only if successful
@@ -481,17 +471,7 @@ void NetSettingsScreen::Impl::handleAddrMenuButton() {
 
 void NetSettingsScreen::Impl::drawMainMenu(bool fullRedraw) {
     if (fullRedraw) {
-        // Clear screen
-        m_display->clear();
-        usleep(Config::DISPLAY_CMD_DELAY * 3);
-        
-        // Draw header
-        m_display->drawText(0, 0, "  Net Settings");
-        usleep(Config::DISPLAY_CMD_DELAY);
-        
-        // Draw separator
-        m_display->drawText(0, 8, "----------------");
-        usleep(Config::DISPLAY_CMD_DELAY);
+        m_display->drawMenuHeader("  Net Settings");
     }
 
     // Draw each menu item with proper formatting
@@ -1071,15 +1051,13 @@ bool NetSettingsScreen::handleInput() {
                             int oldSelection = m_pImpl->m_mainSelection;
                             int numItems = static_cast<int>(MainMenuSelection::MAIN_ITEM_COUNT);
                             
-                            // Navigate menu
+                            // Navigate menu (bounded, no wraparound)
                             if (rotationDirection < 0) {
-                                // Move up (with wrap)
-                                m_pImpl->m_mainSelection = (m_pImpl->m_mainSelection > 0) ? 
-                                                        m_pImpl->m_mainSelection - 1 : 
-                                                        numItems - 1;
+                                if (m_pImpl->m_mainSelection > 0)
+                                    m_pImpl->m_mainSelection--;
                             } else {
-                                // Move down (with wrap)
-                                m_pImpl->m_mainSelection = (m_pImpl->m_mainSelection + 1) % numItems;
+                                if (m_pImpl->m_mainSelection < numItems - 1)
+                                    m_pImpl->m_mainSelection++;
                             }
                             
                             // Update display if selection changed
@@ -1094,15 +1072,13 @@ bool NetSettingsScreen::handleInput() {
                             int oldSelection = m_pImpl->m_modeSelection;
                             int numItems = static_cast<int>(ModeMenuSelection::MODE_ITEM_COUNT);
                             
-                            // Navigate menu
+                            // Navigate menu (bounded, no wraparound)
                             if (rotationDirection < 0) {
-                                // Move up (with wrap)
-                                m_pImpl->m_modeSelection = (m_pImpl->m_modeSelection > 0) ? 
-                                                        m_pImpl->m_modeSelection - 1 : 
-                                                        numItems - 1;
+                                if (m_pImpl->m_modeSelection > 0)
+                                    m_pImpl->m_modeSelection--;
                             } else {
-                                // Move down (with wrap)
-                                m_pImpl->m_modeSelection = (m_pImpl->m_modeSelection + 1) % numItems;
+                                if (m_pImpl->m_modeSelection < numItems - 1)
+                                    m_pImpl->m_modeSelection++;
                             }
                             
                             // Update display if selection changed

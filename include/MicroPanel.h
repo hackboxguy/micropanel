@@ -51,6 +51,7 @@ private:
     void runModuleWithGPIOInput(std::shared_ptr<ScreenModule> module);
     void simulateRotationForModule(std::shared_ptr<ScreenModule> module, int direction);
     void simulateButtonPressForModule(std::shared_ptr<ScreenModule> module,bool& moduleRunning);
+    void configureMenuModuleGPIO(std::shared_ptr<class MenuScreenModule> menuModule);
 
     struct {
         std::string inputDevice;
@@ -72,12 +73,13 @@ private:
 
     // Application state
     std::atomic<bool> m_running{false};
+    bool m_shutdownDone{false};
 
     // Module registry
     std::map<std::string, std::shared_ptr<ScreenModule>> m_modules;
 
     // Signal handling
-    static MicroPanel* s_instance;
+    static std::atomic<MicroPanel*> s_instance;
     static void signalHandler(int signal);
     std::shared_ptr<BaseDisplayDevice> createDisplayDevice(const std::string& devicePath);
     std::shared_ptr<BaseDisplayDevice> m_baseDisplayDevice;

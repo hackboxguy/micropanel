@@ -59,9 +59,9 @@ void NetworkInfoScreen::enter()
         
         pos += chunk;
         remaining -= chunk;
-        yPos += 10;
+        yPos += 8;
     }
-    
+
     yPos += 8;
     
     // Format MAC address
@@ -164,7 +164,8 @@ void NetworkInfoScreen::getNetworkInfo(std::string& ipStr, std::string& macStr, 
         int fd = socket(AF_INET, SOCK_DGRAM, 0);
 
         if (fd >= 0) {
-            strcpy(ifr.ifr_name, ifa->ifa_name);
+            strncpy(ifr.ifr_name, ifa->ifa_name, sizeof(ifr.ifr_name) - 1);
+            ifr.ifr_name[sizeof(ifr.ifr_name) - 1] = '\0';
             if (ioctl(fd, SIOCGIFHWADDR, &ifr) == 0) {
                 unsigned char* mac = (unsigned char*)ifr.ifr_hwaddr.sa_data;
                 char macBuf[18];
@@ -204,7 +205,8 @@ void NetworkInfoScreen::getNetworkInfo(std::string& ipStr, std::string& macStr, 
                 int fd = socket(AF_INET, SOCK_DGRAM, 0);
 
                 if (fd >= 0) {
-                    strcpy(ifr.ifr_name, ifa->ifa_name);
+                    strncpy(ifr.ifr_name, ifa->ifa_name, sizeof(ifr.ifr_name) - 1);
+            ifr.ifr_name[sizeof(ifr.ifr_name) - 1] = '\0';
                     if (ioctl(fd, SIOCGIFHWADDR, &ifr) == 0) {
                         unsigned char* mac = (unsigned char*)ifr.ifr_hwaddr.sa_data;
                         char macBuf[18];
