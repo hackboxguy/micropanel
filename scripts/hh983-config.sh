@@ -30,7 +30,7 @@ if [ -z "$DESER_TYPE" ]; then
     exit 0
 fi
 
-# Write mode: update hh983.conf
+# Write mode: update hh983.conf and reboot
 case "$DESER_TYPE" in
     988)
         echo "options hh983-serializer config_mode=1" > "$HH983_CONF"
@@ -43,3 +43,5 @@ case "$DESER_TYPE" in
         exit 1
         ;;
 esac
+
+reboot
