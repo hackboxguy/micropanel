@@ -19,6 +19,7 @@
       "type": "menu",
       "submenus": [
         {"id": "hdmi_out", "title": "HDMI Timing"},
+        {"id": "deser_config", "title": "Deserializer"},
         {"id": "invert_display", "title": "Invert Display"},
         {"id": "brightness", "title": "Brightness"},
         {"id": "system", "title": "System Stats"},
@@ -37,16 +38,6 @@
       "submenus": [
         {"id": "update_fpga", "title": "Update FPGA"},
         {"id": "mcu_flash_menu", "title": "IOC-Update"},
-        {"id": "back", "title": "Back"}
-      ]
-    },
-    {
-      "id": "settings_menu",
-      "title": "Settings",
-      "enabled": true,
-      "type": "menu",
-      "submenus": [
-        {"id": "deser_config", "title": "Deserializer"},
         {"id": "back", "title": "Back"}
       ]
     },

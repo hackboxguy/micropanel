@@ -26,6 +26,7 @@
         {"id": "transfer_logs", "title": "Transfer Logs"},
         {"id": "power_settings", "title": "Power Settings"},
         {"id": "hdmi_out", "title": "HDMI Timing"},
+        {"id": "deser_config", "title": "Deserializer"},
         {"id": "back", "title": "Back"}
       ]
     },
@@ -37,16 +38,6 @@
       "submenus": [
         {"id": "update_fpga", "title": "Update FPGA"},
         {"id": "mcu_flash_menu", "title": "IOC-Update"},
-        {"id": "back", "title": "Back"}
-      ]
-    },
-    {
-      "id": "settings_menu",
-      "title": "Settings",
-      "enabled": true,
-      "type": "menu",
-      "submenus": [
-        {"id": "deser_config", "title": "Deserializer"},
         {"id": "back", "title": "Back"}
       ]
     },
