@@ -41,6 +41,16 @@
       ]
     },
     {
+      "id": "settings_menu",
+      "title": "Settings",
+      "enabled": true,
+      "type": "menu",
+      "submenus": [
+        {"id": "deser_config", "title": "Deserializer"},
+        {"id": "back", "title": "Back"}
+      ]
+    },
+    {
       "id": "media_menu",
       "title": "Multimedia",
       "enabled": true,
@@ -553,6 +563,18 @@
         {"title": "Stop-Playback", "action": "/usr/bin/stop-image.sh"},
         {"title": "Back"}
       ]
+    },
+    {
+      "id": "deser_config",
+      "title": "Deserializer",
+      "enabled": false,
+      "type": "GenericList",
+      "list_items": [
+        {"title": "988", "action": "/usr/bin/hh983-config.sh --type=$1"},
+        {"title": "984", "action": "/usr/bin/hh983-config.sh --type=$1"},
+        {"title": "Back"}
+      ],
+      "list_selection": "/usr/bin/hh983-config.sh"
     },
     {
       "id": "power_settings",
