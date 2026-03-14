@@ -21,4 +21,13 @@ else
 fi
 
 echo "Re-init mode: $MODE"
-exec /usr/bin/re-init-983-pipeline.sh --skip-hdmi-toggle --mode="$MODE"
+/usr/bin/re-init-983-pipeline.sh --skip-hdmi-toggle --mode="$MODE"
+ret=$?
+
+if [ $ret -eq 0 ]; then
+    echo "[SUCCESS] Re-init complete"
+else
+    echo "[ERROR] Re-init failed (exit code $ret)"
+fi
+
+exit $ret
