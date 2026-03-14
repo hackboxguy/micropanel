@@ -743,6 +743,14 @@
           "log_file": "/tmp/hh983-reinit.log",
           "progress_title": "Re-Init 983..."
         },
+        {
+          "title": "Toggle-HDMI",
+          "action": "$MICROPANEL_HOME/usr/bin/hh983-toggle-hdmi.sh",
+          "async": true,
+          "timeout": 10,
+          "log_file": "/tmp/hh983-toggle-hdmi.log",
+          "progress_title": "HDMI Toggle..."
+        },
         {"title": "Back"}
       ]
     },

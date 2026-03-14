@@ -228,6 +228,7 @@ if(INSTALL_HELPER_SCRIPTS)
         scripts/pi-config-txt.sh
         scripts/hh983-config.sh
         scripts/hh983-reinit.sh
+        scripts/hh983-toggle-hdmi.sh
         scripts/play-video.sh
         scripts/stop-video.sh
         scripts/buzzer.sh
