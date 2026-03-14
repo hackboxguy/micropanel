@@ -20,6 +20,7 @@
       "submenus": [
         {"id": "hdmi_out", "title": "HDMI Timing"},
         {"id": "deser_config", "title": "Deserializer"},
+        {"id": "ser_reinit", "title": "Serializer"},
         {"id": "invert_display", "title": "Invert Display"},
         {"id": "brightness", "title": "Brightness"},
         {"id": "system", "title": "System Stats"},
@@ -727,6 +728,23 @@
         {"title": "Back"}
       ],
       "list_selection": "$MICROPANEL_HOME/usr/bin/hh983-config.sh"
+    },
+    {
+      "id": "ser_reinit",
+      "title": "Serializer",
+      "enabled": false,
+      "type": "GenericList",
+      "list_items": [
+        {
+          "title": "Re-Init",
+          "action": "$MICROPANEL_HOME/usr/bin/hh983-reinit.sh",
+          "async": true,
+          "timeout": 30,
+          "log_file": "/tmp/hh983-reinit.log",
+          "progress_title": "Re-Init 983..."
+        },
+        {"title": "Back"}
+      ]
     },
     {
       "id": "power_settings",

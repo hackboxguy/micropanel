@@ -27,6 +27,7 @@
         {"id": "power_settings", "title": "Power Settings"},
         {"id": "hdmi_out", "title": "HDMI Timing"},
         {"id": "deser_config", "title": "Deserializer"},
+        {"id": "ser_reinit", "title": "Serializer"},
         {"id": "back", "title": "Back"}
       ]
     },
@@ -566,6 +567,23 @@
         {"title": "Back"}
       ],
       "list_selection": "/usr/bin/hh983-config.sh"
+    },
+    {
+      "id": "ser_reinit",
+      "title": "Serializer",
+      "enabled": false,
+      "type": "GenericList",
+      "list_items": [
+        {
+          "title": "Re-Init",
+          "action": "/usr/bin/hh983-reinit.sh",
+          "async": true,
+          "timeout": 30,
+          "log_file": "/tmp/hh983-reinit.log",
+          "progress_title": "Re-Init 983..."
+        },
+        {"title": "Back"}
+      ]
     },
     {
       "id": "power_settings",

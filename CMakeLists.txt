@@ -227,6 +227,7 @@ if(INSTALL_HELPER_SCRIPTS)
         scripts/dhcp-net-settings-buildroot.sh
         scripts/pi-config-txt.sh
         scripts/hh983-config.sh
+        scripts/hh983-reinit.sh
         scripts/play-video.sh
         scripts/stop-video.sh
         scripts/buzzer.sh
