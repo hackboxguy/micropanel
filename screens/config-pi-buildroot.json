@@ -613,6 +613,7 @@
         {"title": "Back"},
         {"title": "edid", "action": "/usr/bin/pi-config-txt.sh --input=/boot/config.txt --type=$1"},
         {"title": "12.3", "action": "/usr/bin/pi-config-txt.sh --input=/boot/config.txt --type=$1"},
+        {"title": "12.3-nq1", "action": "/usr/bin/pi-config-txt.sh --input=/boot/config.txt --type=$1"},
         {"title": "14.6-fhd", "action": "/usr/bin/pi-config-txt.sh --input=/boot/config.txt --type=$1"},
         {"title": "14.6-2k5", "action": "/usr/bin/pi-config-txt.sh --input=/boot/config.txt --type=$1"},
         {"title": "15.6-2k5", "action": "/usr/bin/pi-config-txt.sh --input=/boot/config.txt --type=$1"},

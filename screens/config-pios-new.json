@@ -774,6 +774,7 @@
         {"title": "Back"},
         {"title": "edid", "action": "$MICROPANEL_HOME/usr/bin/pi-config-txt.sh --configspath=$MICROPANEL_HOME/usr/share/micropanel/configs/ --input=/boot/firmware/config.txt --type=$1"},
         {"title": "12.3", "action": "$MICROPANEL_HOME/usr/bin/pi-config-txt.sh --configspath=$MICROPANEL_HOME/usr/share/micropanel/configs/ --input=/boot/firmware/config.txt --type=$1"},
+        {"title": "12.3-nq1", "action": "$MICROPANEL_HOME/usr/bin/pi-config-txt.sh --configspath=$MICROPANEL_HOME/usr/share/micropanel/configs/ --input=/boot/firmware/config.txt --type=$1"},
         {"title": "14.6-fhd", "action": "$MICROPANEL_HOME/usr/bin/pi-config-txt.sh --configspath=$MICROPANEL_HOME/usr/share/micropanel/configs/ --input=/boot/firmware/config.txt --type=$1"},
         {"title": "14.6-2k5", "action": "$MICROPANEL_HOME/usr/bin/pi-config-txt.sh --configspath=$MICROPANEL_HOME/usr/share/micropanel/configs/ --input=/boot/firmware/config.txt --type=$1"},
         {"title": "15.6-2k5", "action": "$MICROPANEL_HOME/usr/bin/pi-config-txt.sh --configspath=$MICROPANEL_HOME/usr/share/micropanel/configs/ --input=/boot/firmware/config.txt --type=$1"},

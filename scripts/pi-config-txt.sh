@@ -88,8 +88,8 @@ configure_hh983_serializer() {
     local config_type="$1"
     local hh983_conf="/etc/modprobe.d/hh983.conf"
 
-    # 15.6-2k5 requires config_mode=0, all others require config_mode=1
-    if [ "$config_type" = "15.6-2k5" ]; then
+    # 15.6-2k5 and 12.3-nq1 require config_mode=0 (983+984), all others require config_mode=1 (983+988)
+    if [ "$config_type" = "15.6-2k5" ] || [ "$config_type" = "12.3-nq1" ]; then
         echo "options hh983-serializer config_mode=0" > "$hh983_conf"
         if [ $VERBOSE -eq 1 ]; then
             echo "HH983 serializer configured: config_mode=0 (for 15.6-2k5)"
