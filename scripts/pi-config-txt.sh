@@ -92,7 +92,7 @@ configure_hh983_serializer() {
     if [ "$config_type" = "15.6-2k5" ] || [ "$config_type" = "12.3-nq1" ]; then
         echo "options hh983-serializer config_mode=0" > "$hh983_conf"
         if [ $VERBOSE -eq 1 ]; then
-            echo "HH983 serializer configured: config_mode=0 (for 15.6-2k5)"
+            echo "HH983 serializer configured: config_mode=0 (for $config_type)"
         fi
     else
         echo "options hh983-serializer config_mode=1" > "$hh983_conf"
@@ -163,17 +163,39 @@ get_config_resolution() {
     echo "unknown"
 }
 
+# Function to get expected hh983 config_mode for a display type
+get_expected_hh983_mode() {
+    local config_type="$1"
+    if [ "$config_type" = "15.6-2k5" ] || [ "$config_type" = "12.3-nq1" ]; then
+        echo "0"
+    else
+        echo "1"
+    fi
+}
+
 # Function to read and identify current configuration
 read_current_config() {
     local current_content=$(extract_config_content "$INPUT_FILE")
+    local hh983_conf="/etc/modprobe.d/hh983.conf"
+    local current_hh983_mode="1"
+    if [ -f "$hh983_conf" ]; then
+        current_hh983_mode=$(grep -o 'config_mode=[0-9]*' "$hh983_conf" | head -1 | cut -d= -f2)
+        current_hh983_mode="${current_hh983_mode:-1}"
+    fi
 
-    # Check against all known configurations
+    # Check against all known configurations.
+    # Multiple display types can produce identical config.txt (e.g. 12.3 and
+    # 12.3-nq1 share the same timings).  When config.txt matches, also verify
+    # the hh983 config_mode to pick the correct type.
     for type in $(get_supported_types); do
         local reference_content=$(get_reference_config "$type")
 
         if [ "$current_content" = "$reference_content" ]; then
-            echo "$type"
-            return 0
+            local expected_mode=$(get_expected_hh983_mode "$type")
+            if [ "$expected_mode" = "$current_hh983_mode" ]; then
+                echo "$type"
+                return 0
+            fi
         fi
     done
 
