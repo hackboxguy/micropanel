@@ -119,14 +119,28 @@ set_dhcp_server() {
     fi
     pkill -f "udhcpc.*$INTERFACE" 2>/dev/null || true
 
-    # Stop systemd-networkd temporarily to take manual control
-    systemctl stop systemd-networkd 2>/dev/null || true
+    # Write a static systemd-networkd config so the interface stays up
+    # with our desired IP (don't stop systemd-networkd — it owns the interface)
+    if [ -d "/etc/systemd/network" ]; then
+        NETWORK_CONFIG="/etc/systemd/network/50-${INTERFACE}.network"
+        cat > "$NETWORK_CONFIG" << NETEOF
+[Match]
+Name=${INTERFACE}
 
-    # Configure static IP on the interface
-    ip addr flush dev "$INTERFACE" 2>/dev/null || true
-    ip addr add "${IP}/${cidr}" dev "$INTERFACE"
-    ip link set "$INTERFACE" up
-    sleep 1
+[Network]
+DHCP=no
+Address=${IP}/${cidr}
+NETEOF
+        log_verbose "Wrote static config: $NETWORK_CONFIG"
+        systemctl restart systemd-networkd 2>/dev/null || true
+        sleep 2
+    else
+        # Fallback: manual IP assignment
+        ip addr flush dev "$INTERFACE" 2>/dev/null || true
+        ip addr add "${IP}/${cidr}" dev "$INTERFACE"
+        ip link set "$INTERFACE" up
+        sleep 1
+    fi
 
     # Write dnsmasq configuration
     mkdir -p /etc/dnsmasq.d
