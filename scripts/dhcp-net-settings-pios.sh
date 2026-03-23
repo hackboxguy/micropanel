@@ -476,17 +476,35 @@ set_dhcp_server() {
     local dhcp_start="${ip_prefix}.100"
     local dhcp_end="${ip_prefix}.200"
 
-    # Stop any existing DHCP client services for this interface
-    systemctl stop NetworkManager 2>/dev/null || true
-    systemctl stop dhcpcd 2>/dev/null || true
-    dhclient -r "$INTERFACE" 2>/dev/null || true
-    pkill -f "dhclient.*$INTERFACE" 2>/dev/null || true
+    # Configure static IP using the native network manager (so it persists)
+    if [ "$NETWORK_SYSTEM" = "networkmanager" ]; then
+        CONNECTION=$(nmcli -t -f NAME,DEVICE connection show --active 2>/dev/null | grep ":$INTERFACE" | cut -d':' -f1)
+        if [ -n "$CONNECTION" ]; then
+            nmcli connection modify "$CONNECTION" ipv4.method manual \
+                ipv4.addresses "${IP}/${cidr}" ipv4.gateway "" ipv4.dns ""
+            nmcli connection up "$CONNECTION"
+        else
+            nmcli connection add type ethernet con-name "$INTERFACE" ifname "$INTERFACE" \
+                ipv4.method manual ipv4.addresses "${IP}/${cidr}"
+            nmcli connection up "$INTERFACE"
+        fi
+        log_verbose "Static IP set via NetworkManager: ${IP}/${cidr}"
+    else
+        # dhcpcd: write static config
+        # Remove any existing static config for this interface
+        if [ -f "$DHCPCD_CONF" ]; then
+            sed -i "/^interface $INTERFACE/,/^interface \|^$/d" "$DHCPCD_CONF"
+        fi
+        cat >> "$DHCPCD_CONF" << DHCPEOF
 
-    # Configure static IP on the interface
-    ip addr flush dev "$INTERFACE" 2>/dev/null || true
-    ip addr add "${IP}/${cidr}" dev "$INTERFACE"
-    ip link set "$INTERFACE" up
-    sleep 1
+interface $INTERFACE
+static ip_address=${IP}/${cidr}
+DHCPEOF
+        # Restart dhcpcd to apply
+        systemctl restart dhcpcd 2>/dev/null || true
+        log_verbose "Static IP set via dhcpcd: ${IP}/${cidr}"
+    fi
+    sleep 2
 
     # Write dnsmasq configuration
     mkdir -p /etc/dnsmasq.d
