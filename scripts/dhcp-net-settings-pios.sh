@@ -24,6 +24,11 @@ error_exit() {
     exit 1
 }
 
+# Function to clean IP addresses (remove leading zeros)
+clean_ip() {
+    echo "$1" | awk -F. '{printf "%d.%d.%d.%d", $1, $2, $3, $4}'
+}
+
 # Define file paths
 DHCPCD_CONF="/etc/dhcpcd.conf"
 NM_CONN_DIR="/etc/NetworkManager/system-connections"
@@ -457,6 +462,11 @@ netmask_to_cidr() {
 # Configure and start DHCP server
 set_dhcp_server() {
     log_verbose "Configuring DHCP server on $INTERFACE..."
+
+    # Strip leading zeros from IP addresses (IPSelector returns 192.168.001.001)
+    IP=$(clean_ip "$IP")
+    GATEWAY=$(clean_ip "$GATEWAY")
+    NETMASK=$(clean_ip "$NETMASK")
 
     local cidr=$(netmask_to_cidr "$NETMASK")
 

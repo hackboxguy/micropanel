@@ -103,6 +103,11 @@ netmask_to_cidr() {
 set_dhcp_server() {
     log_verbose "Configuring DHCP server on $INTERFACE..."
 
+    # Strip leading zeros from IP addresses (IPSelector returns 192.168.001.001)
+    IP=$(clean_ip "$IP")
+    GATEWAY=$(clean_ip "$GATEWAY")
+    NETMASK=$(clean_ip "$NETMASK")
+
     local cidr=$(netmask_to_cidr "$NETMASK")
     local ip_prefix=$(echo "$IP" | cut -d. -f1-3)
     local dhcp_start="${ip_prefix}.100"
