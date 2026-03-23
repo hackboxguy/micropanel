@@ -39,10 +39,11 @@ enum class MainMenuSelection {
 
 // Mode selection options
 enum class ModeMenuSelection {
-    MODE_STATIC,    // Static IP configuration
-    MODE_DHCP,      // DHCP configuration
-    MODE_BACK,      // Back to main menu
-    MODE_ITEM_COUNT // Count of mode menu items
+    MODE_STATIC,      // Static IP configuration
+    MODE_DHCP,        // DHCP configuration
+    MODE_DHCP_SERVER, // DHCP server mode
+    MODE_BACK,        // Back to main menu
+    MODE_ITEM_COUNT   // Count of mode menu items
 };
 
 // Address menu options
@@ -54,8 +55,9 @@ enum class AddrMenuSelection {
 
 // Network configuration mode
 enum class NetworkMode {
-    NET_MODE_STATIC, // Static IP
-    NET_MODE_DHCP    // DHCP
+    NET_MODE_STATIC,      // Static IP
+    NET_MODE_DHCP,        // DHCP
+    NET_MODE_DHCP_SERVER  // DHCP server
 };
 
 // Implementation class for NetSettingsScreen
@@ -194,6 +196,8 @@ bool NetSettingsScreen::Impl::initNetworkSettingsFromScript() {
         else if (strncmp(line, "mode=", 5) == 0) {
             if (strcmp(line + 5, "static") == 0) {
                 m_mode = NetworkMode::NET_MODE_STATIC;
+            } else if (strcmp(line + 5, "dhcp-server") == 0) {
+                m_mode = NetworkMode::NET_MODE_DHCP_SERVER;
             } else if (strcmp(line + 5, "dhcp") == 0) {
                 m_mode = NetworkMode::NET_MODE_DHCP;
             }
@@ -221,16 +225,17 @@ bool NetSettingsScreen::Impl::initNetworkSettingsFromScript() {
         return false;
     }
 
-    // If mode is static, we should have all IP settings
-    if (m_mode == NetworkMode::NET_MODE_STATIC) {
+    // If mode is static or dhcp-server, we should have all IP settings
+    if (m_mode == NetworkMode::NET_MODE_STATIC || m_mode == NetworkMode::NET_MODE_DHCP_SERVER) {
         if (!hasIp || !hasGateway || !hasNetmask) {
-            Logger::warning("Static mode but missing some IP settings");
+            Logger::warning("Static/dhcp-server mode but missing some IP settings");
             // We'll continue anyway with default values
         }
     }
 
-    Logger::debug("Network settings initialized from script: mode=" + 
-                  std::string((m_mode == NetworkMode::NET_MODE_STATIC) ? "static" : "dhcp"));
+    const char* modeStr = (m_mode == NetworkMode::NET_MODE_STATIC) ? "static" :
+                          (m_mode == NetworkMode::NET_MODE_DHCP_SERVER) ? "dhcp-server" : "dhcp";
+    Logger::debug("Network settings initialized from script: mode=" + std::string(modeStr));
     return true;
 }
 
@@ -263,15 +268,17 @@ void NetSettingsScreen::Impl::applyNetworkSettings() {
     std::string ostype = getNetSettingsOsType();
     std::string iface  = getNetSettingsInterface();
 
-    if (m_mode == NetworkMode::NET_MODE_STATIC) {
+    if (m_mode == NetworkMode::NET_MODE_STATIC || m_mode == NetworkMode::NET_MODE_DHCP_SERVER) {
         // Get current IP values from selectors
         const std::string& ip = m_ipSelector->getIp();
         const std::string& netmask = m_netmaskSelector->getIp();
         const std::string& gateway = m_gatewaySelector->getIp();
 
+        const char* modeArg = (m_mode == NetworkMode::NET_MODE_DHCP_SERVER) ? "dhcp-server" : "static";
+
         // Construct command with all parameters
         std::string cmd = scriptPath + " --os=" + ostype + " --interface=" + iface
-            + " --mode=static --ip=" + ip + " --gateway=" + gateway + " --netmask=" + netmask;
+            + " --mode=" + modeArg + " --ip=" + ip + " --gateway=" + gateway + " --netmask=" + netmask;
 
         Logger::debug("Running command: " + cmd);
 
@@ -301,7 +308,7 @@ void NetSettingsScreen::Impl::applyNetworkSettings() {
             }
         }
 
-        Logger::debug("Applied static IP settings:");
+        Logger::debug(std::string("Applied ") + modeArg + " settings:");
         Logger::debug("  IP: " + ip);
         Logger::debug("  Netmask: " + netmask);
         Logger::debug("  Gateway: " + gateway);
@@ -361,9 +368,12 @@ void NetSettingsScreen::Impl::switchToMainMenu() {
 void NetSettingsScreen::Impl::switchToModeMenu() {
     m_menuState = NetSettingsMenuState::MENU_MODE;
     // Highlight the current mode initially
-    m_modeSelection = (m_mode == NetworkMode::NET_MODE_STATIC) ? 
-                       static_cast<int>(ModeMenuSelection::MODE_STATIC) : 
-                       static_cast<int>(ModeMenuSelection::MODE_DHCP);
+    if (m_mode == NetworkMode::NET_MODE_STATIC)
+        m_modeSelection = static_cast<int>(ModeMenuSelection::MODE_STATIC);
+    else if (m_mode == NetworkMode::NET_MODE_DHCP_SERVER)
+        m_modeSelection = static_cast<int>(ModeMenuSelection::MODE_DHCP_SERVER);
+    else
+        m_modeSelection = static_cast<int>(ModeMenuSelection::MODE_DHCP);
     m_prevModeSelection = m_modeSelection; // Prevent unnecessary marker update
     m_redrawNeeded = true;
     m_fullRedrawNeeded = true;  // Always do full redraw when switching menus
@@ -400,22 +410,22 @@ void NetSettingsScreen::Impl::handleMainMenuButton() {
             break;
 
         case MainMenuSelection::MAIN_IP:
-            // Only allow IP editing in static mode
-            if (m_mode == NetworkMode::NET_MODE_STATIC) {
+            // Allow IP editing in static and dhcp-server modes
+            if (m_mode != NetworkMode::NET_MODE_DHCP) {
                 switchToIpMenu();
             }
             break;
 
         case MainMenuSelection::MAIN_GATEWAY:
-            // Only allow Gateway editing in static mode
-            if (m_mode == NetworkMode::NET_MODE_STATIC) {
+            // Allow Gateway editing in static and dhcp-server modes
+            if (m_mode != NetworkMode::NET_MODE_DHCP) {
                 switchToGatewayMenu();
             }
             break;
 
         case MainMenuSelection::MAIN_NETMASK:
-            // Only allow Netmask editing in static mode
-            if (m_mode == NetworkMode::NET_MODE_STATIC) {
+            // Allow Netmask editing in static and dhcp-server modes
+            if (m_mode != NetworkMode::NET_MODE_DHCP) {
                 switchToNetmaskMenu();
             }
             break;
@@ -452,6 +462,17 @@ void NetSettingsScreen::Impl::handleModeMenuButton() {
             switchToMainMenu();
             break;
 
+        case ModeMenuSelection::MODE_DHCP_SERVER:
+            m_mode = NetworkMode::NET_MODE_DHCP_SERVER;
+            // Pre-populate with default DHCP server addresses
+            m_ipSelector->setIp("192.168.1.1");
+            m_gatewaySelector->setIp("192.168.1.1");
+            m_netmaskSelector->setIp("255.255.255.0");
+            m_settingsChanged = true;
+            m_settingsApplied = false;
+            switchToMainMenu();
+            break;
+
         case ModeMenuSelection::MODE_BACK:
             switchToMainMenu();
             break;
@@ -469,6 +490,16 @@ void NetSettingsScreen::Impl::handleAddrMenuButton() {
     // Otherwise let the IP selector handle it
 }
 
+// Helper to get short display text for current network mode
+static const char* getModeText(NetworkMode mode) {
+    switch (mode) {
+        case NetworkMode::NET_MODE_STATIC:      return "Static";
+        case NetworkMode::NET_MODE_DHCP:        return "DHCP";
+        case NetworkMode::NET_MODE_DHCP_SERVER:  return "DhcpSrvr";
+        default:                                return "Unknown";
+    }
+}
+
 void NetSettingsScreen::Impl::drawMainMenu(bool fullRedraw) {
     if (fullRedraw) {
         m_display->drawMenuHeader("  Net Settings");
@@ -478,7 +509,7 @@ void NetSettingsScreen::Impl::drawMainMenu(bool fullRedraw) {
     char buffer[32];
 
     // Mode line
-    const char* modeText = (m_mode == NetworkMode::NET_MODE_STATIC) ? "Static" : "DHCP";
+    const char* modeText = getModeText(m_mode);
     snprintf(buffer, sizeof(buffer), "%cMode: %s",
              (m_mainSelection == static_cast<int>(MainMenuSelection::MAIN_MODE)) ? '>' : ' ',
              modeText);
@@ -525,11 +556,8 @@ void NetSettingsScreen::Impl::updateMainMenuSelection(int oldSelection, int newS
     // Clear old selection
     switch (static_cast<MainMenuSelection>(oldSelection)) {
         case MainMenuSelection::MAIN_MODE:
-            {
-                const char* modeText = (m_mode == NetworkMode::NET_MODE_STATIC) ? "Static" : "DHCP";
-                snprintf(buffer, sizeof(buffer), " Mode: %s", modeText);
-                m_display->drawText(0, 16, buffer);
-            }
+            snprintf(buffer, sizeof(buffer), " Mode: %-8s", getModeText(m_mode));
+            m_display->drawText(0, 16, buffer);
             break;
         case MainMenuSelection::MAIN_IP:
             m_display->drawText(0, 24, " IP");
@@ -554,11 +582,8 @@ void NetSettingsScreen::Impl::updateMainMenuSelection(int oldSelection, int newS
     // Set new selection
     switch (static_cast<MainMenuSelection>(newSelection)) {
         case MainMenuSelection::MAIN_MODE:
-            {
-                const char* modeText = (m_mode == NetworkMode::NET_MODE_STATIC) ? "Static" : "DHCP";
-                snprintf(buffer, sizeof(buffer), ">Mode: %s", modeText);
-                m_display->drawText(0, 16, buffer);
-            }
+            snprintf(buffer, sizeof(buffer), ">Mode: %-8s", getModeText(m_mode));
+            m_display->drawText(0, 16, buffer);
             break;
         case MainMenuSelection::MAIN_IP:
             m_display->drawText(0, 24, ">IP");
@@ -611,14 +636,19 @@ void NetSettingsScreen::Impl::drawModeMenu(bool fullRedraw) {
     m_display->drawText(0, 24, buffer);
     usleep(Config::DISPLAY_CMD_DELAY);
 
-    // Back option
-    snprintf(buffer, sizeof(buffer), "%cBack",
-             (m_modeSelection == static_cast<int>(ModeMenuSelection::MODE_BACK)) ? '>' : ' ');
+    // DHCP Server mode option
+    snprintf(buffer, sizeof(buffer), "%cDhcp-Server",
+             (m_modeSelection == static_cast<int>(ModeMenuSelection::MODE_DHCP_SERVER)) ? '>' : ' ');
     m_display->drawText(0, 32, buffer);
     usleep(Config::DISPLAY_CMD_DELAY);
 
+    // Back option
+    snprintf(buffer, sizeof(buffer), "%cBack",
+             (m_modeSelection == static_cast<int>(ModeMenuSelection::MODE_BACK)) ? '>' : ' ');
+    m_display->drawText(0, 40, buffer);
+    usleep(Config::DISPLAY_CMD_DELAY);
+
     // Clear remaining lines
-    m_display->drawText(0, 40, "                ");
     m_display->drawText(0, 48, "                ");
     m_display->drawText(0, 56, "                ");
     usleep(Config::DISPLAY_CMD_DELAY);
@@ -628,8 +658,6 @@ void NetSettingsScreen::Impl::drawModeMenu(bool fullRedraw) {
 }
 
 void NetSettingsScreen::Impl::updateModeMenuSelection(int oldSelection, int newSelection) {
-    //char buffer[32];
-
     // Clear old selection
     switch (static_cast<ModeMenuSelection>(oldSelection)) {
         case ModeMenuSelection::MODE_STATIC:
@@ -638,8 +666,11 @@ void NetSettingsScreen::Impl::updateModeMenuSelection(int oldSelection, int newS
         case ModeMenuSelection::MODE_DHCP:
             m_display->drawText(0, 24, " Dhcp");
             break;
+        case ModeMenuSelection::MODE_DHCP_SERVER:
+            m_display->drawText(0, 32, " Dhcp-Server");
+            break;
         case ModeMenuSelection::MODE_BACK:
-            m_display->drawText(0, 32, " Back");
+            m_display->drawText(0, 40, " Back");
             break;
         default:
             break;
@@ -654,8 +685,11 @@ void NetSettingsScreen::Impl::updateModeMenuSelection(int oldSelection, int newS
         case ModeMenuSelection::MODE_DHCP:
             m_display->drawText(0, 24, ">Dhcp");
             break;
+        case ModeMenuSelection::MODE_DHCP_SERVER:
+            m_display->drawText(0, 32, ">Dhcp-Server");
+            break;
         case ModeMenuSelection::MODE_BACK:
-            m_display->drawText(0, 32, ">Back");
+            m_display->drawText(0, 40, ">Back");
             break;
         default:
             break;

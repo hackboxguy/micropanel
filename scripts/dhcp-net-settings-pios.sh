@@ -374,6 +374,131 @@ backup_network_settings() {
     fi
 }
 
+# DHCP Server configuration file managed by micropanel
+DNSMASQ_CONF="/etc/dnsmasq.d/micropanel-dhcp-server.conf"
+
+# Check if system is currently in dhcp-server mode
+is_dhcp_server_active() {
+    # Check if our dnsmasq config exists AND dnsmasq is running
+    [ -f "$DNSMASQ_CONF" ] && systemctl is-active --quiet dnsmasq 2>/dev/null
+}
+
+# Read current settings when in dhcp-server mode
+get_dhcp_server_settings() {
+    echo "mode=dhcp-server"
+
+    # Read IP from the interface
+    local current_ip=$(ip -4 addr show "$INTERFACE" 2>/dev/null | grep -oP 'inet \K[0-9.]+' | head -1)
+    if [ -n "$current_ip" ]; then
+        echo "ip=$current_ip"
+        echo "gateway=$current_ip"
+    else
+        echo "ip=192.168.1.1"
+        echo "gateway=192.168.1.1"
+    fi
+
+    # Read netmask from the interface
+    local cidr=$(ip -4 addr show "$INTERFACE" 2>/dev/null | grep -oP 'inet [0-9.]+/\K[0-9]+' | head -1)
+    if [ -n "$cidr" ]; then
+        # Convert CIDR to dotted netmask
+        local mask=""
+        local full_octets=$((cidr / 8))
+        local partial_bits=$((cidr % 8))
+        for i in 1 2 3 4; do
+            if [ "$i" -le "$full_octets" ]; then
+                mask="${mask}255"
+            elif [ "$i" -eq $((full_octets + 1)) ] && [ "$partial_bits" -gt 0 ]; then
+                mask="${mask}$((256 - (1 << (8 - partial_bits))))"
+            else
+                mask="${mask}0"
+            fi
+            [ "$i" -lt 4 ] && mask="${mask}."
+        done
+        echo "netmask=$mask"
+    else
+        echo "netmask=255.255.255.0"
+    fi
+
+    echo "dns1="
+    echo "dns2="
+    echo "dns3="
+}
+
+# Stop DHCP server and clean up configuration
+stop_dhcp_server() {
+    log_verbose "Stopping DHCP server..."
+    systemctl stop dnsmasq 2>/dev/null || true
+    rm -f "$DNSMASQ_CONF"
+    log_verbose "DHCP server stopped and config removed"
+}
+
+# Convert dotted netmask to CIDR prefix length
+netmask_to_cidr() {
+    local netmask="$1"
+    local cidr=0
+    for octet in $(echo "$netmask" | tr '.' ' '); do
+        case "$octet" in
+            255) cidr=$((cidr + 8)) ;;
+            254) cidr=$((cidr + 7)) ;;
+            252) cidr=$((cidr + 6)) ;;
+            248) cidr=$((cidr + 5)) ;;
+            240) cidr=$((cidr + 4)) ;;
+            224) cidr=$((cidr + 3)) ;;
+            192) cidr=$((cidr + 2)) ;;
+            128) cidr=$((cidr + 1)) ;;
+            0)   ;;
+        esac
+    done
+    echo "$cidr"
+}
+
+# Configure and start DHCP server
+set_dhcp_server() {
+    log_verbose "Configuring DHCP server on $INTERFACE..."
+
+    local cidr=$(netmask_to_cidr "$NETMASK")
+
+    # Derive DHCP range from the server IP (use .100-.200 in the same subnet)
+    local ip_prefix=$(echo "$IP" | cut -d. -f1-3)
+    local dhcp_start="${ip_prefix}.100"
+    local dhcp_end="${ip_prefix}.200"
+
+    # Stop any existing DHCP client services for this interface
+    systemctl stop NetworkManager 2>/dev/null || true
+    systemctl stop dhcpcd 2>/dev/null || true
+    dhclient -r "$INTERFACE" 2>/dev/null || true
+    pkill -f "dhclient.*$INTERFACE" 2>/dev/null || true
+
+    # Configure static IP on the interface
+    ip addr flush dev "$INTERFACE" 2>/dev/null || true
+    ip addr add "${IP}/${cidr}" dev "$INTERFACE"
+    ip link set "$INTERFACE" up
+    sleep 1
+
+    # Write dnsmasq configuration
+    mkdir -p /etc/dnsmasq.d
+    cat > "$DNSMASQ_CONF" << EOF
+# Micropanel DHCP Server Configuration
+# Managed by dhcp-net-settings-pios.sh — do not edit manually
+interface=${INTERFACE}
+bind-interfaces
+dhcp-range=${dhcp_start},${dhcp_end},12h
+dhcp-option=3,${IP}
+dhcp-authoritative
+no-resolv
+no-hosts
+EOF
+
+    # Start dnsmasq
+    systemctl start dnsmasq
+    if systemctl is-active --quiet dnsmasq; then
+        log_verbose "DHCP server started: ${IP}/${cidr}, range ${dhcp_start}-${dhcp_end}"
+    else
+        log_verbose "WARNING: dnsmasq failed to start"
+        return 1
+    fi
+}
+
 # Main script execution starts here
 # Detect which network management system is being used
 detect_network_system
@@ -383,7 +508,10 @@ backup_network_settings
 
 # Get current settings if no mode specified
 if [ -z "$MODE" ]; then
-    if [ "$NETWORK_SYSTEM" = "networkmanager" ]; then
+    # Check for dhcp-server mode first (takes priority over static/dhcp detection)
+    if is_dhcp_server_active; then
+        get_dhcp_server_settings
+    elif [ "$NETWORK_SYSTEM" = "networkmanager" ]; then
         get_nm_settings
     else
         get_dhcpcd_settings
@@ -391,6 +519,11 @@ if [ -z "$MODE" ]; then
 
     echo "RESULT:OK"
     exit 0
+fi
+
+# Stop DHCP server if switching away from dhcp-server mode
+if [ "$MODE" != "dhcp-server" ] && is_dhcp_server_active; then
+    stop_dhcp_server
 fi
 
 # Set new settings
@@ -410,8 +543,14 @@ elif [ "$MODE" = "static" ]; then
     else
         set_dhcpcd_static
     fi
+elif [ "$MODE" = "dhcp-server" ]; then
+    if [ -z "$IP" ] || [ -z "$GATEWAY" ] || [ -z "$NETMASK" ]; then
+        error_exit "DHCP server mode requires IP, gateway, and netmask parameters"
+    fi
+
+    set_dhcp_server
 else
-    error_exit "Invalid mode: $MODE. Must be 'dhcp' or 'static'"
+    error_exit "Invalid mode: $MODE. Must be 'dhcp', 'static', or 'dhcp-server'"
 fi
 
 echo "RESULT:OK"

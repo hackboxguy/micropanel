@@ -96,10 +96,10 @@ log "Using config file: $CONFIG_FILE" force
 printf "Installing dependencies ................................ "
 if [ $VERBOSE -eq 1 ]; then
     DEBIAN_FRONTEND=noninteractive apt-get update
-    DEBIAN_FRONTEND=noninteractive apt-get install -y fxload libi2c-dev i2c-tools cmake libudev-dev nlohmann-json3-dev iperf3 libcurl4-openssl-dev avahi-daemon avahi-utils fbi mpv libftdi1 libhidapi-libusb0
+    DEBIAN_FRONTEND=noninteractive apt-get install -y fxload libi2c-dev i2c-tools cmake libudev-dev nlohmann-json3-dev iperf3 libcurl4-openssl-dev avahi-daemon avahi-utils fbi mpv libftdi1 libhidapi-libusb0 dnsmasq
 else
     DEBIAN_FRONTEND=noninteractive apt-get update < /dev/null > /dev/null
-    DEBIAN_FRONTEND=noninteractive apt-get install -y -qq fxload libi2c-dev i2c-tools cmake libudev-dev nlohmann-json3-dev iperf3 libcurl4-openssl-dev avahi-daemon avahi-utils fbi mpv libftdi1 libhidapi-libusb0 < /dev/null > /dev/null
+    DEBIAN_FRONTEND=noninteractive apt-get install -y -qq fxload libi2c-dev i2c-tools cmake libudev-dev nlohmann-json3-dev iperf3 libcurl4-openssl-dev avahi-daemon avahi-utils fbi mpv libftdi1 libhidapi-libusb0 dnsmasq < /dev/null > /dev/null
 fi
 test 0 -eq $? && echo "[OK]" || { echo "[FAIL]"; exit 1; }
 

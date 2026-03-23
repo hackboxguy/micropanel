@@ -31,6 +31,123 @@ clean_ip() {
 # Define variables
 INTERFACES_FILE="/etc/network/interfaces"
 RESOLV_CONF="/etc/resolv.conf"
+DNSMASQ_CONF="/etc/dnsmasq.d/micropanel-dhcp-server.conf"
+
+# Check if system is currently in dhcp-server mode
+is_dhcp_server_active() {
+    [ -f "$DNSMASQ_CONF" ] && \
+        (systemctl is-active --quiet dnsmasq 2>/dev/null || pgrep -x dnsmasq >/dev/null 2>&1)
+}
+
+# Read current settings when in dhcp-server mode
+get_dhcp_server_settings() {
+    echo "mode=dhcp-server"
+
+    local current_ip=$(ip -4 addr show "$INTERFACE" 2>/dev/null | grep -o 'inet [0-9.]*' | head -1 | cut -d' ' -f2)
+    if [ -n "$current_ip" ]; then
+        echo "ip=$current_ip"
+        echo "gateway=$current_ip"
+    else
+        echo "ip=192.168.1.1"
+        echo "gateway=192.168.1.1"
+    fi
+
+    local cidr=$(ip -4 addr show "$INTERFACE" 2>/dev/null | grep -o 'inet [0-9.]*/[0-9]*' | head -1 | cut -d'/' -f2)
+    case "$cidr" in
+        8)  echo "netmask=255.0.0.0" ;;
+        16) echo "netmask=255.255.0.0" ;;
+        24) echo "netmask=255.255.255.0" ;;
+        *)  echo "netmask=255.255.255.0" ;;
+    esac
+
+    echo "dns1="
+    echo "dns2="
+    echo "dns3="
+}
+
+# Stop DHCP server and clean up
+stop_dhcp_server() {
+    log_verbose "Stopping DHCP server..."
+    if systemctl is-active --quiet dnsmasq 2>/dev/null; then
+        systemctl stop dnsmasq 2>/dev/null || true
+    else
+        killall dnsmasq 2>/dev/null || true
+    fi
+    rm -f "$DNSMASQ_CONF"
+    log_verbose "DHCP server stopped and config removed"
+}
+
+# Convert dotted netmask to CIDR prefix length
+netmask_to_cidr() {
+    local netmask="$1"
+    local cidr=0
+    for octet in $(echo "$netmask" | tr '.' ' '); do
+        case "$octet" in
+            255) cidr=$((cidr + 8)) ;;
+            254) cidr=$((cidr + 7)) ;;
+            252) cidr=$((cidr + 6)) ;;
+            248) cidr=$((cidr + 5)) ;;
+            240) cidr=$((cidr + 4)) ;;
+            224) cidr=$((cidr + 3)) ;;
+            192) cidr=$((cidr + 2)) ;;
+            128) cidr=$((cidr + 1)) ;;
+            0)   ;;
+        esac
+    done
+    echo "$cidr"
+}
+
+# Configure and start DHCP server
+set_dhcp_server() {
+    log_verbose "Configuring DHCP server on $INTERFACE..."
+
+    local cidr=$(netmask_to_cidr "$NETMASK")
+    local ip_prefix=$(echo "$IP" | cut -d. -f1-3)
+    local dhcp_start="${ip_prefix}.100"
+    local dhcp_end="${ip_prefix}.200"
+
+    # Stop any DHCP clients
+    if [ -f "/var/run/udhcpc.$INTERFACE.pid" ]; then
+        kill "$(cat /var/run/udhcpc.$INTERFACE.pid)" 2>/dev/null || true
+    fi
+    pkill -f "udhcpc.*$INTERFACE" 2>/dev/null || true
+
+    # Stop systemd-networkd temporarily to take manual control
+    systemctl stop systemd-networkd 2>/dev/null || true
+
+    # Configure static IP on the interface
+    ip addr flush dev "$INTERFACE" 2>/dev/null || true
+    ip addr add "${IP}/${cidr}" dev "$INTERFACE"
+    ip link set "$INTERFACE" up
+    sleep 1
+
+    # Write dnsmasq configuration
+    mkdir -p /etc/dnsmasq.d
+    cat > "$DNSMASQ_CONF" << EOF
+# Micropanel DHCP Server Configuration
+# Managed by dhcp-net-settings-buildroot.sh — do not edit manually
+interface=${INTERFACE}
+bind-interfaces
+dhcp-range=${dhcp_start},${dhcp_end},12h
+dhcp-option=3,${IP}
+dhcp-authoritative
+no-resolv
+no-hosts
+EOF
+
+    # Start dnsmasq
+    if systemctl start dnsmasq 2>/dev/null; then
+        log_verbose "DHCP server started via systemd"
+    elif command -v dnsmasq >/dev/null 2>&1; then
+        dnsmasq --conf-file="$DNSMASQ_CONF"
+        log_verbose "DHCP server started directly"
+    else
+        log_verbose "WARNING: dnsmasq not found"
+        return 1
+    fi
+
+    log_verbose "DHCP server: ${IP}/${cidr}, range ${dhcp_start}-${dhcp_end}"
+}
 
 # Backup current settings
 if [ "$DRY_RUN" -eq 0 ]; then
@@ -49,6 +166,13 @@ fi
 
 # Get current settings
 if [ -z "$MODE" ]; then
+    # Check for dhcp-server mode first
+    if is_dhcp_server_active; then
+        get_dhcp_server_settings
+        echo "RESULT:OK"
+        exit 0
+    fi
+
     # Check interfaces file first
     if [ -f "$INTERFACES_FILE" ] && grep -q "iface $INTERFACE" "$INTERFACES_FILE" 2>/dev/null; then
         if grep -q "iface $INTERFACE inet dhcp" "$INTERFACES_FILE" 2>/dev/null; then
@@ -154,6 +278,14 @@ if [ -z "$MODE" ]; then
 
     echo "RESULT:OK"
     exit 0
+fi
+
+# Stop DHCP server if switching away from dhcp-server mode
+if [ "$MODE" != "dhcp-server" ] && [ "$DRY_RUN" -eq 0 ] && is_dhcp_server_active; then
+    stop_dhcp_server
+    # Restart systemd-networkd since we stopped it when entering dhcp-server mode
+    systemctl restart systemd-networkd 2>/dev/null || true
+    sleep 1
 fi
 
 # Set new settings
@@ -349,8 +481,23 @@ EOF
         [ -n "$DNS2" ] && log_verbose "[DRY-RUN]   DNS2: $CLEAN_DNS2"
         [ -n "$DNS3" ] && log_verbose "[DRY-RUN]   DNS3: $CLEAN_DNS3"
     fi
+elif [ "$MODE" = "dhcp-server" ]; then
+    if [ -z "$IP" ] || [ -z "$GATEWAY" ] || [ -z "$NETMASK" ]; then
+        error_exit "DHCP server mode requires IP, gateway, and netmask parameters"
+    fi
+
+    # Stop DHCP server if already running (to reconfigure)
+    if is_dhcp_server_active; then
+        stop_dhcp_server
+    fi
+
+    if [ "$DRY_RUN" -eq 0 ]; then
+        set_dhcp_server
+    else
+        log_verbose "[DRY-RUN] Would configure DHCP server with IP=$IP netmask=$NETMASK"
+    fi
 else
-    error_exit "Invalid mode: $MODE. Must be 'dhcp' or 'static'"
+    error_exit "Invalid mode: $MODE. Must be 'dhcp', 'static', or 'dhcp-server'"
 fi
 
 echo "RESULT:OK"

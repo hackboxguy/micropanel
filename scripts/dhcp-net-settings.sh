@@ -4,6 +4,7 @@
 #   Get current settings:  ./dhcp-net-settings.sh --interface=eth0 --os=debian
 #   Set to DHCP:          ./dhcp-net-settings.sh --interface=eth0 --os=debian --mode=dhcp
 #   Set to static:        ./dhcp-net-settings.sh --interface=eth0 --os=debian --mode=static --ip=192.168.1.2 --gateway=192.168.1.1 --netmask=255.255.255.0
+#   Set to DHCP server:   ./dhcp-net-settings.sh --interface=eth0 --os=debian --mode=dhcp-server --ip=192.168.1.1 --gateway=192.168.1.1 --netmask=255.255.255.0
 
 # Default values
 SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
@@ -162,17 +163,17 @@ parse_args() {
     # Validate mode parameter if provided
     if [ -n "$MODE" ]; then
         case "$MODE" in
-            static|dhcp)
+            static|dhcp|dhcp-server)
                 log_verbose "Mode: $MODE"
                 ;;
             *)
-                error_exit "Unsupported mode: $MODE. Must be 'static' or 'dhcp'"
+                error_exit "Unsupported mode: $MODE. Must be 'static', 'dhcp', or 'dhcp-server'"
                 ;;
         esac
     fi
 
-    # Validate IP parameters if mode is static
-    if [ "$MODE" = "static" ]; then
+    # Validate IP parameters if mode is static or dhcp-server
+    if [ "$MODE" = "static" ] || [ "$MODE" = "dhcp-server" ]; then
         if [ -z "$IP" ] || [ -z "$GATEWAY" ] || [ -z "$NETMASK" ]; then
             error_exit "Static mode requires IP, gateway, and netmask parameters"
         fi
