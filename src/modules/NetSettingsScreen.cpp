@@ -431,9 +431,53 @@ void NetSettingsScreen::Impl::handleMainMenuButton() {
             break;
 
         case MainMenuSelection::MAIN_APPLY:
+            // Show "Please wait.." while applying
+            m_display->clear();
+            usleep(Config::DISPLAY_CMD_DELAY * 3);
+            m_display->drawText(0, 0, "  Net Settings");
+            usleep(Config::DISPLAY_CMD_DELAY);
+            m_display->drawText(0, 8, "----------------");
+            usleep(Config::DISPLAY_CMD_DELAY);
+            m_display->drawText(0, 24, " Please wait...");
+            usleep(Config::DISPLAY_CMD_DELAY);
+
             applyNetworkSettings();
+
+            // Show result and wait for any button press
+            m_display->clear();
+            usleep(Config::DISPLAY_CMD_DELAY * 3);
+            m_display->drawText(0, 0, "  Net Settings");
+            usleep(Config::DISPLAY_CMD_DELAY);
+            m_display->drawText(0, 8, "----------------");
+            usleep(Config::DISPLAY_CMD_DELAY);
+            if (m_settingsApplied) {
+                m_display->drawText(0, 24, " Apply success!");
+            } else {
+                m_display->drawText(0, 24, " Apply failed!");
+            }
+            usleep(Config::DISPLAY_CMD_DELAY);
+            m_display->drawText(0, 40, " Press any key..");
+            usleep(Config::DISPLAY_CMD_DELAY);
+
+            // Drain any pending input events from the apply button press
+            if (m_input->waitForEvents(50) > 0) {
+                m_input->processEvents([](int) {}, []() {});
+            }
+            // Wait for any button press or rotation to dismiss
+            {
+                bool dismissed = false;
+                while (!dismissed) {
+                    if (m_input->waitForEvents(200) > 0) {
+                        m_input->processEvents(
+                            [&dismissed](int) { dismissed = true; },
+                            [&dismissed]() { dismissed = true; }
+                        );
+                    }
+                }
+            }
+
             m_redrawNeeded = true;
-            m_fullRedrawNeeded = true; // Full redraw to show changes
+            m_fullRedrawNeeded = true;
             break;
 
         case MainMenuSelection::MAIN_EXIT:
