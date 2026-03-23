@@ -33,10 +33,11 @@ INTERFACES_FILE="/etc/network/interfaces"
 RESOLV_CONF="/etc/resolv.conf"
 DNSMASQ_CONF="/etc/dnsmasq.d/micropanel-dhcp-server.conf"
 
-# Check if system is currently in dhcp-server mode
+# Check if system is currently in dhcp-server mode.
+# Relies solely on the config file we create/delete — dnsmasq may fork
+# into the background causing systemctl to report inactive even when running.
 is_dhcp_server_active() {
-    [ -f "$DNSMASQ_CONF" ] && \
-        (systemctl is-active --quiet dnsmasq 2>/dev/null || pgrep -x dnsmasq >/dev/null 2>&1)
+    [ -f "$DNSMASQ_CONF" ]
 }
 
 # Read current settings when in dhcp-server mode
