@@ -626,29 +626,42 @@ void NetSettingsScreen::Impl::drawModeMenu(bool fullRedraw) {
         usleep(Config::DISPLAY_CMD_DELAY);
     }
 
-    // Draw each menu item with proper formatting
+    // Draw each menu item: ">" = cursor, "[text]" = currently active mode
     char buffer[32];
+    bool isCursor, isActive;
 
     // Static mode option
-    snprintf(buffer, sizeof(buffer), "%cStatic",
-             (m_modeSelection == static_cast<int>(ModeMenuSelection::MODE_STATIC)) ? '>' : ' ');
+    isCursor = (m_modeSelection == static_cast<int>(ModeMenuSelection::MODE_STATIC));
+    isActive = (m_mode == NetworkMode::NET_MODE_STATIC);
+    snprintf(buffer, sizeof(buffer), "%c%s%-14s",
+             isCursor ? '>' : ' ',
+             isActive ? "[" : " ",
+             isActive ? "Static]" : "Static");
     m_display->drawText(0, 16, buffer);
     usleep(Config::DISPLAY_CMD_DELAY);
 
     // DHCP mode option
-    snprintf(buffer, sizeof(buffer), "%cDhcp",
-             (m_modeSelection == static_cast<int>(ModeMenuSelection::MODE_DHCP)) ? '>' : ' ');
+    isCursor = (m_modeSelection == static_cast<int>(ModeMenuSelection::MODE_DHCP));
+    isActive = (m_mode == NetworkMode::NET_MODE_DHCP);
+    snprintf(buffer, sizeof(buffer), "%c%s%-14s",
+             isCursor ? '>' : ' ',
+             isActive ? "[" : " ",
+             isActive ? "Dhcp]" : "Dhcp");
     m_display->drawText(0, 24, buffer);
     usleep(Config::DISPLAY_CMD_DELAY);
 
     // DHCP Server mode option
-    snprintf(buffer, sizeof(buffer), "%cDhcp-Server",
-             (m_modeSelection == static_cast<int>(ModeMenuSelection::MODE_DHCP_SERVER)) ? '>' : ' ');
+    isCursor = (m_modeSelection == static_cast<int>(ModeMenuSelection::MODE_DHCP_SERVER));
+    isActive = (m_mode == NetworkMode::NET_MODE_DHCP_SERVER);
+    snprintf(buffer, sizeof(buffer), "%c%s%-14s",
+             isCursor ? '>' : ' ',
+             isActive ? "[" : " ",
+             isActive ? "Dhcp-Server]" : "Dhcp-Server");
     m_display->drawText(0, 32, buffer);
     usleep(Config::DISPLAY_CMD_DELAY);
 
-    // Back option
-    snprintf(buffer, sizeof(buffer), "%cBack",
+    // Back option (never "active")
+    snprintf(buffer, sizeof(buffer), "%c Back",
              (m_modeSelection == static_cast<int>(ModeMenuSelection::MODE_BACK)) ? '>' : ' ');
     m_display->drawText(0, 40, buffer);
     usleep(Config::DISPLAY_CMD_DELAY);
@@ -663,43 +676,35 @@ void NetSettingsScreen::Impl::drawModeMenu(bool fullRedraw) {
 }
 
 void NetSettingsScreen::Impl::updateModeMenuSelection(int oldSelection, int newSelection) {
-    // Clear old selection
-    switch (static_cast<ModeMenuSelection>(oldSelection)) {
-        case ModeMenuSelection::MODE_STATIC:
-            m_display->drawText(0, 16, " Static");
-            break;
-        case ModeMenuSelection::MODE_DHCP:
-            m_display->drawText(0, 24, " Dhcp");
-            break;
-        case ModeMenuSelection::MODE_DHCP_SERVER:
-            m_display->drawText(0, 32, " Dhcp-Server");
-            break;
-        case ModeMenuSelection::MODE_BACK:
-            m_display->drawText(0, 40, " Back");
-            break;
-        default:
-            break;
-    }
-    usleep(Config::DISPLAY_CMD_DELAY);
+    char buffer[32];
+    bool isActive;
 
-    // Set new selection
-    switch (static_cast<ModeMenuSelection>(newSelection)) {
-        case ModeMenuSelection::MODE_STATIC:
-            m_display->drawText(0, 16, ">Static");
-            break;
-        case ModeMenuSelection::MODE_DHCP:
-            m_display->drawText(0, 24, ">Dhcp");
-            break;
-        case ModeMenuSelection::MODE_DHCP_SERVER:
-            m_display->drawText(0, 32, ">Dhcp-Server");
-            break;
-        case ModeMenuSelection::MODE_BACK:
-            m_display->drawText(0, 40, ">Back");
-            break;
-        default:
-            break;
+    // Helper lambda: format a mode menu line
+    auto formatLine = [&](ModeMenuSelection item, const char* label, const char* labelBracketed, NetworkMode mode, int y) {
+        bool isCursor = (static_cast<int>(item) == newSelection);
+        bool wasOld = (static_cast<int>(item) == oldSelection);
+        if (!isCursor && !wasOld) return;  // Only redraw changed lines
+        isActive = (m_mode == mode);
+        snprintf(buffer, sizeof(buffer), "%c%s%-14s",
+                 isCursor ? '>' : ' ',
+                 isActive ? "[" : " ",
+                 isActive ? labelBracketed : label);
+        m_display->drawText(0, y, buffer);
+        usleep(Config::DISPLAY_CMD_DELAY);
+    };
+
+    formatLine(ModeMenuSelection::MODE_STATIC, "Static", "Static]", NetworkMode::NET_MODE_STATIC, 16);
+    formatLine(ModeMenuSelection::MODE_DHCP, "Dhcp", "Dhcp]", NetworkMode::NET_MODE_DHCP, 24);
+    formatLine(ModeMenuSelection::MODE_DHCP_SERVER, "Dhcp-Server", "Dhcp-Server]", NetworkMode::NET_MODE_DHCP_SERVER, 32);
+
+    // Back (never active, just cursor)
+    bool isCursorBack = (static_cast<int>(ModeMenuSelection::MODE_BACK) == newSelection);
+    bool wasBack = (static_cast<int>(ModeMenuSelection::MODE_BACK) == oldSelection);
+    if (isCursorBack || wasBack) {
+        snprintf(buffer, sizeof(buffer), "%c Back", isCursorBack ? '>' : ' ');
+        m_display->drawText(0, 40, buffer);
+        usleep(Config::DISPLAY_CMD_DELAY);
     }
-    usleep(Config::DISPLAY_CMD_DELAY);
 }
 
 void NetSettingsScreen::Impl::drawIpMenu(bool fullRedraw) {
