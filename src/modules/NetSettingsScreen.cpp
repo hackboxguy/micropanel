@@ -19,11 +19,13 @@
 
 // Menu states - define which menu is currently active
 enum class NetSettingsMenuState {
-    MENU_MAIN,      // Main network settings menu
-    MENU_MODE,      // Mode selection submenu
-    MENU_IP,        // IP address edit submenu
-    MENU_GATEWAY,   // Gateway edit submenu
-    MENU_NETMASK    // Netmask edit submenu
+    MENU_MAIN,          // Main network settings menu
+    MENU_MODE,          // Mode selection submenu
+    MENU_IP,            // IP address edit submenu
+    MENU_GATEWAY,       // Gateway edit submenu
+    MENU_NETMASK,       // Netmask edit submenu
+    MENU_APPLY_WAIT,    // "Please wait..." during apply
+    MENU_APPLY_RESULT   // "Apply success/failed - press any key"
 };
 
 // Main menu items
@@ -98,6 +100,8 @@ public:
     void drawIpMenu(bool fullRedraw);
     void drawGatewayMenu(bool fullRedraw);
     void drawNetmaskMenu(bool fullRedraw);
+    void drawApplyWaitScreen();
+    void drawApplyResultScreen();
     void updateAddrMenuSelection(AddrMenuSelection oldSelection, AddrMenuSelection newSelection, IPSelector* selector);
 
     // State tracking
@@ -431,51 +435,8 @@ void NetSettingsScreen::Impl::handleMainMenuButton() {
             break;
 
         case MainMenuSelection::MAIN_APPLY:
-            // Show "Please wait.." while applying
-            m_display->clear();
-            usleep(Config::DISPLAY_CMD_DELAY * 3);
-            m_display->drawText(0, 0, "  Net Settings");
-            usleep(Config::DISPLAY_CMD_DELAY);
-            m_display->drawText(0, 8, "----------------");
-            usleep(Config::DISPLAY_CMD_DELAY);
-            m_display->drawText(0, 24, " Please wait...");
-            usleep(Config::DISPLAY_CMD_DELAY);
-
-            applyNetworkSettings();
-
-            // Show result and wait for any button press
-            m_display->clear();
-            usleep(Config::DISPLAY_CMD_DELAY * 3);
-            m_display->drawText(0, 0, "  Net Settings");
-            usleep(Config::DISPLAY_CMD_DELAY);
-            m_display->drawText(0, 8, "----------------");
-            usleep(Config::DISPLAY_CMD_DELAY);
-            if (m_settingsApplied) {
-                m_display->drawText(0, 24, " Apply success!");
-            } else {
-                m_display->drawText(0, 24, " Apply failed!");
-            }
-            usleep(Config::DISPLAY_CMD_DELAY);
-            m_display->drawText(0, 40, " Press any key..");
-            usleep(Config::DISPLAY_CMD_DELAY);
-
-            // Drain any pending input events from the apply button press
-            if (m_input->waitForEvents(50) > 0) {
-                m_input->processEvents([](int) {}, []() {});
-            }
-            // Wait for any button press or rotation to dismiss
-            {
-                bool dismissed = false;
-                while (!dismissed) {
-                    if (m_input->waitForEvents(200) > 0) {
-                        m_input->processEvents(
-                            [&dismissed](int) { dismissed = true; },
-                            [&dismissed]() { dismissed = true; }
-                        );
-                    }
-                }
-            }
-
+            // Show "Please wait.." and transition to apply state
+            m_menuState = NetSettingsMenuState::MENU_APPLY_WAIT;
             m_redrawNeeded = true;
             m_fullRedrawNeeded = true;
             break;
@@ -914,6 +875,34 @@ void NetSettingsScreen::Impl::drawNetmaskMenu(bool fullRedraw) {
     m_prevAddrSelection = m_addrSelection;
 }
 
+void NetSettingsScreen::Impl::drawApplyWaitScreen() {
+    m_display->clear();
+    usleep(Config::DISPLAY_CMD_DELAY * 3);
+    m_display->drawText(0, 0, "  Net Settings");
+    usleep(Config::DISPLAY_CMD_DELAY);
+    m_display->drawText(0, 8, "----------------");
+    usleep(Config::DISPLAY_CMD_DELAY);
+    m_display->drawText(0, 24, " Please wait...");
+    usleep(Config::DISPLAY_CMD_DELAY);
+}
+
+void NetSettingsScreen::Impl::drawApplyResultScreen() {
+    m_display->clear();
+    usleep(Config::DISPLAY_CMD_DELAY * 3);
+    m_display->drawText(0, 0, "  Net Settings");
+    usleep(Config::DISPLAY_CMD_DELAY);
+    m_display->drawText(0, 8, "----------------");
+    usleep(Config::DISPLAY_CMD_DELAY);
+    if (m_settingsApplied) {
+        m_display->drawText(0, 24, " Apply success!");
+    } else {
+        m_display->drawText(0, 24, " Apply failed!");
+    }
+    usleep(Config::DISPLAY_CMD_DELAY);
+    m_display->drawText(0, 40, " Press any key..");
+    usleep(Config::DISPLAY_CMD_DELAY);
+}
+
 void NetSettingsScreen::Impl::updateAddrMenuSelection(AddrMenuSelection oldSelection, AddrMenuSelection newSelection, IPSelector* selector) {
     char buffer[32];
     const std::string& ipStr = selector->getIp();
@@ -1006,6 +995,17 @@ void NetSettingsScreen::update() {
             case NetSettingsMenuState::MENU_NETMASK:
                 m_pImpl->drawNetmaskMenu(m_pImpl->m_fullRedrawNeeded);
                 break;
+            case NetSettingsMenuState::MENU_APPLY_WAIT:
+                m_pImpl->drawApplyWaitScreen();
+                // Now run the actual apply (blocks while script runs)
+                m_pImpl->applyNetworkSettings();
+                // Transition to result screen
+                m_pImpl->m_menuState = NetSettingsMenuState::MENU_APPLY_RESULT;
+                m_pImpl->drawApplyResultScreen();
+                break;
+            case NetSettingsMenuState::MENU_APPLY_RESULT:
+                // Already drawn, just waiting for input — nothing to redraw
+                break;
         }
         m_pImpl->m_redrawNeeded = false;
         m_pImpl->m_fullRedrawNeeded = false;
@@ -1039,10 +1039,16 @@ bool NetSettingsScreen::handleInput() {
         
         // Handle button press
         if (buttonPressed) {
+            // Any input on the apply result screen dismisses it
+            if (m_pImpl->m_menuState == NetSettingsMenuState::MENU_APPLY_RESULT) {
+                m_pImpl->switchToMainMenu();
+                return !m_pImpl->m_shouldExit;
+            }
+
             bool handled = false;
-            
+
             // Let IP selector handle button first if applicable
-            if (m_pImpl->m_menuState == NetSettingsMenuState::MENU_IP && 
+            if (m_pImpl->m_menuState == NetSettingsMenuState::MENU_IP &&
                 m_pImpl->m_addrSelection == AddrMenuSelection::ADDR_IP) {
                 handled = m_pImpl->m_ipSelector->handleButton();
                 if (handled) {
@@ -1084,16 +1090,25 @@ bool NetSettingsScreen::handleInput() {
                     case NetSettingsMenuState::MENU_NETMASK:
                         m_pImpl->handleAddrMenuButton();
                         break;
+                    case NetSettingsMenuState::MENU_APPLY_WAIT:
+                    case NetSettingsMenuState::MENU_APPLY_RESULT:
+                        break;  // Handled above
                 }
             }
         }
-        
+
         // Handle rotation
         if (rotationDirection != 0) {
+            // Any input on the apply result screen dismisses it
+            if (m_pImpl->m_menuState == NetSettingsMenuState::MENU_APPLY_RESULT) {
+                m_pImpl->switchToMainMenu();
+                return !m_pImpl->m_shouldExit;
+            }
+
             bool handled = false;
-            
+
             // Let IP selector handle rotation first if applicable
-            if (m_pImpl->m_menuState == NetSettingsMenuState::MENU_IP && 
+            if (m_pImpl->m_menuState == NetSettingsMenuState::MENU_IP &&
                 m_pImpl->m_addrSelection == AddrMenuSelection::ADDR_IP) {
                 handled = m_pImpl->m_ipSelector->handleRotation(rotationDirection);
                 if (handled) {
@@ -1192,6 +1207,9 @@ bool NetSettingsScreen::handleInput() {
                             }
                         }
                         break;
+                    case NetSettingsMenuState::MENU_APPLY_WAIT:
+                    case NetSettingsMenuState::MENU_APPLY_RESULT:
+                        break;  // Handled above
                 }
             }
         }
@@ -1249,6 +1267,12 @@ std::string NetSettingsScreen::Impl::getNetSettingsInterface() {
 
 // GPIO support methods for Impl class
 void NetSettingsScreen::Impl::handleGPIORotation(int direction) {
+    // Any input on the apply result screen dismisses it
+    if (m_menuState == NetSettingsMenuState::MENU_APPLY_RESULT) {
+        switchToMainMenu();
+        return;
+    }
+
     bool handled = false;
 
     // Let IP selector handle rotation first if applicable
@@ -1370,11 +1394,20 @@ void NetSettingsScreen::Impl::handleGPIORotation(int direction) {
                     }
                 }
                 break;
+            case NetSettingsMenuState::MENU_APPLY_WAIT:
+            case NetSettingsMenuState::MENU_APPLY_RESULT:
+                break;  // Handled above
         }
     }
 }
 
 bool NetSettingsScreen::Impl::handleGPIOButtonPress() {
+    // Any input on the apply result screen dismisses it
+    if (m_menuState == NetSettingsMenuState::MENU_APPLY_RESULT) {
+        switchToMainMenu();
+        return true;  // Keep running (don't exit)
+    }
+
     bool handled = false;
 
     // Let IP selector handle button first if applicable
@@ -1420,6 +1453,9 @@ bool NetSettingsScreen::Impl::handleGPIOButtonPress() {
             case NetSettingsMenuState::MENU_NETMASK:
                 handleAddrMenuButton();
                 break;
+            case NetSettingsMenuState::MENU_APPLY_WAIT:
+            case NetSettingsMenuState::MENU_APPLY_RESULT:
+                break;  // Handled above
         }
     }
 
