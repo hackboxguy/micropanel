@@ -428,8 +428,10 @@ get_dhcp_server_settings() {
 stop_dhcp_server() {
     log_verbose "Stopping DHCP server..."
     systemctl stop dnsmasq 2>/dev/null || true
+    # Re-mask so dnsmasq doesn't start on next boot
+    systemctl mask dnsmasq 2>/dev/null || true
     rm -f "$DNSMASQ_CONF"
-    log_verbose "DHCP server stopped and config removed"
+    log_verbose "DHCP server stopped, masked, and config removed"
 }
 
 # Convert dotted netmask to CIDR prefix length
@@ -489,7 +491,8 @@ no-resolv
 no-hosts
 EOF
 
-    # Start dnsmasq
+    # Start dnsmasq (unmask first in case it was masked at image build time)
+    systemctl unmask dnsmasq 2>/dev/null || true
     systemctl start dnsmasq
     if systemctl is-active --quiet dnsmasq; then
         log_verbose "DHCP server started: ${IP}/${cidr}, range ${dhcp_start}-${dhcp_end}"

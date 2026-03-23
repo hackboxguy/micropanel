@@ -73,8 +73,10 @@ stop_dhcp_server() {
     else
         killall dnsmasq 2>/dev/null || true
     fi
+    # Re-mask so dnsmasq doesn't start on next boot
+    systemctl mask dnsmasq 2>/dev/null || true
     rm -f "$DNSMASQ_CONF"
-    log_verbose "DHCP server stopped and config removed"
+    log_verbose "DHCP server stopped, masked, and config removed"
 }
 
 # Convert dotted netmask to CIDR prefix length
@@ -135,7 +137,8 @@ no-resolv
 no-hosts
 EOF
 
-    # Start dnsmasq
+    # Start dnsmasq (unmask first in case it was masked at image build time)
+    systemctl unmask dnsmasq 2>/dev/null || true
     if systemctl start dnsmasq 2>/dev/null; then
         log_verbose "DHCP server started via systemd"
     elif command -v dnsmasq >/dev/null 2>&1; then
