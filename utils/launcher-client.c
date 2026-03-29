@@ -17,20 +17,32 @@
 
 // Default values
 #define DEFAULT_TIMEOUT_SEC 2
+#define DEFAULT_SERVER      "127.0.0.1:8081"
 #define BUFFER_SIZE         4096
 
 void print_usage(const char* program_name) {
-    printf("Usage: %s --srv=IP:PORT --command=COMMAND [--command-arg=ARG] [--timeoutsec=N]\n\n", program_name);
+    printf("Usage: %s [--srv=IP:PORT] --command=COMMAND [--command-arg=ARG] [--timeoutsec=N]\n\n", program_name);
     printf("Options:\n");
-    printf("  --srv=IP:PORT           Server address (e.g., 127.0.0.1:8081)\n");
-    printf("  --command=COMMAND       Command to send (stop-app, start-app, list-apps, etc.)\n");
-    printf("  --command-arg=ARG       Optional argument for command (used with start-app)\n");
+    printf("  --srv=IP:PORT           Server address (default: 127.0.0.1:8081)\n");
+    printf("  --command=COMMAND       Command to send\n");
+    printf("  --command-arg=ARG       Optional argument for command\n");
     printf("  --timeoutsec=N          Connection timeout in seconds (default: %d)\n", DEFAULT_TIMEOUT_SEC);
     printf("  -h, --help              Show this help message\n\n");
-    printf("Examples:\n");
-    printf("  %s --srv=127.0.0.1:8081 --command=stop-app\n", program_name);
-    printf("  %s --srv=127.0.0.1:8081 --command=start-app --command-arg=pattern-generator\n", program_name);
-    printf("  %s --srv=127.0.0.1:8081 --command=list-apps\n", program_name);
+    printf("Supported commands:\n");
+    printf("  list-apps                          List all enabled applications\n");
+    printf("  start-app (--command-arg=<id>)     Start application by ID\n");
+    printf("  stop-app                           Stop currently running application\n");
+    printf("  get-running-app                    Get currently running app ID or 'none'\n");
+    printf("  reload-config                      Reload JSON configuration from file\n");
+    printf("  set-button-enabled (--command-arg=\"<id> <true|false>\")  Enable/disable button\n");
+    printf("  get-button-status (--command-arg=<id>)  Get button enabled/disabled status\n");
+    printf("  list-all-buttons                   List all buttons with their status\n");
+    printf("\nExamples:\n");
+    printf("  %s --command=get-running-app\n", program_name);
+    printf("  %s --command=list-apps\n", program_name);
+    printf("  %s --command=stop-app\n", program_name);
+    printf("  %s --command=start-app --command-arg=gallery\n", program_name);
+    printf("  %s --srv=192.168.1.100:8081 --command=get-running-app\n", program_name);
     printf("  %s --srv=127.0.0.1:8082 --command=pattern --command-arg=red\n", program_name);
     printf("\nOutput:\n");
     printf("  Prints server response to stdout\n");
@@ -246,13 +258,12 @@ int main(int argc, char* argv[]) {
         }
     }
 
-    // Validate required arguments
+    // Apply default server if not specified
     if (!srv_str) {
-        fprintf(stderr, "Error: --srv is required\n");
-        print_usage(argv[0]);
-        return EXIT_ARGS_ERROR;
+        srv_str = DEFAULT_SERVER;
     }
 
+    // Validate required arguments
     if (!command) {
         fprintf(stderr, "Error: --command is required\n");
         print_usage(argv[0]);
