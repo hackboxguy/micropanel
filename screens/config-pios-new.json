@@ -102,7 +102,10 @@
         {"id": "fpga_14_6_fhd_cy24", "title": "14-6-fhd-cy24"},
         {"id": "fpga_14_6_nq3_g1b", "title": "14-6-nq3-g1b"},
         {"id": "fpga_14_6_nq7_g1b", "title": "14-6-nq7-g1b"},
+        {"id": "fpga_12_3_nq1v1", "title": "12-3-nq1v1"},
+        {"id": "fpga_12_3_nq1v2", "title": "12-3-nq1v2"},
         {"id": "fpga_15_6_2k5", "title": "15-6-2k5"},
+        {"id": "fpga_15_6_0OD", "title": "15-6-0OD"},
         {"id": "fpga_27_inch", "title": "27-inch"}
       ]
     },
@@ -332,6 +335,96 @@
       ]
     },
     {
+      "id": "fpga_12_3_nq1v1",
+      "title": "12-3-nq1v1",
+      "enabled": false,
+      "type": "GenericList",
+      "list_items": [
+        {
+          "title": "Detect",
+          "action": "stdbuf -oL -eL $MICROPANEL_HOME/fpga/bin/fpga-jtag-flasher.sh --info --skipbitstream",
+          "async": true,
+          "timeout": 25,
+          "log_file": "/tmp/fpga-flash.log",
+          "progress_title": "Detecting 12-3-nq1v1..",
+          "result_pattern": "DEVICE=",
+          "result_prefix": "FPGA: "
+        },
+        {
+          "title": "Update",
+          "action": "stdbuf -oL -eL $MICROPANEL_HOME/fpga/bin/fpga-jtag-flasher-wrapper.sh --operation=flash --file=12-3-nq1v1 --fpga-type=lattice",
+          "async": true,
+          "timeout": 70,
+          "log_file": "/tmp/fpga-flash.log",
+          "progress_title": "Updating 12-3-nq1v1.."
+        },
+        {
+          "title": "Backup",
+          "action": "stdbuf -oL -eL $MICROPANEL_HOME/fpga/bin/fpga-jtag-flasher-wrapper.sh --operation=dump --file=12-3-nq1v1 --fpga-type=lattice --size=1078990",
+          "async": true,
+          "timeout": 70,
+          "log_file": "/tmp/fpga-flash.log",
+          "progress_title": "Backing up 12-3-nq1v1.."
+        },
+        {
+          "title": "Revert",
+          "action": "stdbuf -oL -eL $MICROPANEL_HOME/fpga/bin/fpga-jtag-flasher-wrapper.sh --operation=revert --file=12-3-nq1v1 --fpga-type=lattice",
+          "async": true,
+          "timeout": 70,
+          "log_file": "/tmp/fpga-flash.log",
+          "progress_title": "Reverting 12-3-nq1v1.."
+        },
+        {
+          "title": "Back"
+        }
+      ]
+    },
+    {
+      "id": "fpga_12_3_nq1v2",
+      "title": "12-3-nq1v2",
+      "enabled": false,
+      "type": "GenericList",
+      "list_items": [
+        {
+          "title": "Detect",
+          "action": "stdbuf -oL -eL $MICROPANEL_HOME/fpga/bin/fpga-jtag-flasher.sh --info --skipbitstream",
+          "async": true,
+          "timeout": 25,
+          "log_file": "/tmp/fpga-flash.log",
+          "progress_title": "Detecting 12-3-nq1v2..",
+          "result_pattern": "DEVICE=",
+          "result_prefix": "FPGA: "
+        },
+        {
+          "title": "Update",
+          "action": "stdbuf -oL -eL $MICROPANEL_HOME/fpga/bin/fpga-jtag-flasher-wrapper.sh --operation=flash --file=12-3-nq1v2 --fpga-type=lattice",
+          "async": true,
+          "timeout": 70,
+          "log_file": "/tmp/fpga-flash.log",
+          "progress_title": "Updating 12-3-nq1v2.."
+        },
+        {
+          "title": "Backup",
+          "action": "stdbuf -oL -eL $MICROPANEL_HOME/fpga/bin/fpga-jtag-flasher-wrapper.sh --operation=dump --file=12-3-nq1v2 --fpga-type=lattice --size=1078990",
+          "async": true,
+          "timeout": 70,
+          "log_file": "/tmp/fpga-flash.log",
+          "progress_title": "Backing up 12-3-nq1v2.."
+        },
+        {
+          "title": "Revert",
+          "action": "stdbuf -oL -eL $MICROPANEL_HOME/fpga/bin/fpga-jtag-flasher-wrapper.sh --operation=revert --file=12-3-nq1v2 --fpga-type=lattice",
+          "async": true,
+          "timeout": 70,
+          "log_file": "/tmp/fpga-flash.log",
+          "progress_title": "Reverting 12-3-nq1v2.."
+        },
+        {
+          "title": "Back"
+        }
+      ]
+    },
+    {
       "id": "fpga_15_6_2k5",
       "title": "15-6-2k5",
       "enabled": false,
@@ -370,6 +463,51 @@
           "timeout": 70,
           "log_file": "/tmp/fpga-flash.log",
           "progress_title": "Reverting 15-6-2k5.."
+        },
+        {
+          "title": "Back"
+        }
+      ]
+    },
+    {
+      "id": "fpga_15_6_0OD",
+      "title": "15-6-0OD",
+      "enabled": false,
+      "type": "GenericList",
+      "list_items": [
+        {
+          "title": "Detect",
+          "action": "stdbuf -oL -eL $MICROPANEL_HOME/fpga/bin/fpga-jtag-flasher.sh --info --skipbitstream",
+          "async": true,
+          "timeout": 25,
+          "log_file": "/tmp/fpga-flash.log",
+          "progress_title": "Detecting 15-6-0OD..",
+          "result_pattern": "DEVICE=",
+          "result_prefix": "FPGA: "
+        },
+        {
+          "title": "Update",
+          "action": "stdbuf -oL -eL $MICROPANEL_HOME/fpga/bin/fpga-jtag-flasher-wrapper.sh --operation=flash --file=15-6-0OD --fpga-type=lattice",
+          "async": true,
+          "timeout": 70,
+          "log_file": "/tmp/fpga-flash.log",
+          "progress_title": "Updating 15-6-0OD.."
+        },
+        {
+          "title": "Backup",
+          "action": "stdbuf -oL -eL $MICROPANEL_HOME/fpga/bin/fpga-jtag-flasher-wrapper.sh --operation=dump --file=15-6-0OD --fpga-type=lattice --size=1078990",
+          "async": true,
+          "timeout": 70,
+          "log_file": "/tmp/fpga-flash.log",
+          "progress_title": "Backing up 15-6-0OD.."
+        },
+        {
+          "title": "Revert",
+          "action": "stdbuf -oL -eL $MICROPANEL_HOME/fpga/bin/fpga-jtag-flasher-wrapper.sh --operation=revert --file=15-6-0OD --fpga-type=lattice",
+          "async": true,
+          "timeout": 70,
+          "log_file": "/tmp/fpga-flash.log",
+          "progress_title": "Reverting 15-6-0OD.."
         },
         {
           "title": "Back"
