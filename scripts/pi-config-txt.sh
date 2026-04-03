@@ -102,6 +102,28 @@ configure_hh983_serializer() {
     fi
 }
 
+# Function to configure als-dimmer symlink for displays that use dimmer2048
+configure_als_dimmer() {
+    local config_type="$1"
+    local als_dir="/home/pi/als-dimmer/etc/als-dimmer"
+    local als_link="$als_dir/config.json"
+    local als_target="$als_dir/config_fpga_opti4001_dimmer2048.json"
+
+    # Only 15.6-2k5 and 12.3-nq1 need the dimmer2048 config
+    if [ "$config_type" = "15.6-2k5" ] || [ "$config_type" = "12.3-nq1" ]; then
+        if [ -f "$als_target" ]; then
+            ln -sf "$als_target" "$als_link"
+            if [ $VERBOSE -eq 1 ]; then
+                echo "als-dimmer config linked to $(basename "$als_target") (for $config_type)"
+            fi
+        else
+            if [ $VERBOSE -eq 1 ]; then
+                echo "Warning: als-dimmer config not found: $als_target"
+            fi
+        fi
+    fi
+}
+
 # Function to create complete configuration
 create_config() {
     local config_type="$1"
@@ -130,6 +152,9 @@ EOF
 
     # Configure HH983 serializer based on display type
     configure_hh983_serializer "$config_type"
+
+    # Configure als-dimmer symlink based on display type
+    configure_als_dimmer "$config_type"
 }
 
 # Function to extract config content for comparison
