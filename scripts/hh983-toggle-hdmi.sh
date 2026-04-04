@@ -2,7 +2,8 @@
 # Toggle Pi4 HDMI output (cycle: off -> 1s -> on)
 # Wrapper for toggle-pi-hdmi.sh with [SUCCESS]/[ERROR] markers for micropanel
 
-/usr/bin/toggle-pi-hdmi.sh cycle
+SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
+"$SCRIPT_DIR/toggle-pi-hdmi.sh" cycle
 ret=$?
 
 if [ $ret -eq 0 ]; then

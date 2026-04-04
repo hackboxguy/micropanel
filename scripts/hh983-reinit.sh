@@ -7,6 +7,7 @@
 # Usage:
 #   hh983-reinit.sh           # Run re-init with auto-detected mode
 
+SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
 HH983_CONF="/etc/modprobe.d/hh983.conf"
 
 # Determine current mode from hh983.conf
@@ -21,7 +22,7 @@ else
 fi
 
 echo "Re-init mode: $MODE"
-/usr/bin/re-init-983-pipeline.sh --skip-hdmi-toggle --mode="$MODE"
+"$SCRIPT_DIR/re-init-983-pipeline.sh" --skip-hdmi-toggle --mode="$MODE"
 ret=$?
 
 if [ $ret -eq 0 ]; then
