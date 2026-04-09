@@ -569,6 +569,7 @@
         {"id": "mcu_983hh_blinkfast", "title": "983HH-BlinkFst"},
         {"id": "mcu_983hh_blinkslo", "title": "983HH-BlinkSlo"},
         {"id": "mcu_lat_ecp5", "title": "LAT-ECP5"},
+        {"id": "mcu_lat_ecp5_v2", "title": "LAT-ECP5-V2"},
         {"id": "mcu_au15p", "title": "AU15P"},
         {"id": "back", "title": "Back"}
       ]
@@ -758,6 +759,54 @@
           "timeout": 120,
           "log_file": "/tmp/rh850-flash.log",
           "progress_title": "Reverting LAT-ECP5..",
+          "parse_progress": true
+        },
+        {
+          "title": "Back"
+        }
+      ]
+    },
+    {
+      "id": "mcu_lat_ecp5_v2",
+      "title": "LAT-ECP5-V2",
+      "enabled": false,
+      "type": "GenericList",
+      "list_items": [
+        {
+          "title": "Detect",
+          "action": "stdbuf -oL -eL $MICROPANEL_HOME/bin/flashrh850.sh --npj=$MICROPANEL_HOME/share/sp6bins/config/LAT-ECP5.npj --info",
+          "async": true,
+          "timeout": 30,
+          "log_file": "/tmp/rh850-flash.log",
+          "progress_title": "Detecting LAT-ECP5-V2..",
+          "result_pattern": "MCU probe completed successfully",
+          "result_prefix": ""
+        },
+        {
+          "title": "Update",
+          "action": "stdbuf -oL -eL $MICROPANEL_HOME/bin/flashrh850.sh --npj=$MICROPANEL_HOME/share/sp6bins/config/LAT-ECP5.npj --bios-autorun=$MICROPANEL_HOME/share/sp6bins/firmware/bios-bin/REMOTE_DISP_display_manager.bin",
+          "async": true,
+          "timeout": 120,
+          "log_file": "/tmp/rh850-flash.log",
+          "progress_title": "Updating LAT-ECP5-V2..",
+          "parse_progress": true
+        },
+        {
+          "title": "Backup",
+          "action": "stdbuf -oL -eL $MICROPANEL_HOME/bin/flashrh850.sh --npj=$MICROPANEL_HOME/share/sp6bins/config/LAT-ECP5.npj --backup",
+          "async": true,
+          "timeout": 120,
+          "log_file": "/tmp/rh850-flash.log",
+          "progress_title": "Backing up LAT-ECP5-V2..",
+          "parse_progress": true
+        },
+        {
+          "title": "Revert",
+          "action": "stdbuf -oL -eL $MICROPANEL_HOME/bin/flashrh850.sh --npj=$MICROPANEL_HOME/share/sp6bins/config/LAT-ECP5.npj --recover",
+          "async": true,
+          "timeout": 120,
+          "log_file": "/tmp/rh850-flash.log",
+          "progress_title": "Reverting LAT-ECP5-V2..",
           "parse_progress": true
         },
         {
