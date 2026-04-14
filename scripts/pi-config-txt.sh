@@ -64,7 +64,7 @@ generate_display_config() {
 
     load_display_config "$config_type"
 
-    if [ "$config_type" = "edid" ]; then
+    if [ "$config_type" = "edid" ] || [ "$config_type" = "edid-hdmi" ]; then
         # EDID auto-detection - use full KMS for proper EDID reading
         echo "dtoverlay=vc4-kms-v3d"
         echo "display_auto_detect=1"
@@ -88,8 +88,14 @@ configure_hh983_serializer() {
     local config_type="$1"
     local hh983_conf="/etc/modprobe.d/hh983.conf"
 
+    # edid-hdmi: disable both hh983-serializer and himax_mmi for direct HDMI output
+    if [ "$config_type" = "edid-hdmi" ]; then
+        printf "install hh983-serializer /bin/true\ninstall himax_mmi /bin/true\n" > "$hh983_conf"
+        if [ $VERBOSE -eq 1 ]; then
+            echo "HH983 serializer and himax touch disabled (for $config_type)"
+        fi
     # 15.6-2k5 and 12.3-nq1 require config_mode=0 (983+984), all others require config_mode=1 (983+988)
-    if [ "$config_type" = "15.6-2k5" ] || [ "$config_type" = "12.3-nq1" ]; then
+    elif [ "$config_type" = "15.6-2k5" ] || [ "$config_type" = "12.3-nq1" ]; then
         echo "options hh983-serializer config_mode=0" > "$hh983_conf"
         if [ $VERBOSE -eq 1 ]; then
             echo "HH983 serializer configured: config_mode=0 (for $config_type)"
@@ -145,6 +151,11 @@ EOF
 
     # Remove the placeholder comment
     sed -i '/# Display-specific section will be inserted here by the script/d' "$temp_file"
+
+    # For edid-hdmi, remove himax-touch overlay (not needed for direct HDMI)
+    if [ "$config_type" = "edid-hdmi" ]; then
+        sed -i '/dtoverlay=himax-touch/d' "$temp_file"
+    fi
 
     # Copy to final destination
     cp "$temp_file" "$output_file"
