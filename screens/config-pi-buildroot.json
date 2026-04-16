@@ -621,6 +621,15 @@
           "parse_progress": true
         },
         {
+          "title": "983HHV3",
+          "action": "cd /usr/share/micropanel/bin/ && ./flashrh850.sh --npj=/usr/share/micropanel/sp6bins/config/983HH.npj --bios-autorun=/usr/share/micropanel/sp6bins/firmware/bios-bin/983HH_983_manager.bin",
+          "async": true,
+          "timeout": 120,
+          "log_file": "/tmp/rh850-flash.log",
+          "progress_title": "Flashing MCU $1...",
+          "parse_progress": true
+        },
+        {
           "title": "983HH-BlinkFst",
           "action": "cd /usr/share/micropanel/bin/ && ./flashrh850.sh --script=fast-blink.txt --bios=983HH_Board_ROMBIOS.bin",
           "async": true,

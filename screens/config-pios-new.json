@@ -566,6 +566,7 @@
       "type": "menu",
       "submenus": [
         {"id": "mcu_983hh", "title": "983HH"},
+        {"id": "mcu_983hh_v3", "title": "983HHV3"},
         {"id": "mcu_983hh_blinkfast", "title": "983HH-BlinkFst"},
         {"id": "mcu_983hh_blinkslo", "title": "983HH-BlinkSlo"},
         {"id": "mcu_lat_ecp5", "title": "LAT-ECP5"},
@@ -615,6 +616,54 @@
           "timeout": 120,
           "log_file": "/tmp/rh850-flash.log",
           "progress_title": "Reverting 983HH..",
+          "parse_progress": true
+        },
+        {
+          "title": "Back"
+        }
+      ]
+    },
+    {
+      "id": "mcu_983hh_v3",
+      "title": "983HHV3",
+      "enabled": false,
+      "type": "GenericList",
+      "list_items": [
+        {
+          "title": "Detect",
+          "action": "stdbuf -oL -eL $MICROPANEL_HOME/bin/flashrh850.sh --npj=$MICROPANEL_HOME/share/sp6bins/config/983HH.npj --info",
+          "async": true,
+          "timeout": 30,
+          "log_file": "/tmp/rh850-flash.log",
+          "progress_title": "Detecting 983HHV3..",
+          "result_pattern": "MCU probe completed successfully",
+          "result_prefix": ""
+        },
+        {
+          "title": "Update",
+          "action": "stdbuf -oL -eL $MICROPANEL_HOME/bin/flashrh850.sh --npj=$MICROPANEL_HOME/share/sp6bins/config/983HH.npj --bios-autorun=$MICROPANEL_HOME/share/sp6bins/firmware/bios-bin/983HH_983_manager.bin",
+          "async": true,
+          "timeout": 120,
+          "log_file": "/tmp/rh850-flash.log",
+          "progress_title": "Updating 983HHV3..",
+          "parse_progress": true
+        },
+        {
+          "title": "Backup",
+          "action": "stdbuf -oL -eL $MICROPANEL_HOME/bin/flashrh850.sh --npj=$MICROPANEL_HOME/share/sp6bins/config/983HH.npj --backup",
+          "async": true,
+          "timeout": 120,
+          "log_file": "/tmp/rh850-flash.log",
+          "progress_title": "Backing up 983HHV3..",
+          "parse_progress": true
+        },
+        {
+          "title": "Revert",
+          "action": "stdbuf -oL -eL $MICROPANEL_HOME/bin/flashrh850.sh --npj=$MICROPANEL_HOME/share/sp6bins/config/983HH.npj --recover",
+          "async": true,
+          "timeout": 120,
+          "log_file": "/tmp/rh850-flash.log",
+          "progress_title": "Reverting 983HHV3..",
           "parse_progress": true
         },
         {
