@@ -6,7 +6,7 @@ After=local-fs.target
 [Service]
 Type=oneshot
 User=root
-ExecStart=@CMAKE_INSTALL_PREFIX@/usr/bin/dip-switch-resolution.sh --configspath=@CMAKE_INSTALL_PREFIX@/usr/share/micropanel/configs/ --input=/boot/firmware/config.txt
+ExecStart=@CMAKE_INSTALL_PREFIX@/usr/bin/dip-switch-resolution.sh --configspath=@CMAKE_INSTALL_PREFIX@/usr/share/micropanel/configs/ --input=/boot/firmware/config.txt -v
 RemainAfterExit=no
 
 [Install]
