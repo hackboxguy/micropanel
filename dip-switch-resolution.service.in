@@ -1,0 +1,13 @@
+[Unit]
+Description=DIP Switch Display Resolution Auto-Detection
+Before=micropanel.service
+After=local-fs.target
+
+[Service]
+Type=oneshot
+User=root
+ExecStart=@CMAKE_INSTALL_PREFIX@/usr/bin/dip-switch-resolution.sh --configspath=@CMAKE_INSTALL_PREFIX@/usr/share/micropanel/configs/ --input=/boot/firmware/config.txt
+RemainAfterExit=no
+
+[Install]
+WantedBy=multi-user.target

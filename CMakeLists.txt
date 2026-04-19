@@ -189,6 +189,7 @@ endif()
 option(INSTALL_ALL_CONFIGS "Install all configuration files" OFF)
 set(INSTALL_SCREEN "" CACHE STRING "Specific screen config to install (e.g., config-pios.json)")
 option(INSTALL_SYSTEMD_SERVICE "Install systemd service file" OFF)
+option(INSTALL_DIP_SWITCH_SERVICE "Install DIP switch resolution auto-detection service" OFF)
 option(INSTALL_HELPER_SCRIPTS "Install helper shell scripts" OFF)
 option(INSTALL_MEDIA_FILES "Install media files to usr/share/micropanel/media" OFF)
 set(SERVICE_USER "root" CACHE STRING "User to run micropanel service as")
@@ -246,6 +247,7 @@ if(INSTALL_HELPER_SCRIPTS)
         scripts/network-interfaces-list.sh
         scripts/network-data-info.sh
         scripts/video-info-jq.sh
+        scripts/dip-switch-resolution.sh
         screens/update-config-path.sh
         DESTINATION usr/bin
         PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE
@@ -355,6 +357,21 @@ if(INSTALL_SYSTEMD_SERVICE)
     if(SYSTEMD_UNITFILE_ARGS)
         message(STATUS "  Additional args: ${SYSTEMD_UNITFILE_ARGS}")
     endif()
+endif()
+
+# Configure and install DIP switch resolution service
+if(INSTALL_DIP_SWITCH_SERVICE)
+    configure_file(
+        ${CMAKE_CURRENT_SOURCE_DIR}/dip-switch-resolution.service.in
+        ${CMAKE_CURRENT_BINARY_DIR}/dip-switch-resolution.service
+        @ONLY
+    )
+
+    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/dip-switch-resolution.service
+        DESTINATION lib/systemd/system
+    )
+    message(STATUS "Will install DIP switch resolution service")
+    message(STATUS "  Script path: ${CMAKE_INSTALL_PREFIX}/usr/bin/dip-switch-resolution.sh")
 endif()
 
 # Strip the binary to reduce size (only in Release mode)
