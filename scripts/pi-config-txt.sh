@@ -160,12 +160,6 @@ EOF
     # Copy to final destination
     cp "$temp_file" "$output_file"
     rm "$temp_file"
-
-    # Configure HH983 serializer based on display type
-    configure_hh983_serializer "$config_type"
-
-    # Configure als-dimmer symlink based on display type
-    configure_als_dimmer "$config_type"
 }
 
 # Function to extract config content for comparison
@@ -585,6 +579,10 @@ if [ -n "$DISPLAY_TYPE" ] && [ -n "$INPUT_FILE" ]; then
 
     create_backup
     create_config "$DISPLAY_TYPE" "$INPUT_FILE"
+
+    # Apply side effects only during write operations
+    configure_hh983_serializer "$DISPLAY_TYPE"
+    configure_als_dimmer "$DISPLAY_TYPE"
 
     if [ $VERBOSE -eq 1 ]; then
         echo "Configuration update completed successfully"
