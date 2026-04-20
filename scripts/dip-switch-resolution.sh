@@ -106,8 +106,27 @@ log "Current config type: $current_type"
 # Compare
 if [ "$current_type" = "$expected_type" ]; then
     log "Config matches DIP switch, no action needed"
-    # Clear reboot flag if it exists (successful boot after reconfig)
+    # After a DIP-switch-triggered reboot, power-cycle the display to restore sync
     if [ -f "$REBOOT_FLAG" ]; then
+        prev_type=$(cat "$REBOOT_FLAG" 2>/dev/null)
+        if [ "$prev_type" != "edid-hdmi" ]; then
+            log "Post-reconfig reboot detected, power-cycling display..."
+            DISPTOOL="/home/pi/micropanel/bin/disptool"
+            if [ -x "$DISPTOOL" ]; then
+                "$DISPTOOL" --device=983 --command=disppower --value=off
+                sleep 1
+                "$DISPTOOL" --device=983 --command=disppower --value=on
+                sleep 1
+                gpioset 0 22=0
+                sleep 2
+                gpioset 0 22=1
+                log "Display power-cycle complete"
+            else
+                log "Warning: disptool not found at $DISPTOOL, skipping power-cycle"
+            fi
+        else
+            log "edid-hdmi config, skipping display power-cycle"
+        fi
         rm -f "$REBOOT_FLAG"
         log "Cleared reboot flag"
     fi
