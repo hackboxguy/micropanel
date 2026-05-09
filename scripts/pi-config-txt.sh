@@ -71,6 +71,7 @@ generate_display_config() {
     else
         # Custom timing configuration - use fake KMS for custom hdmi_timings
         echo "dtoverlay=vc4-fkms-v3d"
+        echo "hdmi_force_hotplug=1"
         echo "hdmi_group=2"
         echo "hdmi_mode=87"
         echo "hdmi_timings=$HDMI_TIMINGS"
