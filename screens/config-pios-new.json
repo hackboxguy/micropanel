@@ -928,7 +928,7 @@
         },
         {
           "title": "Update",
-          "action": "stdbuf -oL -eL $MICROPANEL_HOME/bin/rh850-flash-auto.sh --board=lattice45-9090 --npj=$MICROPANEL_HOME/share/sp6bins/config/LAT-ECP5.npj --bios-autorun=$MICROPANEL_HOME/share/sp6bins/firmware/bios-bin/Space6_15.6POC_RH850_ROMBIOS_packet_bios.bin",
+          "action": "stdbuf -oL -eL $MICROPANEL_HOME/bin/rh850-flash-auto.sh --board=lattice45-9090 --npj=$MICROPANEL_HOME/share/sp6bins/config/LAT-ECP5.npj --bios-autorun=$MICROPANEL_HOME/share/sp6bins/firmware/bios-bin/Lattice45_9090_ROMBIOS_packet.bin",
           "async": true,
           "timeout": 120,
           "log_file": "/tmp/rh850-flash.log",
