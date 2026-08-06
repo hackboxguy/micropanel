@@ -664,6 +664,8 @@
         {"id": "mcu_983hh_blinkslo", "title": "983HH-BlinkSlo"},
         {"id": "mcu_lat_ecp5", "title": "LAT-ECP5"},
         {"id": "mcu_lat_ecp5_v2", "title": "LAT-ECP5-V2"},
+        {"id": "mcu_spartan7_9090", "title": "S7-9090"},
+        {"id": "mcu_spartan7_9090_v2", "title": "S7-9090-V2"},
         {"id": "mcu_au15p", "title": "AU15P"},
         {"id": "back", "title": "Back"}
       ]
@@ -676,7 +678,7 @@
       "list_items": [
         {
           "title": "Detect",
-          "action": "stdbuf -oL -eL $MICROPANEL_HOME/bin/flashrh850.sh --npj=$MICROPANEL_HOME/share/sp6bins/config/983HH.npj --info",
+          "action": "stdbuf -oL -eL $MICROPANEL_HOME/bin/rh850-flash-auto.sh --board=983hh --npj=$MICROPANEL_HOME/share/sp6bins/config/983HH.npj --info",
           "async": true,
           "timeout": 30,
           "log_file": "/tmp/rh850-flash.log",
@@ -686,7 +688,7 @@
         },
         {
           "title": "Update",
-          "action": "stdbuf -oL -eL $MICROPANEL_HOME/bin/flashrh850.sh --npj=$MICROPANEL_HOME/share/sp6bins/config/983HH.npj --bios-autorun=$MICROPANEL_HOME/share/sp6bins/firmware/bios-bin/983HH-bios-bin.bin",
+          "action": "stdbuf -oL -eL $MICROPANEL_HOME/bin/rh850-flash-auto.sh --board=983hh --npj=$MICROPANEL_HOME/share/sp6bins/config/983HH.npj --bios-autorun=$MICROPANEL_HOME/share/sp6bins/firmware/bios-bin/983HH-bios-bin.bin",
           "async": true,
           "timeout": 120,
           "log_file": "/tmp/rh850-flash.log",
@@ -695,7 +697,7 @@
         },
         {
           "title": "Backup",
-          "action": "stdbuf -oL -eL $MICROPANEL_HOME/bin/flashrh850.sh --npj=$MICROPANEL_HOME/share/sp6bins/config/983HH.npj --backup",
+          "action": "stdbuf -oL -eL $MICROPANEL_HOME/bin/rh850-flash-auto.sh --board=983hh --npj=$MICROPANEL_HOME/share/sp6bins/config/983HH.npj --backup",
           "async": true,
           "timeout": 120,
           "log_file": "/tmp/rh850-flash.log",
@@ -704,7 +706,7 @@
         },
         {
           "title": "Revert",
-          "action": "stdbuf -oL -eL $MICROPANEL_HOME/bin/flashrh850.sh --npj=$MICROPANEL_HOME/share/sp6bins/config/983HH.npj --recover",
+          "action": "stdbuf -oL -eL $MICROPANEL_HOME/bin/rh850-flash-auto.sh --board=983hh --npj=$MICROPANEL_HOME/share/sp6bins/config/983HH.npj --recover",
           "async": true,
           "timeout": 120,
           "log_file": "/tmp/rh850-flash.log",
@@ -724,7 +726,7 @@
       "list_items": [
         {
           "title": "Detect",
-          "action": "stdbuf -oL -eL $MICROPANEL_HOME/bin/flashrh850.sh --npj=$MICROPANEL_HOME/share/sp6bins/config/983HH.npj --info",
+          "action": "stdbuf -oL -eL $MICROPANEL_HOME/bin/rh850-flash-auto.sh --board=983hh --npj=$MICROPANEL_HOME/share/sp6bins/config/983HH.npj --info",
           "async": true,
           "timeout": 30,
           "log_file": "/tmp/rh850-flash.log",
@@ -734,7 +736,7 @@
         },
         {
           "title": "Update",
-          "action": "stdbuf -oL -eL $MICROPANEL_HOME/bin/flashrh850.sh --npj=$MICROPANEL_HOME/share/sp6bins/config/983HH.npj --bios-autorun=$MICROPANEL_HOME/share/sp6bins/firmware/bios-bin/983HH_983_manager.bin",
+          "action": "stdbuf -oL -eL $MICROPANEL_HOME/bin/rh850-flash-auto.sh --board=983hh --npj=$MICROPANEL_HOME/share/sp6bins/config/983HH.npj --bios-autorun=$MICROPANEL_HOME/share/sp6bins/firmware/bios-bin/983HH_983_manager.bin",
           "async": true,
           "timeout": 120,
           "log_file": "/tmp/rh850-flash.log",
@@ -743,7 +745,7 @@
         },
         {
           "title": "Backup",
-          "action": "stdbuf -oL -eL $MICROPANEL_HOME/bin/flashrh850.sh --npj=$MICROPANEL_HOME/share/sp6bins/config/983HH.npj --backup",
+          "action": "stdbuf -oL -eL $MICROPANEL_HOME/bin/rh850-flash-auto.sh --board=983hh --npj=$MICROPANEL_HOME/share/sp6bins/config/983HH.npj --backup",
           "async": true,
           "timeout": 120,
           "log_file": "/tmp/rh850-flash.log",
@@ -752,7 +754,7 @@
         },
         {
           "title": "Revert",
-          "action": "stdbuf -oL -eL $MICROPANEL_HOME/bin/flashrh850.sh --npj=$MICROPANEL_HOME/share/sp6bins/config/983HH.npj --recover",
+          "action": "stdbuf -oL -eL $MICROPANEL_HOME/bin/rh850-flash-auto.sh --board=983hh --npj=$MICROPANEL_HOME/share/sp6bins/config/983HH.npj --recover",
           "async": true,
           "timeout": 120,
           "log_file": "/tmp/rh850-flash.log",
@@ -772,7 +774,7 @@
       "list_items": [
         {
           "title": "Detect",
-          "action": "stdbuf -oL -eL $MICROPANEL_HOME/bin/flashrh850.sh --npj=$MICROPANEL_HOME/share/sp6bins/config/983HH.npj --info",
+          "action": "stdbuf -oL -eL $MICROPANEL_HOME/bin/rh850-flash-auto.sh --board=983hh --npj=$MICROPANEL_HOME/share/sp6bins/config/983HH.npj --info",
           "async": true,
           "timeout": 30,
           "log_file": "/tmp/rh850-flash.log",
@@ -782,7 +784,7 @@
         },
         {
           "title": "Update",
-          "action": "stdbuf -oL -eL $MICROPANEL_HOME/bin/flashrh850.sh --npj=$MICROPANEL_HOME/share/sp6bins/config/983HH.npj --bios=$MICROPANEL_HOME/share/sp6bins/firmware/bios/983HH_Board_ROMBIOS.bin --autorun=$MICROPANEL_HOME/share/sp6bins/firmware/autorun/983HH-Script.txt",
+          "action": "stdbuf -oL -eL $MICROPANEL_HOME/bin/rh850-flash-auto.sh --board=983hh --npj=$MICROPANEL_HOME/share/sp6bins/config/983HH.npj --bios=$MICROPANEL_HOME/share/sp6bins/firmware/bios/983HH_Board_ROMBIOS.bin --autorun=$MICROPANEL_HOME/share/sp6bins/firmware/autorun/983HH-Script.txt",
           "async": true,
           "timeout": 120,
           "log_file": "/tmp/rh850-flash.log",
@@ -791,7 +793,7 @@
         },
         {
           "title": "Backup",
-          "action": "stdbuf -oL -eL $MICROPANEL_HOME/bin/flashrh850.sh --npj=$MICROPANEL_HOME/share/sp6bins/config/983HH.npj --backup",
+          "action": "stdbuf -oL -eL $MICROPANEL_HOME/bin/rh850-flash-auto.sh --board=983hh --npj=$MICROPANEL_HOME/share/sp6bins/config/983HH.npj --backup",
           "async": true,
           "timeout": 120,
           "log_file": "/tmp/rh850-flash.log",
@@ -800,7 +802,7 @@
         },
         {
           "title": "Revert",
-          "action": "stdbuf -oL -eL $MICROPANEL_HOME/bin/flashrh850.sh --npj=$MICROPANEL_HOME/share/sp6bins/config/983HH.npj --recover",
+          "action": "stdbuf -oL -eL $MICROPANEL_HOME/bin/rh850-flash-auto.sh --board=983hh --npj=$MICROPANEL_HOME/share/sp6bins/config/983HH.npj --recover",
           "async": true,
           "timeout": 120,
           "log_file": "/tmp/rh850-flash.log",
@@ -820,7 +822,7 @@
       "list_items": [
         {
           "title": "Detect",
-          "action": "stdbuf -oL -eL $MICROPANEL_HOME/bin/flashrh850.sh --npj=$MICROPANEL_HOME/share/sp6bins/config/983HH.npj --info",
+          "action": "stdbuf -oL -eL $MICROPANEL_HOME/bin/rh850-flash-auto.sh --board=983hh --npj=$MICROPANEL_HOME/share/sp6bins/config/983HH.npj --info",
           "async": true,
           "timeout": 30,
           "log_file": "/tmp/rh850-flash.log",
@@ -830,7 +832,7 @@
         },
         {
           "title": "Update",
-          "action": "stdbuf -oL -eL $MICROPANEL_HOME/bin/flashrh850.sh --npj=$MICROPANEL_HOME/share/sp6bins/config/983HH.npj --bios-autorun=$MICROPANEL_HOME/share/sp6bins/firmware/bios-bin/983HH-bios-bin-fastblink.bin",
+          "action": "stdbuf -oL -eL $MICROPANEL_HOME/bin/rh850-flash-auto.sh --board=983hh --npj=$MICROPANEL_HOME/share/sp6bins/config/983HH.npj --bios-autorun=$MICROPANEL_HOME/share/sp6bins/firmware/bios-bin/983HH-bios-bin-fastblink.bin",
           "async": true,
           "timeout": 120,
           "log_file": "/tmp/rh850-flash.log",
@@ -839,7 +841,7 @@
         },
         {
           "title": "Backup",
-          "action": "stdbuf -oL -eL $MICROPANEL_HOME/bin/flashrh850.sh --npj=$MICROPANEL_HOME/share/sp6bins/config/983HH.npj --backup",
+          "action": "stdbuf -oL -eL $MICROPANEL_HOME/bin/rh850-flash-auto.sh --board=983hh --npj=$MICROPANEL_HOME/share/sp6bins/config/983HH.npj --backup",
           "async": true,
           "timeout": 120,
           "log_file": "/tmp/rh850-flash.log",
@@ -848,7 +850,7 @@
         },
         {
           "title": "Revert",
-          "action": "stdbuf -oL -eL $MICROPANEL_HOME/bin/flashrh850.sh --npj=$MICROPANEL_HOME/share/sp6bins/config/983HH.npj --recover",
+          "action": "stdbuf -oL -eL $MICROPANEL_HOME/bin/rh850-flash-auto.sh --board=983hh --npj=$MICROPANEL_HOME/share/sp6bins/config/983HH.npj --recover",
           "async": true,
           "timeout": 120,
           "log_file": "/tmp/rh850-flash.log",
@@ -868,7 +870,7 @@
       "list_items": [
         {
           "title": "Detect",
-          "action": "stdbuf -oL -eL $MICROPANEL_HOME/bin/flashrh850.sh --npj=$MICROPANEL_HOME/share/sp6bins/config/983HH.npj --info",
+          "action": "stdbuf -oL -eL $MICROPANEL_HOME/bin/rh850-flash-auto.sh --board=983hh --npj=$MICROPANEL_HOME/share/sp6bins/config/983HH.npj --info",
           "async": true,
           "timeout": 30,
           "log_file": "/tmp/rh850-flash.log",
@@ -878,7 +880,7 @@
         },
         {
           "title": "Update",
-          "action": "stdbuf -oL -eL $MICROPANEL_HOME/bin/flashrh850.sh --npj=$MICROPANEL_HOME/share/sp6bins/config/983HH.npj --bios-autorun=$MICROPANEL_HOME/share/sp6bins/firmware/bios-bin/983HH-bios-bin-slowblink.bin",
+          "action": "stdbuf -oL -eL $MICROPANEL_HOME/bin/rh850-flash-auto.sh --board=983hh --npj=$MICROPANEL_HOME/share/sp6bins/config/983HH.npj --bios-autorun=$MICROPANEL_HOME/share/sp6bins/firmware/bios-bin/983HH-bios-bin-slowblink.bin",
           "async": true,
           "timeout": 120,
           "log_file": "/tmp/rh850-flash.log",
@@ -887,7 +889,7 @@
         },
         {
           "title": "Backup",
-          "action": "stdbuf -oL -eL $MICROPANEL_HOME/bin/flashrh850.sh --npj=$MICROPANEL_HOME/share/sp6bins/config/983HH.npj --backup",
+          "action": "stdbuf -oL -eL $MICROPANEL_HOME/bin/rh850-flash-auto.sh --board=983hh --npj=$MICROPANEL_HOME/share/sp6bins/config/983HH.npj --backup",
           "async": true,
           "timeout": 120,
           "log_file": "/tmp/rh850-flash.log",
@@ -896,7 +898,7 @@
         },
         {
           "title": "Revert",
-          "action": "stdbuf -oL -eL $MICROPANEL_HOME/bin/flashrh850.sh --npj=$MICROPANEL_HOME/share/sp6bins/config/983HH.npj --recover",
+          "action": "stdbuf -oL -eL $MICROPANEL_HOME/bin/rh850-flash-auto.sh --board=983hh --npj=$MICROPANEL_HOME/share/sp6bins/config/983HH.npj --recover",
           "async": true,
           "timeout": 120,
           "log_file": "/tmp/rh850-flash.log",
@@ -916,7 +918,7 @@
       "list_items": [
         {
           "title": "Detect",
-          "action": "stdbuf -oL -eL $MICROPANEL_HOME/bin/flashrh850.sh --npj=$MICROPANEL_HOME/share/sp6bins/config/LAT-ECP5.npj --info",
+          "action": "stdbuf -oL -eL $MICROPANEL_HOME/bin/rh850-flash-auto.sh --board=lattice45-9090 --npj=$MICROPANEL_HOME/share/sp6bins/config/LAT-ECP5.npj --info",
           "async": true,
           "timeout": 30,
           "log_file": "/tmp/rh850-flash.log",
@@ -926,7 +928,7 @@
         },
         {
           "title": "Update",
-          "action": "stdbuf -oL -eL $MICROPANEL_HOME/bin/flashrh850.sh --npj=$MICROPANEL_HOME/share/sp6bins/config/LAT-ECP5.npj --bios-autorun=$MICROPANEL_HOME/share/sp6bins/firmware/bios-bin/Space6_15.6POC_RH850_ROMBIOS_packet_bios.bin",
+          "action": "stdbuf -oL -eL $MICROPANEL_HOME/bin/rh850-flash-auto.sh --board=lattice45-9090 --npj=$MICROPANEL_HOME/share/sp6bins/config/LAT-ECP5.npj --bios-autorun=$MICROPANEL_HOME/share/sp6bins/firmware/bios-bin/Space6_15.6POC_RH850_ROMBIOS_packet_bios.bin",
           "async": true,
           "timeout": 120,
           "log_file": "/tmp/rh850-flash.log",
@@ -935,7 +937,7 @@
         },
         {
           "title": "Backup",
-          "action": "stdbuf -oL -eL $MICROPANEL_HOME/bin/flashrh850.sh --npj=$MICROPANEL_HOME/share/sp6bins/config/LAT-ECP5.npj --backup",
+          "action": "stdbuf -oL -eL $MICROPANEL_HOME/bin/rh850-flash-auto.sh --board=lattice45-9090 --npj=$MICROPANEL_HOME/share/sp6bins/config/LAT-ECP5.npj --backup",
           "async": true,
           "timeout": 120,
           "log_file": "/tmp/rh850-flash.log",
@@ -944,7 +946,7 @@
         },
         {
           "title": "Revert",
-          "action": "stdbuf -oL -eL $MICROPANEL_HOME/bin/flashrh850.sh --npj=$MICROPANEL_HOME/share/sp6bins/config/LAT-ECP5.npj --recover",
+          "action": "stdbuf -oL -eL $MICROPANEL_HOME/bin/rh850-flash-auto.sh --board=lattice45-9090 --npj=$MICROPANEL_HOME/share/sp6bins/config/LAT-ECP5.npj --recover",
           "async": true,
           "timeout": 120,
           "log_file": "/tmp/rh850-flash.log",
@@ -964,7 +966,7 @@
       "list_items": [
         {
           "title": "Detect",
-          "action": "stdbuf -oL -eL $MICROPANEL_HOME/bin/flashrh850.sh --npj=$MICROPANEL_HOME/share/sp6bins/config/LAT-ECP5.npj --info",
+          "action": "stdbuf -oL -eL $MICROPANEL_HOME/bin/rh850-flash-auto.sh --board=lattice45-9090 --npj=$MICROPANEL_HOME/share/sp6bins/config/LAT-ECP5.npj --info",
           "async": true,
           "timeout": 30,
           "log_file": "/tmp/rh850-flash.log",
@@ -974,7 +976,7 @@
         },
         {
           "title": "Update",
-          "action": "stdbuf -oL -eL $MICROPANEL_HOME/bin/flashrh850.sh --npj=$MICROPANEL_HOME/share/sp6bins/config/LAT-ECP5.npj --bios-autorun=$MICROPANEL_HOME/share/sp6bins/firmware/bios-bin/REMOTE_DISP_display_manager.bin",
+          "action": "stdbuf -oL -eL $MICROPANEL_HOME/bin/rh850-flash-auto.sh --board=lattice45-9090 --npj=$MICROPANEL_HOME/share/sp6bins/config/LAT-ECP5.npj --bios-autorun=$MICROPANEL_HOME/share/sp6bins/firmware/bios-bin/REMOTE_DISP_display_manager.bin",
           "async": true,
           "timeout": 120,
           "log_file": "/tmp/rh850-flash.log",
@@ -983,7 +985,7 @@
         },
         {
           "title": "Backup",
-          "action": "stdbuf -oL -eL $MICROPANEL_HOME/bin/flashrh850.sh --npj=$MICROPANEL_HOME/share/sp6bins/config/LAT-ECP5.npj --backup",
+          "action": "stdbuf -oL -eL $MICROPANEL_HOME/bin/rh850-flash-auto.sh --board=lattice45-9090 --npj=$MICROPANEL_HOME/share/sp6bins/config/LAT-ECP5.npj --backup",
           "async": true,
           "timeout": 120,
           "log_file": "/tmp/rh850-flash.log",
@@ -992,11 +994,107 @@
         },
         {
           "title": "Revert",
-          "action": "stdbuf -oL -eL $MICROPANEL_HOME/bin/flashrh850.sh --npj=$MICROPANEL_HOME/share/sp6bins/config/LAT-ECP5.npj --recover",
+          "action": "stdbuf -oL -eL $MICROPANEL_HOME/bin/rh850-flash-auto.sh --board=lattice45-9090 --npj=$MICROPANEL_HOME/share/sp6bins/config/LAT-ECP5.npj --recover",
           "async": true,
           "timeout": 120,
           "log_file": "/tmp/rh850-flash.log",
           "progress_title": "Reverting LAT-ECP5-V2..",
+          "parse_progress": true
+        },
+        {
+          "title": "Back"
+        }
+      ]
+    },
+    {
+      "id": "mcu_spartan7_9090",
+      "title": "S7-9090",
+      "enabled": false,
+      "type": "GenericList",
+      "list_items": [
+        {
+          "title": "Detect",
+          "action": "stdbuf -oL -eL $MICROPANEL_HOME/bin/rh850-flash-auto.sh --board=spartan7-9090 --info",
+          "async": true,
+          "timeout": 30,
+          "log_file": "/tmp/rh850-flash.log",
+          "progress_title": "Detecting S7-9090..",
+          "result_pattern": "MCU probe completed successfully",
+          "result_prefix": ""
+        },
+        {
+          "title": "Update",
+          "action": "stdbuf -oL -eL $MICROPANEL_HOME/bin/rh850-flash-auto.sh --board=spartan7-9090 --bios-autorun=$MICROPANEL_HOME/share/sp6bins/firmware/bios-bin/Spartan7_9090_ROMBIOS_packet.bin",
+          "async": true,
+          "timeout": 300,
+          "log_file": "/tmp/rh850-flash.log",
+          "progress_title": "Updating S7-9090..",
+          "parse_progress": true
+        },
+        {
+          "title": "Backup",
+          "action": "stdbuf -oL -eL $MICROPANEL_HOME/bin/rh850-flash-auto.sh --board=spartan7-9090 --backup",
+          "async": true,
+          "timeout": 480,
+          "log_file": "/tmp/rh850-flash.log",
+          "progress_title": "Backing up S7-9090..",
+          "parse_progress": true
+        },
+        {
+          "title": "Revert",
+          "action": "stdbuf -oL -eL $MICROPANEL_HOME/bin/rh850-flash-auto.sh --board=spartan7-9090 --recover",
+          "async": true,
+          "timeout": 300,
+          "log_file": "/tmp/rh850-flash.log",
+          "progress_title": "Reverting S7-9090..",
+          "parse_progress": true
+        },
+        {
+          "title": "Back"
+        }
+      ]
+    },
+    {
+      "id": "mcu_spartan7_9090_v2",
+      "title": "S7-9090-V2",
+      "enabled": false,
+      "type": "GenericList",
+      "list_items": [
+        {
+          "title": "Detect",
+          "action": "stdbuf -oL -eL $MICROPANEL_HOME/bin/rh850-flash-auto.sh --board=spartan7-9090 --info",
+          "async": true,
+          "timeout": 30,
+          "log_file": "/tmp/rh850-flash.log",
+          "progress_title": "Detecting S7-9090-V2..",
+          "result_pattern": "MCU probe completed successfully",
+          "result_prefix": ""
+        },
+        {
+          "title": "Update",
+          "action": "stdbuf -oL -eL $MICROPANEL_HOME/bin/rh850-flash-auto.sh --board=spartan7-9090 --bios-autorun=$MICROPANEL_HOME/share/sp6bins/firmware/bios-bin/REMOTE_DISP_SPARTAN7_display_manager_s4.bin",
+          "async": true,
+          "timeout": 300,
+          "log_file": "/tmp/rh850-flash.log",
+          "progress_title": "Updating S7-9090-V2..",
+          "parse_progress": true
+        },
+        {
+          "title": "Backup",
+          "action": "stdbuf -oL -eL $MICROPANEL_HOME/bin/rh850-flash-auto.sh --board=spartan7-9090 --backup",
+          "async": true,
+          "timeout": 480,
+          "log_file": "/tmp/rh850-flash.log",
+          "progress_title": "Backing up S7-9090-V2..",
+          "parse_progress": true
+        },
+        {
+          "title": "Revert",
+          "action": "stdbuf -oL -eL $MICROPANEL_HOME/bin/rh850-flash-auto.sh --board=spartan7-9090 --recover",
+          "async": true,
+          "timeout": 300,
+          "log_file": "/tmp/rh850-flash.log",
+          "progress_title": "Reverting S7-9090-V2..",
           "parse_progress": true
         },
         {

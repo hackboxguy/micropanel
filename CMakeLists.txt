@@ -180,8 +180,11 @@ target_link_libraries(micropanel
 # Test targets (build with: cmake -DBUILD_TESTS=ON ..)
 option(BUILD_TESTS "Build unit tests" OFF)
 if(BUILD_TESTS)
+    enable_testing()
     add_executable(test_protocol tests/test_protocol.cpp)
     target_include_directories(test_protocol PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
+    add_test(NAME rh850-flash-auto-offline
+        COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/tests/test-rh850-flash-auto.sh)
     message(STATUS "Test targets enabled: test_protocol")
 endif()
 
@@ -192,12 +195,36 @@ option(INSTALL_SYSTEMD_SERVICE "Install systemd service file" OFF)
 option(INSTALL_DIP_SWITCH_SERVICE "Install DIP switch resolution auto-detection service" OFF)
 option(INSTALL_HELPER_SCRIPTS "Install helper shell scripts" OFF)
 option(INSTALL_MEDIA_FILES "Install media files to usr/share/micropanel/media" OFF)
+option(INSTALL_RH850_FLASH_TOOLS "Build and install rh850-flash-tools with Micropanel" OFF)
+set(RH850_FLASH_TOOLS_SOURCE_DIR "" CACHE PATH
+    "Path to the rh850-flash-tools source tree when INSTALL_RH850_FLASH_TOOLS is ON")
 set(SERVICE_USER "root" CACHE STRING "User to run micropanel service as")
 set(SYSTEMD_UNITFILE_ARGS "" CACHE STRING "Additional command line arguments for micropanel in systemd service")
 
 # Install target
 install(TARGETS micropanel patch-generator launcher-client
     RUNTIME DESTINATION usr/bin
+)
+
+# Bluebox support is intentionally an explicit build option. The screen
+# dispatcher remains installable on every target, but a Bluebox-attached Pi
+# must also install rh850-tool and its profiles from the separate GPLv3 package.
+if(INSTALL_RH850_FLASH_TOOLS)
+    if(NOT RH850_FLASH_TOOLS_SOURCE_DIR)
+        message(FATAL_ERROR
+            "INSTALL_RH850_FLASH_TOOLS requires RH850_FLASH_TOOLS_SOURCE_DIR")
+    endif()
+    if(NOT EXISTS "${RH850_FLASH_TOOLS_SOURCE_DIR}/CMakeLists.txt")
+        message(FATAL_ERROR
+            "rh850-flash-tools source tree not found: ${RH850_FLASH_TOOLS_SOURCE_DIR}")
+    endif()
+    add_subdirectory("${RH850_FLASH_TOOLS_SOURCE_DIR}"
+        "${CMAKE_CURRENT_BINARY_DIR}/rh850-flash-tools")
+    message(STATUS "Will install rh850-flash-tools from ${RH850_FLASH_TOOLS_SOURCE_DIR}")
+endif()
+
+install(PROGRAMS scripts/rh850-flash-auto.sh
+    DESTINATION bin
 )
 
 # Install init.d script for SysV init systems (only if systemd service is not installed)
