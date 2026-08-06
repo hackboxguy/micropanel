@@ -57,6 +57,7 @@ printf 'a9a0\n' > "$usb_dir/idProduct"
 
 probe_output=$(run_tool --board=983hh --npj=/tmp/983HH.npj --info)
 printf '%s\n' "$probe_output" | grep -q 'MCU probe completed successfully'
+printf '%s\n' "$probe_output" | grep -Fq '[SUCCESS]'
 printf '%s\n' "$probe_output" | grep -q 'rh850-tool:probe:--target=r7f7016863:--transport=bluebox:--port='
 
 backup_output=$(run_tool --board=983hh --backup)

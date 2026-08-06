@@ -241,7 +241,7 @@ fi
 if has_option --info "$@"; then
     info "Using $(transport_description)"
     run_transport probe
-    printf 'MCU probe completed successfully\n'
+    printf '[SUCCESS] MCU probe completed successfully\n'
 elif has_option --backup "$@"; then
     backup_target
 elif has_option --recover "$@"; then
