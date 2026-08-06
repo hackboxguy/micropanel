@@ -62,6 +62,7 @@ printf '%s\n' "$probe_output" | grep -q 'rh850-tool:probe:--target=r7f7016863:--
 
 backup_output=$(run_tool --board=983hh --backup)
 printf '%s\n' "$backup_output" | grep -q 'rh850-tool:backup:--output='
+printf '%s\n' "$backup_output" | grep -Fq '[SUCCESS] MCU backup completed successfully'
 
 mkdir -p "$WORK_DIR/backups/983hh"
 printf 'backup' > "$WORK_DIR/backups/983hh/r7f7016863-codeflash-20260806-000000.bin"

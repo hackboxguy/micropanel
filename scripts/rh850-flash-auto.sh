@@ -177,6 +177,7 @@ backup_target()
     info "Using $(transport_description)"
     info "Backing up $BOARD to $backup_dir"
     run_transport backup --output="$backup_dir"
+    printf '[SUCCESS] MCU backup completed successfully\n'
 }
 
 latest_bluebox_backup()
