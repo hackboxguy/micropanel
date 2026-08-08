@@ -73,6 +73,10 @@ void GenericListScreen::setConfig(const nlohmann::json& config)
                 listItem.parse_progress = item["parse_progress"].get<bool>();
             }
 
+            if (item.contains("usb_blaster_duration") && item["usb_blaster_duration"].is_number()) {
+                listItem.usb_blaster_duration = item["usb_blaster_duration"].get<int>();
+            }
+
             if (item.contains("result_pattern") && item["result_pattern"].is_string()) {
                 listItem.result_pattern = item["result_pattern"].get<std::string>();
             }
@@ -515,6 +519,8 @@ void GenericListScreen::startAsyncProcess(const ListItem& item)
     Logger::debug("Starting async process: " + item.action);
     m_parseProgress = item.parse_progress;
     m_lastParsedPercentage = -1;
+    m_asyncUsbBlasterDuration = item.usb_blaster_duration;
+    m_asyncUsbBlasterSeen = false;
     m_asyncResultPattern = item.result_pattern;
     m_asyncResultPrefix = item.result_prefix;
 
@@ -825,8 +831,42 @@ int GenericListScreen::calculateProgressPercentage()
     auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(
         std::chrono::steady_clock::now() - m_asyncStartTime).count();
 
-    int percentage = (elapsed * 100) / m_asyncTimeout;
+    // The timeout is sized for the slow Pi GPIO path. Over a USB-Blaster the
+    // same operation finishes far sooner, so scale against its measured
+    // duration instead; otherwise the bar stalls well short of 100%.
+    int duration = m_asyncTimeout;
+    if (m_asyncUsbBlasterDuration > 0 && asyncRanOverUsbBlaster()) {
+        duration = m_asyncUsbBlasterDuration;
+    }
+    if (duration <= 0) {
+        return 0;
+    }
+
+    int percentage = (elapsed * 100) / duration;
     return std::min(percentage, 99); // Cap at 99% until actually complete
+}
+
+// The flasher scripts announce the transport they picked before doing any JTAG
+// work, so the log tells us which timing applies. Latch it: the transport
+// cannot change mid-run, and the line scrolls far back in a long log.
+bool GenericListScreen::asyncRanOverUsbBlaster()
+{
+    if (m_asyncUsbBlasterSeen) return true;
+    if (m_asyncLogFile.empty()) return false;
+
+    std::ifstream logFile(m_asyncLogFile);
+    if (!logFile.is_open()) return false;
+
+    std::string line;
+    while (std::getline(logFile, line)) {
+        if (line.find("JTAG transport: USB-Blaster") != std::string::npos) {
+            m_asyncUsbBlasterSeen = true;
+            break;
+        }
+    }
+
+    logFile.close();
+    return m_asyncUsbBlasterSeen;
 }
 
 std::string GenericListScreen::formatElapsedTime()

@@ -599,6 +599,10 @@ public:
         std::string log_file;
         std::string progress_title;
 	bool parse_progress = false;
+        // Expected seconds when the action runs over a USB-Blaster, which is
+        // far quicker than the Pi GPIO path the timeout is sized for. Zero
+        // means fall back to scaling the progress bar against timeout.
+        int usb_blaster_duration = 0;
         std::string result_pattern;  // Pattern to search in log for result extraction
         std::string result_prefix;   // Prefix to add when displaying result
     };
@@ -625,6 +629,7 @@ public:
     int calculateProgressPercentage();
     std::string formatElapsedTime();
     int parseProgressFromLog();
+    bool asyncRanOverUsbBlaster();
     void handleGPIORotation(int direction);
     bool handleGPIOButtonPress();
 
@@ -681,6 +686,8 @@ private:
     bool m_asyncDisplayInitialized = false;
     bool m_parseProgress = false;
     int m_lastParsedPercentage = -1;
+    int m_asyncUsbBlasterDuration = 0;  // Expected seconds over USB-Blaster, 0 if unconfigured
+    bool m_asyncUsbBlasterSeen = false; // Latched once the log shows the USB-Blaster transport
     bool m_prependStaticItems = false;  // Flag to prepend static items (Back, etc) instead of append
     std::string m_resultString;  // Store result information from async command (e.g., detected FPGA)
     std::string m_asyncResultPattern;  // Pattern to search for in log file

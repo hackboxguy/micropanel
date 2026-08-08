@@ -133,7 +133,8 @@
           "async": true,
           "timeout": 350,
           "log_file": "/tmp/fpga-flash.log",
-          "progress_title": "Updating 12-3-inch.."
+          "progress_title": "Updating 12-3-inch..",
+          "usb_blaster_duration": 103
         },
         {
           "title": "Backup",
@@ -141,7 +142,8 @@
           "async": true,
           "timeout": 350,
           "log_file": "/tmp/fpga-flash.log",
-          "progress_title": "Backing up 12-3-inch.."
+          "progress_title": "Backing up 12-3-inch..",
+          "usb_blaster_duration": 49
         },
         {
           "title": "Revert",
@@ -149,7 +151,8 @@
           "async": true,
           "timeout": 350,
           "log_file": "/tmp/fpga-flash.log",
-          "progress_title": "Reverting 12-3-inch.."
+          "progress_title": "Reverting 12-3-inch..",
+          "usb_blaster_duration": 103
         },
         {
           "title": "Back"
@@ -178,7 +181,8 @@
           "async": true,
           "timeout": 350,
           "log_file": "/tmp/fpga-flash.log",
-          "progress_title": "Updating 12-3-inch-new.."
+          "progress_title": "Updating 12-3-inch-new..",
+          "usb_blaster_duration": 103
         },
         {
           "title": "Backup",
@@ -186,7 +190,8 @@
           "async": true,
           "timeout": 350,
           "log_file": "/tmp/fpga-flash.log",
-          "progress_title": "Backing up 12-3-inch-new.."
+          "progress_title": "Backing up 12-3-inch-new..",
+          "usb_blaster_duration": 49
         },
         {
           "title": "Revert",
@@ -194,7 +199,8 @@
           "async": true,
           "timeout": 350,
           "log_file": "/tmp/fpga-flash.log",
-          "progress_title": "Reverting 12-3-inch-new.."
+          "progress_title": "Reverting 12-3-inch-new..",
+          "usb_blaster_duration": 103
         },
         {
           "title": "Back"
@@ -223,7 +229,8 @@
           "async": true,
           "timeout": 350,
           "log_file": "/tmp/fpga-flash.log",
-          "progress_title": "Updating 14-6-fhd.."
+          "progress_title": "Updating 14-6-fhd..",
+          "usb_blaster_duration": 103
         },
         {
           "title": "Backup",
@@ -231,7 +238,8 @@
           "async": true,
           "timeout": 350,
           "log_file": "/tmp/fpga-flash.log",
-          "progress_title": "Backing up 14-6-fhd.."
+          "progress_title": "Backing up 14-6-fhd..",
+          "usb_blaster_duration": 49
         },
         {
           "title": "Revert",
@@ -239,7 +247,8 @@
           "async": true,
           "timeout": 350,
           "log_file": "/tmp/fpga-flash.log",
-          "progress_title": "Reverting 14-6-fhd.."
+          "progress_title": "Reverting 14-6-fhd..",
+          "usb_blaster_duration": 103
         },
         {
           "title": "Back"
@@ -268,7 +277,8 @@
           "async": true,
           "timeout": 350,
           "log_file": "/tmp/fpga-flash.log",
-          "progress_title": "Updating 14-6-fhd-new.."
+          "progress_title": "Updating 14-6-fhd-new..",
+          "usb_blaster_duration": 103
         },
         {
           "title": "Backup",
@@ -276,7 +286,8 @@
           "async": true,
           "timeout": 350,
           "log_file": "/tmp/fpga-flash.log",
-          "progress_title": "Backing up 14-6-fhd-new.."
+          "progress_title": "Backing up 14-6-fhd-new..",
+          "usb_blaster_duration": 49
         },
         {
           "title": "Revert",
@@ -284,7 +295,8 @@
           "async": true,
           "timeout": 350,
           "log_file": "/tmp/fpga-flash.log",
-          "progress_title": "Reverting 14-6-fhd-new.."
+          "progress_title": "Reverting 14-6-fhd-new..",
+          "usb_blaster_duration": 103
         },
         {
           "title": "Back"
@@ -313,7 +325,8 @@
           "async": true,
           "timeout": 350,
           "log_file": "/tmp/fpga-flash.log",
-          "progress_title": "Updating 14-6-fhd-cy24.."
+          "progress_title": "Updating 14-6-fhd-cy24..",
+          "usb_blaster_duration": 103
         },
         {
           "title": "Backup",
@@ -321,7 +334,8 @@
           "async": true,
           "timeout": 350,
           "log_file": "/tmp/fpga-flash.log",
-          "progress_title": "Backing up 14-6-fhd-cy24.."
+          "progress_title": "Backing up 14-6-fhd-cy24..",
+          "usb_blaster_duration": 49
         },
         {
           "title": "Revert",
@@ -329,7 +343,8 @@
           "async": true,
           "timeout": 350,
           "log_file": "/tmp/fpga-flash.log",
-          "progress_title": "Reverting 14-6-fhd-cy24.."
+          "progress_title": "Reverting 14-6-fhd-cy24..",
+          "usb_blaster_duration": 103
         },
         {
           "title": "Back"
@@ -448,7 +463,8 @@
           "async": true,
           "timeout": 70,
           "log_file": "/tmp/fpga-flash.log",
-          "progress_title": "Updating 12-3-nq1v1.."
+          "progress_title": "Updating 12-3-nq1v1..",
+          "usb_blaster_duration": 43
         },
         {
           "title": "Backup",
@@ -456,7 +472,8 @@
           "async": true,
           "timeout": 70,
           "log_file": "/tmp/fpga-flash.log",
-          "progress_title": "Backing up 12-3-nq1v1.."
+          "progress_title": "Backing up 12-3-nq1v1..",
+          "usb_blaster_duration": 21
         },
         {
           "title": "Revert",
@@ -464,7 +481,8 @@
           "async": true,
           "timeout": 70,
           "log_file": "/tmp/fpga-flash.log",
-          "progress_title": "Reverting 12-3-nq1v1.."
+          "progress_title": "Reverting 12-3-nq1v1..",
+          "usb_blaster_duration": 43
         },
         {
           "title": "Back"
@@ -493,7 +511,8 @@
           "async": true,
           "timeout": 70,
           "log_file": "/tmp/fpga-flash.log",
-          "progress_title": "Updating 12-3-nq1v11.."
+          "progress_title": "Updating 12-3-nq1v11..",
+          "usb_blaster_duration": 43
         },
         {
           "title": "Backup",
@@ -501,7 +520,8 @@
           "async": true,
           "timeout": 70,
           "log_file": "/tmp/fpga-flash.log",
-          "progress_title": "Backing up 12-3-nq1v11.."
+          "progress_title": "Backing up 12-3-nq1v11..",
+          "usb_blaster_duration": 21
         },
         {
           "title": "Revert",
@@ -509,7 +529,8 @@
           "async": true,
           "timeout": 70,
           "log_file": "/tmp/fpga-flash.log",
-          "progress_title": "Reverting 12-3-nq1v11.."
+          "progress_title": "Reverting 12-3-nq1v11..",
+          "usb_blaster_duration": 43
         },
         {
           "title": "Back"
@@ -538,7 +559,8 @@
           "async": true,
           "timeout": 70,
           "log_file": "/tmp/fpga-flash.log",
-          "progress_title": "Updating 15-6-2k5.."
+          "progress_title": "Updating 15-6-2k5..",
+          "usb_blaster_duration": 43
         },
         {
           "title": "Backup",
@@ -546,7 +568,8 @@
           "async": true,
           "timeout": 70,
           "log_file": "/tmp/fpga-flash.log",
-          "progress_title": "Backing up 15-6-2k5.."
+          "progress_title": "Backing up 15-6-2k5..",
+          "usb_blaster_duration": 21
         },
         {
           "title": "Revert",
@@ -554,7 +577,8 @@
           "async": true,
           "timeout": 70,
           "log_file": "/tmp/fpga-flash.log",
-          "progress_title": "Reverting 15-6-2k5.."
+          "progress_title": "Reverting 15-6-2k5..",
+          "usb_blaster_duration": 43
         },
         {
           "title": "Back"
@@ -583,7 +607,8 @@
           "async": true,
           "timeout": 70,
           "log_file": "/tmp/fpga-flash.log",
-          "progress_title": "Updating 15-6-0OD.."
+          "progress_title": "Updating 15-6-0OD..",
+          "usb_blaster_duration": 43
         },
         {
           "title": "Backup",
@@ -591,7 +616,8 @@
           "async": true,
           "timeout": 70,
           "log_file": "/tmp/fpga-flash.log",
-          "progress_title": "Backing up 15-6-0OD.."
+          "progress_title": "Backing up 15-6-0OD..",
+          "usb_blaster_duration": 21
         },
         {
           "title": "Revert",
@@ -599,7 +625,8 @@
           "async": true,
           "timeout": 70,
           "log_file": "/tmp/fpga-flash.log",
-          "progress_title": "Reverting 15-6-0OD.."
+          "progress_title": "Reverting 15-6-0OD..",
+          "usb_blaster_duration": 43
         },
         {
           "title": "Back"
@@ -628,7 +655,8 @@
           "async": true,
           "timeout": 70,
           "log_file": "/tmp/fpga-flash.log",
-          "progress_title": "Updating 27-inch.."
+          "progress_title": "Updating 27-inch..",
+          "usb_blaster_duration": 43
         },
         {
           "title": "Backup",
@@ -636,7 +664,8 @@
           "async": true,
           "timeout": 70,
           "log_file": "/tmp/fpga-flash.log",
-          "progress_title": "Backing up 27-inch.."
+          "progress_title": "Backing up 27-inch..",
+          "usb_blaster_duration": 21
         },
         {
           "title": "Revert",
@@ -644,7 +673,8 @@
           "async": true,
           "timeout": 70,
           "log_file": "/tmp/fpga-flash.log",
-          "progress_title": "Reverting 27-inch.."
+          "progress_title": "Reverting 27-inch..",
+          "usb_blaster_duration": 43
         },
         {
           "title": "Back"
