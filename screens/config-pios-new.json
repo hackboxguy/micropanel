@@ -434,7 +434,7 @@
       "list_items": [
         {
           "title": "Detect",
-          "action": "stdbuf -oL -eL $MICROPANEL_HOME/fpga/bin/fpga-jtag-flasher.sh --info --skipbitstream",
+          "action": "stdbuf -oL -eL $MICROPANEL_HOME/fpga/bin/fpga-jtag-flasher-lattice.sh --info",
           "async": true,
           "timeout": 25,
           "log_file": "/tmp/fpga-flash.log",
@@ -524,7 +524,7 @@
       "list_items": [
         {
           "title": "Detect",
-          "action": "stdbuf -oL -eL $MICROPANEL_HOME/fpga/bin/fpga-jtag-flasher.sh --info --skipbitstream",
+          "action": "stdbuf -oL -eL $MICROPANEL_HOME/fpga/bin/fpga-jtag-flasher-lattice.sh --info",
           "async": true,
           "timeout": 25,
           "log_file": "/tmp/fpga-flash.log",
@@ -569,7 +569,7 @@
       "list_items": [
         {
           "title": "Detect",
-          "action": "stdbuf -oL -eL $MICROPANEL_HOME/fpga/bin/fpga-jtag-flasher.sh --info --skipbitstream",
+          "action": "stdbuf -oL -eL $MICROPANEL_HOME/fpga/bin/fpga-jtag-flasher-lattice.sh --info",
           "async": true,
           "timeout": 25,
           "log_file": "/tmp/fpga-flash.log",
@@ -614,7 +614,7 @@
       "list_items": [
         {
           "title": "Detect",
-          "action": "stdbuf -oL -eL $MICROPANEL_HOME/fpga/bin/fpga-jtag-flasher.sh --info --skipbitstream",
+          "action": "stdbuf -oL -eL $MICROPANEL_HOME/fpga/bin/fpga-jtag-flasher-lattice.sh --info",
           "async": true,
           "timeout": 25,
           "log_file": "/tmp/fpga-flash.log",
