@@ -108,7 +108,8 @@
         {"id": "fpga_12_3_nq1v11", "title": "12-3-nq1v11"},
         {"id": "fpga_15_6_2k5", "title": "15-6-2k5"},
         {"id": "fpga_15_6_0OD", "title": "15-6-0OD"},
-        {"id": "fpga_27_inch", "title": "27-inch"}
+        {"id": "fpga_27_inch", "title": "27-inch"},
+        {"id": "fpga_35_6_au15p", "title": "35-6-au15p"}
       ]
     },
     {
@@ -675,6 +676,54 @@
           "log_file": "/tmp/fpga-flash.log",
           "progress_title": "Reverting 27-inch..",
           "usb_blaster_duration": 43
+        },
+        {
+          "title": "Back"
+        }
+      ]
+    },
+    {
+      "id": "fpga_35_6_au15p",
+      "title": "35-6-au15p",
+      "enabled": false,
+      "type": "GenericList",
+      "list_items": [
+        {
+          "title": "Detect",
+          "action": "stdbuf -oL -eL $MICROPANEL_HOME/fpga/bin/fpga-jtag-flasher.sh --info --skipbitstream",
+          "async": true,
+          "timeout": 25,
+          "log_file": "/tmp/fpga-flash.log",
+          "progress_title": "Detecting 35-6-au15p..",
+          "result_pattern": "DEVICE=",
+          "result_prefix": "FPGA: "
+        },
+        {
+          "title": "Update",
+          "action": "stdbuf -oL -eL $MICROPANEL_HOME/fpga/bin/fpga-jtag-flasher-wrapper.sh --operation=flash --file=35-6-au15p --fpga-type=xilinx --expected-device=XCAU15P",
+          "async": true,
+          "timeout": 1200,
+          "log_file": "/tmp/fpga-flash.log",
+          "progress_title": "Updating 35-6-au15p..",
+          "usb_blaster_duration": 764
+        },
+        {
+          "title": "Backup",
+          "action": "stdbuf -oL -eL $MICROPANEL_HOME/fpga/bin/fpga-jtag-flasher-wrapper.sh --operation=dump --file=35-6-au15p --fpga-type=xilinx --expected-device=XCAU15P --size=16777216",
+          "async": true,
+          "timeout": 900,
+          "log_file": "/tmp/fpga-flash.log",
+          "progress_title": "Backing up 35-6-au15p..",
+          "usb_blaster_duration": 356
+        },
+        {
+          "title": "Revert",
+          "action": "stdbuf -oL -eL $MICROPANEL_HOME/fpga/bin/fpga-jtag-flasher-wrapper.sh --operation=revert --file=35-6-au15p --fpga-type=xilinx --expected-device=XCAU15P",
+          "async": true,
+          "timeout": 1200,
+          "log_file": "/tmp/fpga-flash.log",
+          "progress_title": "Reverting 35-6-au15p..",
+          "usb_blaster_duration": 764
         },
         {
           "title": "Back"
