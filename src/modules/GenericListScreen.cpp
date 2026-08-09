@@ -579,7 +579,7 @@ void GenericListScreen::startAsyncProcess(const ListItem& item)
         // Fork failed
         Logger::debug("Failed to fork async process");
         m_asyncState = AsyncState::FAILED;
-        m_asyncResultMessage = "Failed to start process";
+        m_asyncResultMessage = "Cannot start action";
         m_asyncWaitingForUser = true;
         renderAsyncProgress();
     }
@@ -598,7 +598,7 @@ void GenericListScreen::updateAsyncProgress()
         Logger::debug("Async process timed out after " + std::to_string(elapsed) + " seconds");
         killAsyncProcess();
         m_asyncState = AsyncState::TIMEOUT;
-        m_asyncResultMessage = "Action timed-out\nUpate failed!";
+        m_asyncResultMessage = "Action timed-out\nAborted!";
         m_asyncWaitingForUser = true;
     }
 
@@ -718,7 +718,7 @@ void GenericListScreen::checkAsyncCompletion()
             m_asyncState = AsyncState::COMPLETED;
         } else {
             m_asyncState = AsyncState::FAILED;
-            m_asyncResultMessage = "Update failed!";
+            m_asyncResultMessage = "Action failed!";
         }
 
         m_asyncWaitingForUser = true;
@@ -728,7 +728,7 @@ void GenericListScreen::checkAsyncCompletion()
         // Error checking process status
         Logger::debug("Error checking async process status");
         m_asyncState = AsyncState::FAILED;
-        m_asyncResultMessage = "Update status error";
+        m_asyncResultMessage = "Action status error";
         m_asyncWaitingForUser = true;
         m_asyncPid = -1;
     }
