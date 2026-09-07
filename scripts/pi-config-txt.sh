@@ -10,13 +10,13 @@ BASE_TEMPLATE="$CONFIG_DIR/config-base.txt.in"
 # Function to display usage
 usage() {
     echo "Usage:"
-    echo "  Write config: $0 --input=/boot/firmware/config.txt --type=<12.3/14.6-fhd/14.6/15.6/27/edid>"
+    echo "  Write config: $0 --input=/boot/firmware/config.txt --type=<12.3/12.3-nq1/14.6-fhd/14.6-2k5/15.6-2k5/17.3-3k/ots-oled-17/27/edid/edid-hdmi>"
     echo "  Read config: $0 --input=/boot/firmware/config.txt [--query-config] [-v]"
     echo "  Query display: $0 --query-display [-v]"
     echo ""
     echo "Options:"
     echo "  --input=FILE      Specify the configuration file path"
-    echo "  --type=TYPE       Configure for display type (12.3, 14.6-fhd, 14.6, 15.6, 27, edid)"
+    echo "  --type=TYPE       Configure for display type (12.3, 12.3-nq1, 14.6-fhd, 14.6-2k5, 15.6-2k5, 17.3-3k, ots-oled-17, 27, edid, edid-hdmi)"
     echo "  --configspath=DIR Override config directory path (default: /usr/share/micropanel/configs)"
     echo "  --query-config    Read and output configured display type/resolution"
     echo "  --query-display   Query actual display resolution on HDMI output"
@@ -95,8 +95,9 @@ configure_hh983_serializer() {
         if [ $VERBOSE -eq 1 ]; then
             echo "HH983 serializer and himax touch disabled (for $config_type)"
         fi
-    # 15.6-2k5 and 12.3-nq1 require config_mode=0 (983+984), all others require config_mode=1 (983+988)
-    elif [ "$config_type" = "15.6-2k5" ] || [ "$config_type" = "12.3-nq1" ]; then
+    # 15.6-2k5, 12.3-nq1, and ots-oled-17 require config_mode=0 (983+984);
+    # all others require config_mode=1 (983+988).
+    elif [ "$config_type" = "15.6-2k5" ] || [ "$config_type" = "12.3-nq1" ] || [ "$config_type" = "ots-oled-17" ]; then
         echo "options hh983-serializer config_mode=0" > "$hh983_conf"
         if [ $VERBOSE -eq 1 ]; then
             echo "HH983 serializer configured: config_mode=0 (for $config_type)"
@@ -201,7 +202,7 @@ get_config_resolution() {
 # Function to get expected hh983 config_mode for a display type
 get_expected_hh983_mode() {
     local config_type="$1"
-    if [ "$config_type" = "15.6-2k5" ] || [ "$config_type" = "12.3-nq1" ]; then
+    if [ "$config_type" = "15.6-2k5" ] || [ "$config_type" = "12.3-nq1" ] || [ "$config_type" = "ots-oled-17" ]; then
         echo "0"
     else
         echo "1"

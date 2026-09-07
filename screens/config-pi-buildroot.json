@@ -765,6 +765,7 @@
         {"title": "14.6-2k5", "action": "/usr/bin/pi-config-txt.sh --input=/boot/config.txt --type=$1"},
         {"title": "15.6-2k5", "action": "/usr/bin/pi-config-txt.sh --input=/boot/config.txt --type=$1"},
         {"title": "17.3-3k", "action": "/usr/bin/pi-config-txt.sh --input=/boot/config.txt --type=$1"},
+        {"title": "ots-oled-17", "action": "/usr/bin/pi-config-txt.sh --input=/boot/config.txt --type=$1"},
         {"title": "27", "action": "/usr/bin/pi-config-txt.sh --input=/boot/config.txt --type=$1"}
       ],
       "list_selection": "/usr/bin/pi-config-txt.sh --input=/boot/config.txt"
