@@ -97,7 +97,12 @@ configure_hh983_serializer() {
         fi
     # 15.6-2k5, 12.3-nq1, and ots-oled-17 require config_mode=0 (983+984);
     # all others require config_mode=1 (983+988).
-    elif [ "$config_type" = "15.6-2k5" ] || [ "$config_type" = "12.3-nq1" ] || [ "$config_type" = "ots-oled-17" ]; then
+    elif [ "$config_type" = "ots-oled-17" ]; then
+        echo "options hh983-serializer config_mode=0 ots_touch=1" > "$hh983_conf"
+        if [ $VERBOSE -eq 1 ]; then
+            echo "HH983 serializer configured: config_mode=0 ots_touch=1 (for $config_type)"
+        fi
+    elif [ "$config_type" = "15.6-2k5" ] || [ "$config_type" = "12.3-nq1" ]; then
         echo "options hh983-serializer config_mode=0" > "$hh983_conf"
         if [ $VERBOSE -eq 1 ]; then
             echo "HH983 serializer configured: config_mode=0 (for $config_type)"
@@ -161,6 +166,12 @@ EOF
     # For edid-hdmi, remove himax-touch overlay (not needed for direct HDMI)
     if [ "$config_type" = "edid-hdmi" ]; then
         sed -i '/dtoverlay=himax-touch/d' "$temp_file"
+    fi
+
+    # For ots-oled-17, use the HX8530 single-IC touch overlay (himax-touch-oled)
+    # instead of the multi-chip himax-touch overlay.
+    if [ "$config_type" = "ots-oled-17" ]; then
+        sed -i 's/^dtoverlay=himax-touch$/dtoverlay=himax-touch-oled/' "$temp_file"
     fi
 
     # Copy to final destination
