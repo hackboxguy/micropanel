@@ -99,6 +99,7 @@ configure_hh983_serializer() {
     # all others require config_mode=1 (983+988).
     elif [ "$config_type" = "ots-oled-17" ]; then
         echo "options hh983-serializer config_mode=0 ots_touch=1" > "$hh983_conf"
+        echo "softdep himax_oled pre: hh983-serializer" >> "$hh983_conf"
         if [ $VERBOSE -eq 1 ]; then
             echo "HH983 serializer configured: config_mode=0 ots_touch=1 (for $config_type)"
         fi
@@ -111,6 +112,30 @@ configure_hh983_serializer() {
         echo "options hh983-serializer config_mode=1" > "$hh983_conf"
         if [ $VERBOSE -eq 1 ]; then
             echo "HH983 serializer configured: config_mode=1 (default)"
+        fi
+    fi
+}
+
+# Function to select the touch-screen kernel module per display type.
+# himax_oled (single-IC HX8530) and himax_mmi (multi-chip) register the SAME
+# i2c driver name, so exactly one may be loaded. ots-oled-17 uses himax_oled
+# and must keep himax_mmi out; all other displays use himax_mmi.
+configure_touch_driver() {
+    local config_type="$1"
+    local ml="/etc/modules-load.d/custom-drivers.conf"
+    local bl="/etc/modprobe.d/blacklist-himax-mmi.conf"
+
+    if [ "$config_type" = "ots-oled-17" ]; then
+        printf "# Custom driver load order (OTS-OLED)\\nhh983-serializer\\nhimax_oled\\n" > "$ml"
+        printf "# OTS-OLED board uses himax_oled (HX8530); keep the multi-chip driver out\\nblacklist himax_mmi\\n" > "$bl"
+        if [ $VERBOSE -eq 1 ]; then
+            echo "Touch driver: himax_oled (himax_mmi blacklisted) for $config_type"
+        fi
+    else
+        printf "# Custom driver load order\\n# hh983-serializer must load before himax touch\\nhh983-serializer\\nhimax_mmi\\n" > "$ml"
+        rm -f "$bl"
+        if [ $VERBOSE -eq 1 ]; then
+            echo "Touch driver: himax_mmi for $config_type"
         fi
     fi
 }
@@ -599,6 +624,7 @@ if [ -n "$DISPLAY_TYPE" ] && [ -n "$INPUT_FILE" ]; then
 
     # Apply side effects only during write operations
     configure_hh983_serializer "$DISPLAY_TYPE"
+    configure_touch_driver "$DISPLAY_TYPE"
     configure_als_dimmer "$DISPLAY_TYPE"
 
     if [ $VERBOSE -eq 1 ]; then
