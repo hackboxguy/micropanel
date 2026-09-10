@@ -2,8 +2,28 @@
 # POSIX-compliant shell script to work with dash/sh
 # Optimized version using external templates and configuration data
 
-# Use proper system paths for config files
+# Use proper system paths for config files.
+#
+# A relocated tree -- the bench images keep micropanel under /home/pi rather
+# than at the packaged prefix -- would otherwise find no templates, and every
+# comparison against an empty reference makes --query-config answer "unknown"
+# for every display. That is a silent wrong answer rather than an error, and
+# anything keying off the query (the als-dimmer config-selection hook, for one)
+# quietly falls back to its default. So fall back to the configs that sit
+# beside this script before giving up. --configspath still overrides both.
 CONFIG_DIR="/usr/share/micropanel/configs"
+if [ ! -f "$CONFIG_DIR/display-configs.conf" ]; then
+    _self_dir=$(dirname "$(readlink -f "$0")")
+    for _candidate in \
+        "$_self_dir/../share/micropanel/configs" \
+        "$_self_dir/../../share/micropanel/configs" \
+        "$_self_dir/../configs"; do
+        if [ -f "$_candidate/display-configs.conf" ]; then
+            CONFIG_DIR=$(cd "$_candidate" && pwd)
+            break
+        fi
+    done
+fi
 CONFIG_DATA_FILE="$CONFIG_DIR/display-configs.conf"
 BASE_TEMPLATE="$CONFIG_DIR/config-base.txt.in"
 
