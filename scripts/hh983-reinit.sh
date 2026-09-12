@@ -2,7 +2,10 @@
 # Re-initialize hh983 serializer pipeline via micropanel menu
 #
 # Reads current config_mode from /etc/modprobe.d/hh983.conf and calls
-# re-init-983-pipeline.sh with the matching --mode flag.
+# re-init-983-pipeline.sh with the matching --mode flag:
+#   config_mode=0 -> --mode=984
+#   config_mode=1 -> --mode=988        (also the fallback for a missing file)
+#   config_mode=2 -> --mode=988-video  (983+988, no touch driver steps)
 #
 # Usage:
 #   hh983-reinit.sh           # Run re-init with auto-detected mode
@@ -39,6 +42,7 @@ if [ -f "$HH983_CONF" ]; then
     current_mode=$(grep -o 'config_mode=[0-9]*' "$HH983_CONF" | head -1 | cut -d= -f2)
     case "$current_mode" in
         0) MODE="984" ;;
+        2) MODE="988-video" ;;
         *) MODE="988" ;;
     esac
 else

@@ -30,13 +30,13 @@ BASE_TEMPLATE="$CONFIG_DIR/config-base.txt.in"
 # Function to display usage
 usage() {
     echo "Usage:"
-    echo "  Write config: $0 --input=/boot/firmware/config.txt --type=<12.3/12.3-nq1/14.6-fhd/14.6-2k5/15.6-2k5/17.3-3k/ots-oled-17/27/edid/edid-hdmi>"
+    echo "  Write config: $0 --input=/boot/firmware/config.txt --type=<12.3/12.3-nq1/14.6-fhd/14.6-2k5/15.6-2k5/17.3-3k/ots-oled-17/3x-qvue/27/edid/edid-hdmi>"
     echo "  Read config: $0 --input=/boot/firmware/config.txt [--query-config] [-v]"
     echo "  Query display: $0 --query-display [-v]"
     echo ""
     echo "Options:"
     echo "  --input=FILE      Specify the configuration file path"
-    echo "  --type=TYPE       Configure for display type (12.3, 12.3-nq1, 14.6-fhd, 14.6-2k5, 15.6-2k5, 17.3-3k, ots-oled-17, 27, edid, edid-hdmi)"
+    echo "  --type=TYPE       Configure for display type (12.3, 12.3-nq1, 14.6-fhd, 14.6-2k5, 15.6-2k5, 17.3-3k, ots-oled-17, 3x-qvue, 27, edid, edid-hdmi)"
     echo "  --configspath=DIR Override config directory path (default: /usr/share/micropanel/configs)"
     echo "  --query-config    Read and output configured display type/resolution"
     echo "  --query-display   Query actual display resolution on HDMI output"
@@ -115,6 +115,14 @@ configure_hh983_serializer() {
         if [ $VERBOSE -eq 1 ]; then
             echo "HH983 serializer and himax touch disabled (for $config_type)"
         fi
+    # 3x-qvue requires config_mode=2 (983+988, video only): the QVue has no
+    # touch controller, and mode 2 leaves the 983 target-alias slot alone
+    # because the RH850 uses it to alias the 988 from 0x38 to 0x2c.
+    elif [ "$config_type" = "3x-qvue" ]; then
+        echo "options hh983-serializer config_mode=2" > "$hh983_conf"
+        if [ $VERBOSE -eq 1 ]; then
+            echo "HH983 serializer configured: config_mode=2 (video only, for $config_type)"
+        fi
     # 15.6-2k5, 12.3-nq1, and ots-oled-17 require config_mode=0 (983+984);
     # all others require config_mode=1 (983+988).
     elif [ "$config_type" = "ots-oled-17" ]; then
@@ -140,12 +148,19 @@ configure_hh983_serializer() {
 # himax_oled (single-IC HX8530) and himax_mmi (multi-chip) register the SAME
 # i2c driver name, so exactly one may be loaded. ots-oled-17 uses himax_oled
 # and must keep himax_mmi out; all other displays use himax_mmi.
+# 3x-qvue has no touch surface at all, so it loads neither and blacklists both.
 configure_touch_driver() {
     local config_type="$1"
     local ml="/etc/modules-load.d/custom-drivers.conf"
     local bl="/etc/modprobe.d/blacklist-himax-mmi.conf"
 
-    if [ "$config_type" = "ots-oled-17" ]; then
+    if [ "$config_type" = "3x-qvue" ]; then
+        printf "# Custom driver load order (3x QVue, no touch)\\nhh983-serializer\\n" > "$ml"
+        printf "# 3x QVue has no touch controller; keep both himax drivers out\\nblacklist himax_mmi\\nblacklist himax_oled\\n" > "$bl"
+        if [ $VERBOSE -eq 1 ]; then
+            echo "Touch driver: none (himax_mmi and himax_oled blacklisted) for $config_type"
+        fi
+    elif [ "$config_type" = "ots-oled-17" ]; then
         printf "# Custom driver load order (OTS-OLED)\\nhh983-serializer\\nhimax_oled\\n" > "$ml"
         printf "# OTS-OLED board uses himax_oled (HX8530); keep the multi-chip driver out\\nblacklist himax_mmi\\n" > "$bl"
         if [ $VERBOSE -eq 1 ]; then
@@ -219,6 +234,16 @@ EOF
         sed -i 's/^dtoverlay=himax-touch$/dtoverlay=himax-touch-oled/' "$temp_file"
     fi
 
+    # For 3x-qvue, use the standalone hh983-serializer overlay. This is not
+    # cosmetic: the serializer@18 I2C node the kernel driver binds to is
+    # defined inside the himax-touch overlay, so simply deleting that line
+    # would leave the driver with nothing to probe. hh983-serializer.dtbo
+    # (installed into overlays/ by the hh983-serializer Buildroot package)
+    # declares the same node without a touch device.
+    if [ "$config_type" = "3x-qvue" ]; then
+        sed -i 's/^dtoverlay=himax-touch$/dtoverlay=hh983-serializer/' "$temp_file"
+    fi
+
     # Copy to final destination
     cp "$temp_file" "$output_file"
     rm "$temp_file"
@@ -260,6 +285,8 @@ get_expected_hh983_mode() {
     local config_type="$1"
     if [ "$config_type" = "15.6-2k5" ] || [ "$config_type" = "12.3-nq1" ] || [ "$config_type" = "ots-oled-17" ]; then
         echo "0"
+    elif [ "$config_type" = "3x-qvue" ]; then
+        echo "2"
     else
         echo "1"
     fi

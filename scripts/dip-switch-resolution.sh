@@ -10,6 +10,7 @@
 #   0xfe  -> 15.6-2k5
 #   0xdf  -> 17.3-3k
 #   0x79  -> ots-oled-17 (DIP setting 01100001, active-low)
+#   0x76  -> 3x-qvue (DIP setting 10010001, active-low)
 #   0xef  -> 27
 #
 # Reboot loop guard: at most one auto-reboot per mismatch.
@@ -154,6 +155,7 @@ map_dip_to_type() {
         0xfe) echo "15.6-2k5" ;;
         0xdf) echo "17.3-3k" ;;
         0x79) echo "ots-oled-17" ;;
+        0x76) echo "3x-qvue" ;;
         0xef) echo "27" ;;
         *)    echo "" ;;
     esac
