@@ -23,6 +23,7 @@
 SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
 I2C_BUS=3
 DIP_ADDR=0x20
+DIP_WAIT_S=15          # how long to wait for i2c-3 and the PCF8574 at boot
 REBOOT_FLAG="/var/lib/micropanel/dip-reboot-pending"
 VERBOSE=0
 
@@ -160,18 +161,38 @@ map_dip_to_type() {
     esac
 }
 
-# Check if DIP switch device is present on i2c bus
-if ! i2cdetect -y "$I2C_BUS" 2>/dev/null | grep -q "20"; then
-    log "No DIP switch (PCF8574) found at $DIP_ADDR on i2c-$I2C_BUS, skipping"
-    exit 0
-fi
+# Read the DIP switch, waiting for the bus if it is not up yet.
+#
+# This unit starts After=local-fs.target, which can be before i2c-3 is
+# registered. A single probe then fails and the type change is silently not
+# applied - seen twice, once leaving a 12.3" panel running a 14.6" timing until
+# someone noticed. So wait for the device node and retry the read, and say how
+# long it took, rather than treating "not there yet" as "not fitted".
+#
+# The probe is a direct read rather than `i2cdetect | grep "20"`: it is the same
+# read the script needs anyway, and a grep for "20" also matches the address
+# column and any other device whose address ends in 0x20 on that row.
+read_dip() {
+    _t=0
+    while [ "$_t" -lt "$DIP_WAIT_S" ]; do
+        if [ -e "/dev/i2c-$I2C_BUS" ]; then
+            _v=$(i2cget -y "$I2C_BUS" "$DIP_ADDR" 2>/dev/null)
+            if [ -n "$_v" ]; then
+                # log() writes to stdout and this function's stdout is the
+                # value, so send the note to stderr or it lands in dip_value.
+                [ "$_t" -gt 0 ] && log "DIP switch answered after ${_t}s" >&2
+                echo "$_v"
+                return 0
+            fi
+        fi
+        sleep 1
+        _t=$((_t + 1))
+    done
+    log "No DIP switch (PCF8574) found at $DIP_ADDR on i2c-$I2C_BUS after ${_t}s, skipping" >&2
+    return 1
+}
 
-# Read DIP switch value
-dip_value=$(i2cget -y "$I2C_BUS" "$DIP_ADDR" 2>/dev/null)
-if [ -z "$dip_value" ]; then
-    log "Failed to read DIP switch, skipping"
-    exit 0
-fi
+dip_value=$(read_dip) || exit 0
 
 log "DIP switch value: $dip_value"
 
