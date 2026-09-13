@@ -45,7 +45,7 @@ fi
 # wedge_recovery=1 for the 15.6" 2K5, whose DP guard has to recover a wedged DTG
 # by 984 digital reset instead of the DTG reset pulse -- on that panel the pulse
 # drops the picture into the TDDI self test whenever it interrupts a live
-# stream.  See br-wrapper/docs/hh983-984-black-screen-2026-09-13/.
+# stream.  See br-wrapper/docs/hh983-984-black-screen/.
 #
 # This used to rewrite the whole file, which dropped those options silently and
 # put the panel straight back on the behaviour that blacked it out.  Now only

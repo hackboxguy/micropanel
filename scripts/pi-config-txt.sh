@@ -136,7 +136,7 @@ configure_hh983_serializer() {
     # 12.3-nq1 has not been validated with it, and on ots-oled-17 the digital
     # reset has never been tried on the panel that black-latches, so that one
     # keeps the DTG pulse the OLED bring-up validated.
-    # Full write-up: br-wrapper/docs/hh983-984-black-screen-2026-09-13/.
+    # Full write-up: br-wrapper/docs/hh983-984-black-screen/.
     elif [ "$config_type" = "ots-oled-17" ]; then
         echo "options hh983-serializer config_mode=0 ots_touch=1" > "$hh983_conf"
         echo "softdep himax_oled pre: hh983-serializer" >> "$hh983_conf"
