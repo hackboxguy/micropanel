@@ -125,13 +125,30 @@ configure_hh983_serializer() {
         fi
     # 15.6-2k5, 12.3-nq1, and ots-oled-17 require config_mode=0 (983+984);
     # all others require config_mode=1 (983+988).
+    #
+    # 15.6-2k5 additionally needs wedge_recovery=1. Its programmed H total is
+    # 2816 = 0x0B00, the 984's measured value jitters across that byte
+    # boundary, and the DP guard used to read the tear as a wedged DTG and
+    # pulse the DTG reset -- which drops this panel into its TDDI self test
+    # whenever it interrupts a live stream. wedge_recovery=1 recovers by 984
+    # digital reset (the same write the Stream Deck "Sync Video" button does)
+    # instead. It is deliberately NOT set for the other config_mode=0 types:
+    # 12.3-nq1 has not been validated with it, and on ots-oled-17 the digital
+    # reset has never been tried on the panel that black-latches, so that one
+    # keeps the DTG pulse the OLED bring-up validated.
+    # Full write-up: br-wrapper/docs/hh983-984-black-screen-2026-09-13/.
     elif [ "$config_type" = "ots-oled-17" ]; then
         echo "options hh983-serializer config_mode=0 ots_touch=1" > "$hh983_conf"
         echo "softdep himax_oled pre: hh983-serializer" >> "$hh983_conf"
         if [ $VERBOSE -eq 1 ]; then
             echo "HH983 serializer configured: config_mode=0 ots_touch=1 (for $config_type)"
         fi
-    elif [ "$config_type" = "15.6-2k5" ] || [ "$config_type" = "12.3-nq1" ]; then
+    elif [ "$config_type" = "15.6-2k5" ]; then
+        echo "options hh983-serializer config_mode=0 wedge_recovery=1" > "$hh983_conf"
+        if [ $VERBOSE -eq 1 ]; then
+            echo "HH983 serializer configured: config_mode=0 wedge_recovery=1 (for $config_type)"
+        fi
+    elif [ "$config_type" = "12.3-nq1" ]; then
         echo "options hh983-serializer config_mode=0" > "$hh983_conf"
         if [ $VERBOSE -eq 1 ]; then
             echo "HH983 serializer configured: config_mode=0 (for $config_type)"
