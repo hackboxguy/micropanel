@@ -257,6 +257,24 @@ EOF
     # instead of the multi-chip himax-touch overlay.
     if [ "$config_type" = "ots-oled-17" ]; then
         sed -i 's/^dtoverlay=himax-touch$/dtoverlay=himax-touch-oled/' "$temp_file"
+
+        # The HX8530 sits behind the 984's SECOND I2C port, one target-alias
+        # hop further than the 988 boards' TDDI, and 400 kHz corrupts the
+        # 56-byte report read on that path: a single 5-finger drag produced 82
+        # finger re-acquisitions, with coordinate bytes reading back 0xFF
+        # (bus undriven) and 0x7F7F (bit 7 dropped).  A sum-mod-256 checksum
+        # cannot see the latter - ten bytes each losing bit 7 shifts the sum
+        # by an exact multiple of 0x100 - so most of it passed validation and
+        # surfaced as dotted strokes rather than errors.
+        #
+        # 200 kHz measured clean (0 checksum errors, 6 tracking IDs for 5
+        # fingers) while still reaching the panel's full 90 Hz report rate.
+        # 100 kHz is equally clean but halves the rate to 59 Hz, which spaces
+        # contacts far enough apart to visibly scallop a drag.  The other
+        # panels keep the template's 400 kHz - the in-cell rig sustains
+        # 125 Hz there and only needs it.
+        sed -i 's/^dtparam=i2c_arm_baudrate=.*/dtparam=i2c_arm_baudrate=200000/' \
+            "$temp_file"
     fi
 
     # For 3x-qvue, use the standalone hh983-serializer overlay. This is not
