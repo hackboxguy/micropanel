@@ -126,22 +126,30 @@ configure_hh983_serializer() {
     # 15.6-2k5, 12.3-nq1, and ots-oled-17 require config_mode=0 (983+984);
     # all others require config_mode=1 (983+988).
     #
-    # 15.6-2k5 additionally needs wedge_recovery=1. Its programmed H total is
-    # 2816 = 0x0B00, the 984's measured value jitters across that byte
-    # boundary, and the DP guard used to read the tear as a wedged DTG and
-    # pulse the DTG reset -- which drops this panel into its TDDI self test
-    # whenever it interrupts a live stream. wedge_recovery=1 recovers by 984
-    # digital reset (the same write the Stream Deck "Sync Video" button does)
-    # instead. It is deliberately NOT set for the other config_mode=0 types:
-    # 12.3-nq1 has not been validated with it, and on ots-oled-17 the digital
-    # reset has never been tried on the panel that black-latches, so that one
-    # keeps the DTG pulse the OLED bring-up validated.
+    # 15.6-2k5 and ots-oled-17 both need wedge_recovery=1, for different
+    # reasons that end in the same place: on those two panels a DTG reset
+    # pulse costs the picture and a 984 digital reset (the same write the
+    # Stream Deck "Sync Video" button does) does not.
+    #
+    # 15.6-2k5: its programmed H total is 2816 = 0x0B00, the 984's measured
+    # value jitters across that byte boundary, and the DP guard used to read
+    # the tear as a wedged DTG and pulse -- which drops that panel into its
+    # TDDI self test whenever the pulse interrupts a live stream.
+    #
+    # ots-oled-17: its wedges are genuine rather than torn reads, but the
+    # pulse recovery leaves the 984 healthy and the panel latched black with
+    # the IOC's TCON_INT asserted (2026-09-14, and event A of the bring-up
+    # doc). One digital reset cleared that latch and the picture returned;
+    # five digital resets on a healthy streaming OLED left TCON_INT clear
+    # every time, so the reset is safe as the standing recovery there.
+    #
+    # 12.3-nq1 stays on the pulse: it has been tested with neither.
     # Full write-up: br-wrapper/docs/hh983-984-black-screen/.
     elif [ "$config_type" = "ots-oled-17" ]; then
-        echo "options hh983-serializer config_mode=0 ots_touch=1" > "$hh983_conf"
+        echo "options hh983-serializer config_mode=0 ots_touch=1 wedge_recovery=1" > "$hh983_conf"
         echo "softdep himax_oled pre: hh983-serializer" >> "$hh983_conf"
         if [ $VERBOSE -eq 1 ]; then
-            echo "HH983 serializer configured: config_mode=0 ots_touch=1 (for $config_type)"
+            echo "HH983 serializer configured: config_mode=0 ots_touch=1 wedge_recovery=1 (for $config_type)"
         fi
     elif [ "$config_type" = "15.6-2k5" ]; then
         echo "options hh983-serializer config_mode=0 wedge_recovery=1" > "$hh983_conf"
