@@ -258,22 +258,30 @@ EOF
     if [ "$config_type" = "ots-oled-17" ]; then
         sed -i 's/^dtoverlay=himax-touch$/dtoverlay=himax-touch-oled/' "$temp_file"
 
-        # The HX8530 sits behind the 984's SECOND I2C port, one target-alias
-        # hop further than the 988 boards' TDDI, and 400 kHz corrupts the
-        # 56-byte report read on that path: a single 5-finger drag produced 82
-        # finger re-acquisitions, with coordinate bytes reading back 0xFF
-        # (bus undriven) and 0x7F7F (bit 7 dropped).  A sum-mod-256 checksum
-        # cannot see the latter - ten bytes each losing bit 7 shifts the sum
-        # by an exact multiple of 0x100 - so most of it passed validation and
-        # surfaced as dotted strokes rather than errors.
+        # The host bus and the 984's panel-side bus are COUPLED - do not tune
+        # one without the other.  The 983 terminates the host transaction and
+        # stretches SCL while the 984 re-masters it on the panel bus, so the
+        # host is held for however long the remote read takes.
         #
-        # 200 kHz measured clean (0 checksum errors, 6 tracking IDs for 5
-        # fingers) while still reaching the panel's full 90 Hz report rate.
-        # 100 kHz is equally clean but halves the rate to 59 Hz, which spaces
-        # contacts far enough apart to visibly scallop a drag.  The other
-        # panels keep the template's 400 kHz - the in-cell rig sustains
-        # 125 Hz there and only needs it.
-        sed -i 's/^dtparam=i2c_arm_baudrate=.*/dtparam=i2c_arm_baudrate=200000/' \
+        # At the 984's 100 kHz reset value a 56-byte touch report took ~5 ms,
+        # and holding the BCM2711 that long at 400 kHz corrupted the read:
+        # coordinate bytes returned 0xFF (bus undriven) and 0x7F7F (bit 7
+        # dropped), which a sum-mod-256 checksum cannot see - ten bytes each
+        # losing bit 7 shifts the sum by an exact multiple of 0x100 - so it
+        # surfaced as dropped fingers and dotted strokes rather than errors.
+        # 200 kHz was the workaround, and left a residual ~1.2% frame loss.
+        #
+        # hh983-serializer now drives the panel bus at 400 kHz (ots_touch),
+        # which cuts that read to ~1.3 ms.  With the stretch that much
+        # shorter the host runs clean at 400 kHz: measured over a two-minute
+        # drag, a five-finger drag and a brightness-slider session, 0 checksum
+        # failures in 14902 interrupts where 200 kHz gave ~1.2%, holding
+        # ~180 Hz with a 39-second unbroken contact.  Verified from a cold
+        # power cycle.
+        #
+        # So 400 kHz here is safe only while the panel side is fast.  Reverting
+        # the serializer to the 984's default would bring the corruption back.
+        sed -i 's/^dtparam=i2c_arm_baudrate=.*/dtparam=i2c_arm_baudrate=400000/' \
             "$temp_file"
     fi
 
