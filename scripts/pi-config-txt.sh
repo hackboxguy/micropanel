@@ -26,17 +26,18 @@ if [ ! -f "$CONFIG_DIR/display-configs.conf" ]; then
 fi
 CONFIG_DATA_FILE="$CONFIG_DIR/display-configs.conf"
 BASE_TEMPLATE="$CONFIG_DIR/config-base.txt.in"
+TYPE_MARKER_PREFIX="micropanel-display-type: "
 
 # Function to display usage
 usage() {
     echo "Usage:"
-    echo "  Write config: $0 --input=/boot/firmware/config.txt --type=<12.3/12.3-nq1/14.6-fhd/14.6-2k5/15.6-2k5/17.3-3k/ots-oled-17/3x-qvue/27/edid/edid-hdmi>"
+    echo "  Write config: $0 --input=/boot/firmware/config.txt --type=<12.3/12.3-nq1/12.3-nq1v1.1/14.6-fhd/14.6-2k5/15.6-2k5/17.3-3k/ots-oled-17/3x-qvue/27/edid/edid-hdmi>"
     echo "  Read config: $0 --input=/boot/firmware/config.txt [--query-config] [-v]"
     echo "  Query display: $0 --query-display [-v]"
     echo ""
     echo "Options:"
     echo "  --input=FILE      Specify the configuration file path"
-    echo "  --type=TYPE       Configure for display type (12.3, 12.3-nq1, 14.6-fhd, 14.6-2k5, 15.6-2k5, 17.3-3k, ots-oled-17, 3x-qvue, 27, edid, edid-hdmi)"
+    echo "  --type=TYPE       Configure for display type (12.3, 12.3-nq1, 12.3-nq1v1.1, 14.6-fhd, 14.6-2k5, 15.6-2k5, 17.3-3k, ots-oled-17, 3x-qvue, 27, edid, edid-hdmi)"
     echo "  --configspath=DIR Override config directory path (default: /usr/share/micropanel/configs)"
     echo "  --query-config    Read and output configured display type/resolution"
     echo "  --query-display   Query actual display resolution on HDMI output"
@@ -83,6 +84,14 @@ generate_display_config() {
     local config_type="$1"
 
     load_display_config "$config_type"
+
+    # Record which display type wrote this block. extract_config_content()
+    # drops every comment line, so this is invisible to the content comparison
+    # and cannot change which type a config.txt matches -- it only lets
+    # read_current_config() tell apart types whose timings are identical.
+    # Without it 12.3 and 12.3-nq1v1.1 are indistinguishable: same panel
+    # timing, same hh983 config_mode, different display.
+    echo "# $TYPE_MARKER_PREFIX$config_type"
 
     if [ "$config_type" = "edid" ] || [ "$config_type" = "edid-hdmi" ]; then
         # EDID auto-detection - use full KMS for proper EDID reading
@@ -209,6 +218,7 @@ configure_als_dimmer() {
 
     case "$config_type" in
         12.3-nq1) als_target="$als_dir/config_fpga_opti4001_dimmer2048_12_3_nq1v1.json" ;;
+        12.3-nq1v1.1) als_target="$als_dir/config_fpga_opti4001_dimmer2048_12_3_nq1v1.json" ;;
         15.6-2k5) als_target="$als_dir/config_fpga_opti4001_dimmer2048_15_6_0od.json" ;;
     esac
 
@@ -353,10 +363,27 @@ read_current_config() {
         current_hh983_mode="${current_hh983_mode:-1}"
     fi
 
-    # Check against all known configurations.
-    # Multiple display types can produce identical config.txt (e.g. 12.3 and
-    # 12.3-nq1 share the same timings).  When config.txt matches, also verify
-    # the hh983 config_mode to pick the correct type.
+    # A config.txt written by this script names its own type in a comment.
+    # Trust it only when the rest of the file still matches that type's
+    # reference, so a hand-edited config.txt falls through to the scan below
+    # rather than being reported as whatever it used to be. This is the only
+    # way to tell apart types that differ in neither timing nor config_mode --
+    # 12.3 (12.3"-NQ5) and 12.3-nq1v1.1 are exactly that pair.
+    local marked_type
+    marked_type=$(grep -m1 "^# *$TYPE_MARKER_PREFIX" "$INPUT_FILE" 2>/dev/null |
+                  sed "s/^# *$TYPE_MARKER_PREFIX//" | tr -d '[:space:]')
+    if [ -n "$marked_type" ] && grep -q "^$marked_type:" "$CONFIG_DATA_FILE" 2>/dev/null; then
+        if [ "$current_content" = "$(get_reference_config "$marked_type")" ] &&
+           [ "$(get_expected_hh983_mode "$marked_type")" = "$current_hh983_mode" ]; then
+            echo "$marked_type"
+            return 0
+        fi
+    fi
+
+    # Otherwise fall back to matching by content. Types that produce identical
+    # config.txt are separated by the hh983 config_mode where that differs;
+    # where it does not, the first match wins and the marker above is what
+    # makes the answer exact.
     for type in $(get_supported_types); do
         local reference_content=$(get_reference_config "$type")
 

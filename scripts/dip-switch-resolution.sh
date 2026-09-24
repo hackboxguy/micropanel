@@ -5,6 +5,7 @@
 # DIP switch mapping:
 #   0xf7  -> 12.3
 #   0x7a  -> 12.3-nq1
+#   0x6d  -> 12.3-nq1v1.1 (DIP setting 01001001, active-low)
 #   0xfb  -> 14.6-fhd
 #   0xfd  -> 14.6-2k5
 #   0xfe  -> 15.6-2k5
@@ -150,6 +151,7 @@ map_dip_to_type() {
     case "$1" in
         0xf7) echo "12.3" ;;
         0x7a) echo "12.3-nq1" ;;
+        0x6d) echo "12.3-nq1v1.1" ;;
         0xfb) echo "14.6-fhd" ;;
         0xfd) echo "14.6-2k5" ;;
         0xfe) echo "15.6-2k5" ;;
