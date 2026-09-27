@@ -1,0 +1,46 @@
+# Base configuration shared by all display types
+start_file=start4.elf
+fixup_file=fixup4.dat
+kernel=Image
+dtparam=audio=on
+camera_auto_detect=1
+auto_initramfs=1
+disable_overscan=1
+arm_64bit=1
+arm_boost=1
+disable_fw_kms_setup=1
+max_framebuffers=2
+dtoverlay=himax-touch
+
+# micropanel-display-type: 17.3-3k
+dtoverlay=vc4-fkms-v3d
+hdmi_force_hotplug=1
+hdmi_group=2
+hdmi_mode=87
+hdmi_timings=2880 0 48 48 108 1620 0 10 6 36 0 0 0 60 0 314280000 3
+hdmi_pixel_freq_limit=314280000
+framebuffer_width=2880
+framebuffer_height=1620
+max_framebuffer_width=2880
+max_framebuffer_height=1620
+config_hdmi_boost=4
+
+[cm4]
+otg_mode=1
+[cm5]
+dtoverlay=dwc2,dr_mode=host
+[all]
+dtoverlay=w1-gpio,gpiopin=8,pullup=1 #ds18b20 1wire-temp-sensor on gpio8
+dtoverlay=gpio-pullup,gpiopin=22
+enable_uart=1
+init_uart_clock=16000000
+#dtoverlay=gpio-key,gpio=22,active_low=1,gpio_pull=up,keycode=105   # KEY_LEFT
+dtoverlay=gpio-key,gpio=23,active_low=1,gpio_pull=up,keycode=106   # KEY_RIGHT
+dtoverlay=gpio-key,gpio=24,active_low=1,gpio_pull=up,keycode=103   # KEY_UP
+dtoverlay=gpio-key,gpio=25,active_low=1,gpio_pull=up,keycode=108   # KEY_DOWN
+dtoverlay=gpio-key,gpio=13,active_low=1,gpio_pull=up,keycode=28    # KEY_ENTER
+#dtoverlay=rotary-encoder,pin_a=12,pin_b=6,relative_axis=1          # rotary-encoder
+dtoverlay=pwm,pin=12,func=4
+dtparam=i2c=on
+dtparam=i2c_arm_baudrate=400000
+dtoverlay=i2c3,pins_4_5,baudrate=400000

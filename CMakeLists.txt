@@ -185,6 +185,8 @@ if(BUILD_TESTS)
     target_include_directories(test_protocol PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
     add_test(NAME rh850-flash-auto-offline
         COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/tests/test-rh850-flash-auto.sh)
+    add_test(NAME pi-config-txt
+        COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_pi_config_txt.sh)
     message(STATUS "Test targets enabled: test_protocol")
 endif()
 

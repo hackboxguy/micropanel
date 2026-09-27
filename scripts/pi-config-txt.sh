@@ -28,6 +28,31 @@ CONFIG_DATA_FILE="$CONFIG_DIR/display-configs.conf"
 BASE_TEMPLATE="$CONFIG_DIR/config-base.txt.in"
 TYPE_MARKER_PREFIX="micropanel-display-type: "
 
+# Split boot configuration (A/B images). An A/B image's config.txt is written
+# by the slot selector and must never be replaced wholesale: it selects the boot
+# slot. There, /etc/default/micropanel sets MICROPANEL_BOOT_CONFIG to a
+# device-owned display file at the root of the boot partition, which the
+# release-owned config.txt includes. Every caller keeps passing
+# --input=/boot/firmware/config.txt; this script reads and writes the display
+# file instead. Without /etc/default/micropanel (single-slot images, buildroot)
+# nothing below changes behaviour.
+MICROPANEL_DEFAULTS="${MICROPANEL_DEFAULTS:-/etc/default/micropanel}"
+SPLIT_CONFIG=""
+if [ -r "$MICROPANEL_DEFAULTS" ]; then
+    SPLIT_CONFIG=$(sed -n 's/^MICROPANEL_BOOT_CONFIG=//p' "$MICROPANEL_DEFAULTS" | tail -n 1 | tr -d "\"'")
+fi
+# The base-template line the per-type substitutions edit; in split form it
+# travels with the display block into the device file.
+TOUCH_OVERLAY_LINE="dtoverlay=himax-touch"
+DISPLAY_PLACEHOLDER="# Display-specific section will be inserted here by the script"
+
+# Test seams (tests/test_pi_config_txt.sh): an alternative root for the files a
+# display type derives, and the kernel-module commands. Unset in normal use.
+SYSROOT="${MICROPANEL_SYSROOT:-}"
+MODPROBE="${MICROPANEL_MODPROBE:-modprobe}"
+RMMOD="${MICROPANEL_RMMOD:-rmmod}"
+SYS_MODULE_DIR="${MICROPANEL_SYS_MODULE_DIR:-/sys/module}"
+
 # Function to display usage
 usage() {
     echo "Usage:"
@@ -41,6 +66,11 @@ usage() {
     echo "  --configspath=DIR Override config directory path (default: /usr/share/micropanel/configs)"
     echo "  --query-config    Read and output configured display type/resolution"
     echo "  --query-display   Query actual display resolution on HDMI output"
+    echo "  --no-reboot       Write the configuration but do not reboot (also MICROPANEL_NO_REBOOT=1)"
+    echo "  --apply-derived   Regenerate the module configuration the configured display type"
+    echo "                    implies and (re)load the display drivers; writes no boot file"
+    echo "  --emit-base=FILE  Split boot configuration only: write the release-owned base"
+    echo "                    config.txt that includes the display file"
     echo "  -v, --verbose     Show detailed information"
     exit 1
 }
@@ -116,7 +146,7 @@ generate_display_config() {
 # Function to configure HH983 serializer module
 configure_hh983_serializer() {
     local config_type="$1"
-    local hh983_conf="/etc/modprobe.d/hh983.conf"
+    local hh983_conf="$SYSROOT/etc/modprobe.d/hh983.conf"
 
     # edid-hdmi: disable both hh983-serializer and himax_mmi for direct HDMI output
     if [ "$config_type" = "edid-hdmi" ]; then
@@ -185,8 +215,8 @@ configure_hh983_serializer() {
 # 3x-qvue has no touch surface at all, so it loads neither and blacklists both.
 configure_touch_driver() {
     local config_type="$1"
-    local ml="/etc/modules-load.d/custom-drivers.conf"
-    local bl="/etc/modprobe.d/blacklist-himax-mmi.conf"
+    local ml="$SYSROOT/etc/modules-load.d/custom-drivers.conf"
+    local bl="$SYSROOT/etc/modprobe.d/blacklist-himax-mmi.conf"
 
     if [ "$config_type" = "3x-qvue" ]; then
         printf "# Custom driver load order (3x QVue, no touch)\\nhh983-serializer\\n" > "$ml"
@@ -212,7 +242,7 @@ configure_touch_driver() {
 # Function to configure als-dimmer symlink based on display type
 configure_als_dimmer() {
     local config_type="$1"
-    local als_dir="/home/pi/als-dimmer/etc/als-dimmer"
+    local als_dir="$SYSROOT/home/pi/als-dimmer/etc/als-dimmer"
     local als_link="$als_dir/config.json"
     local als_target=""
 
@@ -257,6 +287,20 @@ EOF
 
     # Remove the placeholder comment
     sed -i '/# Display-specific section will be inserted here by the script/d' "$temp_file"
+
+    apply_type_substitutions "$config_type" "$temp_file"
+
+    # Copy to final destination
+    cp "$temp_file" "$output_file"
+    rm "$temp_file"
+}
+
+# The per-type edits of base-template lines. Shared by the single-file config
+# (create_config) and the split display file (create_display_config), so the
+# two cannot drift.
+apply_type_substitutions() {
+    local config_type="$1"
+    local temp_file="$2"
 
     # For edid-hdmi, remove himax-touch overlay (not needed for direct HDMI)
     if [ "$config_type" = "edid-hdmi" ]; then
@@ -304,10 +348,132 @@ EOF
     if [ "$config_type" = "3x-qvue" ]; then
         sed -i 's/^dtoverlay=himax-touch$/dtoverlay=hh983-serializer/' "$temp_file"
     fi
+}
 
-    # Copy to final destination
+# Split form, device-owned part: the type marker, the touch overlay line the
+# substitutions edit, and the display block - in that order, which is the
+# order those lines have in the single-file config.
+create_display_config() {
+    local config_type="$1"
+    local output_file="$2"
+    local block_file=$(mktemp)
+    local temp_file=$(mktemp)
+
+    generate_display_config "$config_type" > "$block_file"
+    {
+        head -n 1 "$block_file"
+        echo "$TOUCH_OVERLAY_LINE"
+        tail -n +2 "$block_file"
+    } > "$temp_file"
+    rm "$block_file"
+    apply_type_substitutions "$config_type" "$temp_file"
     cp "$temp_file" "$output_file"
     rm "$temp_file"
+}
+
+# Split form, release-owned part: the base template with the touch overlay line
+# moved out and the display placeholder replaced by the include. Expanding the
+# include gives back the single-file config's lines in the same order.
+create_base_config() {
+    local output_file="$1"
+    local include_name=$(basename "$SPLIT_CONFIG")
+
+    if [ ! -f "$BASE_TEMPLATE" ]; then
+        echo "Error: Base template not found: $BASE_TEMPLATE" >&2
+        exit 1
+    fi
+    grep -qx "$TOUCH_OVERLAY_LINE" "$BASE_TEMPLATE" && grep -qx "$DISPLAY_PLACEHOLDER" "$BASE_TEMPLATE" || {
+        echo "Error: base template lacks the touch overlay line or the display placeholder" >&2
+        exit 1
+    }
+    sed -e "/^$TOUCH_OVERLAY_LINE\$/d" \
+        -e "s|^$DISPLAY_PLACEHOLDER\$|include $include_name|" \
+        "$BASE_TEMPLATE" > "$output_file"
+}
+
+# The display type a split display file records (its marker), if it names a
+# known type. --apply-derived cannot use read_current_config, which also
+# compares the hh983 module options - the very file it is about to regenerate.
+marked_display_type() {
+    local file="$1" marked
+    marked=$(grep -m1 "^# *$TYPE_MARKER_PREFIX" "$file" 2>/dev/null |
+             sed "s/^# *$TYPE_MARKER_PREFIX//" | tr -d '[:space:]')
+    if [ -n "$marked" ] && grep -q "^$marked:" "$CONFIG_DATA_FILE" 2>/dev/null; then
+        echo "$marked"
+    fi
+}
+
+module_loaded() {
+    [ -d "$SYS_MODULE_DIR/$(echo "$1" | tr '-' '_')" ]
+}
+
+# Write the module configuration the display type implies, then make the loaded
+# drivers match it. On an A/B image these files live in the volatile root and
+# fall back to the image defaults at every boot, while udev has already loaded
+# hh983-serializer (it has an OF match table) with those defaults by the time
+# the boot partition is mounted. So: drop whatever driver the type blacklists,
+# reload the serializer (and the touch drivers that sit on it) when its options
+# changed, then load the type's drivers in their configured order.
+apply_derived_modules() {
+    local config_type="$1"
+    local hh983_conf="$SYSROOT/etc/modprobe.d/hh983.conf"
+    local ml="$SYSROOT/etc/modules-load.d/custom-drivers.conf"
+    local bl="$SYSROOT/etc/modprobe.d/blacklist-himax-mmi.conf"
+    local old_options new_options module
+
+    old_options=$(cat "$hh983_conf" 2>/dev/null)
+    mkdir -p "$SYSROOT/etc/modprobe.d" "$SYSROOT/etc/modules-load.d"
+    configure_hh983_serializer "$config_type"
+    configure_touch_driver "$config_type"
+    configure_als_dimmer "$config_type"
+    new_options=$(cat "$hh983_conf" 2>/dev/null)
+
+    for module in himax_oled himax_mmi; do
+        if grep -qx "blacklist $module" "$bl" 2>/dev/null && module_loaded "$module"; then
+            echo "Unloading $module (blacklisted for $config_type)"
+            "$RMMOD" "$module" || echo "Warning: rmmod $module failed" >&2
+        fi
+    done
+    if [ "$old_options" != "$new_options" ] && module_loaded hh983-serializer; then
+        echo "Reloading hh983-serializer with the options for $config_type"
+        for module in himax_oled himax_mmi; do
+            if module_loaded "$module"; then
+                "$RMMOD" "$module" || echo "Warning: rmmod $module failed" >&2
+            fi
+        done
+        "$RMMOD" hh983_serializer || echo "Warning: rmmod hh983_serializer failed" >&2
+    fi
+    for module in $(grep -v '^#' "$ml" 2>/dev/null | sed '/^[[:space:]]*$/d'); do
+        "$MODPROBE" "$module" || echo "Warning: modprobe $module failed" >&2
+    done
+}
+
+# Split form writes: the boot partition is mounted read-only on an A/B image, so
+# make it writable for the write and put it back as it was. One rolling backup
+# beside the file, never timestamped copies: the boot partition is shared by
+# both slots and small.
+write_split_config() {
+    local config_type="$1"
+    local target="$2"
+    local boot_dir=$(dirname "$target")
+    local temp_file=$(mktemp)
+    local was_read_only=0
+
+    create_display_config "$config_type" "$temp_file"
+    if awk -v d="$boot_dir" '$2 == d { n = split($4, o, ","); for (i = 1; i <= n; i++) if (o[i] == "ro") r = 1 }
+                             END { exit !r }' /proc/mounts; then
+        mount -o remount,rw "$boot_dir" || { echo "Error: cannot make $boot_dir writable" >&2; rm -f "$temp_file"; exit 1; }
+        was_read_only=1
+    fi
+    [ -f "$target" ] && cp "$target" "$target.bak"
+    cp "$temp_file" "$target.new" && mv -f "$target.new" "$target"
+    local status=$?
+    rm -f "$temp_file"
+    sync
+    if [ "$was_read_only" -eq 1 ]; then
+        mount -o remount,ro "$boot_dir" || echo "Warning: could not return $boot_dir to read-only" >&2
+    fi
+    [ "$status" -eq 0 ] || { echo "Error: writing $target failed" >&2; exit 1; }
 }
 
 # Function to extract config content for comparison
@@ -321,7 +487,11 @@ get_reference_config() {
     local config_type="$1"
     local temp_file=$(mktemp)
 
-    create_config "$config_type" "$temp_file"
+    if [ -n "$SPLIT_CONFIG" ] && [ "$INPUT_FILE" = "$SPLIT_CONFIG" ]; then
+        create_display_config "$config_type" "$temp_file"
+    else
+        create_config "$config_type" "$temp_file"
+    fi
     extract_config_content "$temp_file"
     rm "$temp_file"
 }
@@ -356,7 +526,7 @@ get_expected_hh983_mode() {
 # Function to read and identify current configuration
 read_current_config() {
     local current_content=$(extract_config_content "$INPUT_FILE")
-    local hh983_conf="/etc/modprobe.d/hh983.conf"
+    local hh983_conf="$SYSROOT/etc/modprobe.d/hh983.conf"
     local current_hh983_mode="1"
     if [ -f "$hh983_conf" ]; then
         current_hh983_mode=$(grep -o 'config_mode=[0-9]*' "$hh983_conf" | head -1 | cut -d= -f2)
@@ -474,6 +644,9 @@ DISPLAY_TYPE=""
 QUERY_CONFIG=0
 QUERY_DISPLAY=0
 VERBOSE=0
+NO_REBOOT="${MICROPANEL_NO_REBOOT:-0}"
+APPLY_DERIVED=0
+EMIT_BASE=""
 
 for arg in "$@"; do
     case $arg in
@@ -499,6 +672,18 @@ for arg in "$@"; do
             QUERY_DISPLAY=1
             shift
             ;;
+        --no-reboot)
+            NO_REBOOT=1
+            shift
+            ;;
+        --apply-derived)
+            APPLY_DERIVED=1
+            shift
+            ;;
+        --emit-base=*)
+            EMIT_BASE="${arg#*=}"
+            shift
+            ;;
         -v|--verbose)
             VERBOSE=1
             shift
@@ -510,23 +695,50 @@ for arg in "$@"; do
 done
 
 # Check for valid command mode
-if [ -z "$INPUT_FILE" ] && [ -z "$DISPLAY_TYPE" ] && [ $QUERY_CONFIG -eq 0 ] && [ $QUERY_DISPLAY -eq 0 ]; then
+if [ -z "$INPUT_FILE" ] && [ -z "$DISPLAY_TYPE" ] && [ $QUERY_CONFIG -eq 0 ] && [ $QUERY_DISPLAY -eq 0 ] &&
+   [ $APPLY_DERIVED -eq 0 ] && [ -z "$EMIT_BASE" ]; then
     echo "Error: No operation specified"
     usage
 fi
 
+# Emit Base Mode (split boot configuration; used when an A/B image is built)
+if [ -n "$EMIT_BASE" ]; then
+    if [ -z "$SPLIT_CONFIG" ]; then
+        echo "Error: --emit-base needs MICROPANEL_BOOT_CONFIG in $MICROPANEL_DEFAULTS" >&2
+        exit 1
+    fi
+    create_base_config "$EMIT_BASE"
+    if [ $VERBOSE -eq 1 ]; then
+        echo "Base configuration written to $EMIT_BASE (includes $(basename "$SPLIT_CONFIG"))"
+    fi
+    exit 0
+fi
+
+# Split boot configuration: the callers' config.txt means the display file.
+if [ -n "$SPLIT_CONFIG" ]; then
+    case "$INPUT_FILE" in
+        ""|/boot/firmware/config.txt|/boot/config.txt)
+            if [ -n "$DISPLAY_TYPE" ] || [ $QUERY_CONFIG -eq 1 ] || [ $APPLY_DERIVED -eq 1 ] || [ -n "$INPUT_FILE" ]; then
+                INPUT_FILE="$SPLIT_CONFIG"
+            fi
+            ;;
+    esac
+fi
+
 # Auto-detect config file if not specified
-if [ -z "$INPUT_FILE" ] && ([ -n "$DISPLAY_TYPE" ] || [ $QUERY_CONFIG -eq 1 ]); then
+if [ -z "$INPUT_FILE" ] && ([ -n "$DISPLAY_TYPE" ] || [ $QUERY_CONFIG -eq 1 ] || [ $APPLY_DERIVED -eq 1 ]); then
     INPUT_FILE=$(find_config_file "")
 fi
 
 # If --input is provided without --query-config, enable query-config mode by default
-if [ -n "$INPUT_FILE" ] && [ -z "$DISPLAY_TYPE" ] && [ $QUERY_CONFIG -eq 0 ] && [ $QUERY_DISPLAY -eq 0 ]; then
+if [ -n "$INPUT_FILE" ] && [ -z "$DISPLAY_TYPE" ] && [ $QUERY_CONFIG -eq 0 ] && [ $QUERY_DISPLAY -eq 0 ] &&
+   [ $APPLY_DERIVED -eq 0 ]; then
     QUERY_CONFIG=1
 fi
 
-# Resolve and validate input file
-if [ -n "$INPUT_FILE" ]; then
+# Resolve and validate input file. A split display file may not exist yet when
+# it is first written (the A/B image build creates it).
+if [ -n "$INPUT_FILE" ] && ! { [ -n "$SPLIT_CONFIG" ] && [ "$INPUT_FILE" = "$SPLIT_CONFIG" ] && [ -n "$DISPLAY_TYPE" ]; }; then
     RESOLVED_INPUT_FILE=$(find_config_file "$INPUT_FILE")
     if [ ! -f "$RESOLVED_INPUT_FILE" ]; then
         echo "Error: Input file $RESOLVED_INPUT_FILE does not exist"
@@ -534,6 +746,10 @@ if [ -n "$INPUT_FILE" ]; then
     fi
     INPUT_FILE="$RESOLVED_INPUT_FILE"
 fi
+
+# The file that carries the display timings (get_current_resolution method 2).
+RESOLUTION_CONFIG_FILE="/boot/firmware/config.txt"
+[ -n "$SPLIT_CONFIG" ] && RESOLUTION_CONFIG_FILE="$SPLIT_CONFIG"
 
 # Include the original get_current_resolution function (unchanged for compatibility)
 get_current_resolution() {
@@ -591,17 +807,17 @@ get_current_resolution() {
     fi
 
     # Method 2: Check config.txt values directly
-    if [ -f "/boot/firmware/config.txt" ]; then
+    if [ -f "$RESOLUTION_CONFIG_FILE" ]; then
         # Look for framebuffer settings
-        fbw=$(grep -E "^framebuffer_width=" "/boot/firmware/config.txt" | cut -d'=' -f2)
-        fbh=$(grep -E "^framebuffer_height=" "/boot/firmware/config.txt" | cut -d'=' -f2)
+        fbw=$(grep -E "^framebuffer_width=" "$RESOLUTION_CONFIG_FILE" | cut -d'=' -f2)
+        fbh=$(grep -E "^framebuffer_height=" "$RESOLUTION_CONFIG_FILE" | cut -d'=' -f2)
         if [ -n "$fbw" ] && [ -n "$fbh" ] && [ "$fbw" != "0" ] && [ "$fbh" != "0" ]; then
             echo "${fbw}x${fbh}"
             return 0
         fi
 
         # Look for hdmi_timings and extract resolution
-        hdmi_timings=$(grep -E "^hdmi_timings=" "/boot/firmware/config.txt")
+        hdmi_timings=$(grep -E "^hdmi_timings=" "$RESOLUTION_CONFIG_FILE")
         if [ -n "$hdmi_timings" ]; then
             timings_values=$(echo "$hdmi_timings" | cut -d'=' -f2)
             width=$(echo "$timings_values" | awk '{print $1}')
@@ -718,18 +934,37 @@ if [ $QUERY_CONFIG -eq 1 ]; then
     exit 0
 fi
 
+# Apply Derived Mode: the module configuration of the type the file records.
+if [ $APPLY_DERIVED -eq 1 ]; then
+    if [ "$(id -u)" -ne 0 ] && [ -z "$SYSROOT" ]; then
+        echo "Error: --apply-derived must be run as root"
+        exit 1
+    fi
+    derived_type=$(marked_display_type "$INPUT_FILE")
+    if [ -z "$derived_type" ]; then
+        echo "Error: $INPUT_FILE records no known display type; module configuration left as it is" >&2
+        exit 1
+    fi
+    [ $VERBOSE -eq 1 ] && echo "Applying the module configuration for display type: $derived_type"
+    apply_derived_modules "$derived_type"
+    exit 0
+fi
+
 # Write Config Mode
 if [ -n "$DISPLAY_TYPE" ] && [ -n "$INPUT_FILE" ]; then
     # Check if running as root or with sudo
-    if [ "$(id -u)" -ne 0 ]; then
+    if [ "$(id -u)" -ne 0 ] && [ -z "$SYSROOT" ]; then
         echo "Error: This script must be run as root or with sudo for write operations"
         exit 1
     fi
 
-    # Check if the script has write access to the config file
-    if [ ! -w "$INPUT_FILE" ]; then
-        echo "Error: No write access to $INPUT_FILE"
-        exit 1
+    # Check if the script has write access to the config file (a split display
+    # file sits on a boot partition that is remounted writable for the write)
+    if [ -z "$SPLIT_CONFIG" ] || [ "$INPUT_FILE" != "$SPLIT_CONFIG" ]; then
+        if [ ! -w "$INPUT_FILE" ]; then
+            echo "Error: No write access to $INPUT_FILE"
+            exit 1
+        fi
     fi
 
     # Validate display type against supported types
@@ -744,8 +979,12 @@ if [ -n "$DISPLAY_TYPE" ] && [ -n "$INPUT_FILE" ]; then
         echo "Updating $INPUT_FILE for display type: $DISPLAY_TYPE ($DESCRIPTION)"
     fi
 
-    create_backup
-    create_config "$DISPLAY_TYPE" "$INPUT_FILE"
+    if [ -n "$SPLIT_CONFIG" ] && [ "$INPUT_FILE" = "$SPLIT_CONFIG" ]; then
+        write_split_config "$DISPLAY_TYPE" "$INPUT_FILE"
+    else
+        create_backup
+        create_config "$DISPLAY_TYPE" "$INPUT_FILE"
+    fi
 
     # Apply side effects only during write operations
     configure_hh983_serializer "$DISPLAY_TYPE"
@@ -757,6 +996,9 @@ if [ -n "$DISPLAY_TYPE" ] && [ -n "$INPUT_FILE" ]; then
         echo "A reboot may be required for changes to take effect"
     fi
 
+    if [ "$NO_REBOOT" = 1 ]; then
+        exit 0
+    fi
     reboot  # trigger reboot so that changed timing can take effect
     exit 0
 fi
