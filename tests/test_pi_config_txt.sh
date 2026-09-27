@@ -47,6 +47,19 @@ for type in $types; do
 done
 echo "ok  single-file config.txt byte-identical to the golden output for every type"
 
+# The config.txt the image build installs (micropanel-hook.sh copies it to the
+# boot partition) is the edid rendering, so a fresh image queries as a known type.
+cmp -s "$configs/config.txt" "$golden/edid.config.txt" || fail 'configs/config.txt is not the edid rendering of the template'
+root="$work/shipped"; new_sysroot "$root"
+shipped_type=$(MICROPANEL_DEFAULTS="$work/absent" MICROPANEL_SYSROOT="$root" \
+    sh "$script" --configspath="$configs" --input="$configs/config.txt" --query-config)
+[ "$shipped_type" = edid ] || fail "configs/config.txt queries as '$shipped_type', not edid"
+# No overlay that exists nowhere: GPIO22 (the RH850 reset line) is pulled up
+# with the firmware's own gpio= directive.
+grep -q 'gpio-pullup' "$configs/config-base.txt.in" && fail 'config-base.txt.in names the nonexistent gpio-pullup overlay'
+grep -qx 'gpio=22=ip,pu' "$configs/config-base.txt.in" || fail 'config-base.txt.in lacks the GPIO22 pull-up'
+echo "ok  shipped configs/config.txt is the edid rendering and queries as edid"
+
 # --- 2./3. split form ---------------------------------------------------------
 for type in $types; do
     root="$work/split-$type"; new_sysroot "$root"
