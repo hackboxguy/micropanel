@@ -51,6 +51,8 @@ DISPLAY_PLACEHOLDER="# Display-specific section will be inserted here by the scr
 SYSROOT="${MICROPANEL_SYSROOT:-}"
 MODPROBE="${MICROPANEL_MODPROBE:-modprobe}"
 RMMOD="${MICROPANEL_RMMOD:-rmmod}"
+I2CSET="${MICROPANEL_I2CSET:-i2cset}"
+SLEEP="${MICROPANEL_SLEEP:-sleep}"
 SYS_MODULE_DIR="${MICROPANEL_SYS_MODULE_DIR:-/sys/module}"
 
 # Function to display usage
@@ -407,19 +409,45 @@ module_loaded() {
     [ -d "$SYS_MODULE_DIR/$(echo "$1" | tr '-' '_')" ]
 }
 
+# The 983's APB LINK_ENABLE, and the HPD toggle built on it: after a serializer
+# reload the DP source does not retrain by itself (a fresh probe deliberately
+# does no HPD toggle), so the panel stays black until something asks it to.
+# Copies of dip-switch-resolution.sh's apb_link_enable/hpd_toggle; keep the two
+# identical.
+apb_link_enable() {
+    "$I2CSET" -y -f 1 0x18 0x48 0x01
+    "$I2CSET" -y -f 1 0x18 0x49 0x00
+    "$I2CSET" -y -f 1 0x18 0x4a 0x00
+    "$I2CSET" -y -f 1 0x18 0x4b "$1"
+    "$I2CSET" -y -f 1 0x18 0x4c 0x00
+    "$I2CSET" -y -f 1 0x18 0x4d 0x00
+    "$I2CSET" -y -f 1 0x18 0x4e 0x00
+}
+hpd_toggle() {
+    echo "HPD toggle (983 APB LINK_ENABLE 0 -> 1)"
+    apb_link_enable 0x00
+    "$SLEEP" 1
+    apb_link_enable 0x01
+    "$SLEEP" 2
+}
+
 # Write the module configuration the display type implies, then make the loaded
 # drivers match it. On an A/B image these files live in the volatile root and
 # fall back to the image defaults at every boot, while udev has already loaded
 # hh983-serializer (it has an OF match table) with those defaults by the time
-# the boot partition is mounted. So: drop whatever driver the type blacklists,
-# reload the serializer (and the touch drivers that sit on it) when its options
-# changed, then load the type's drivers in their configured order.
+# the boot partition is mounted - unless the image blacklists its alias
+# autoload, which an A/B image does, so that this loads it exactly once with
+# the right options (an explicit modprobe ignores the blacklist). So: drop
+# whatever driver the type blacklists; if the serializer is already loaded
+# with other options, reload it (and the touch drivers that sit on it); load
+# the type's drivers in their configured order; and after an actual reload,
+# toggle HPD so the DP source retrains.
 apply_derived_modules() {
     local config_type="$1"
     local hh983_conf="$SYSROOT/etc/modprobe.d/hh983.conf"
     local ml="$SYSROOT/etc/modules-load.d/custom-drivers.conf"
     local bl="$SYSROOT/etc/modprobe.d/blacklist-himax-mmi.conf"
-    local old_options new_options module
+    local old_options new_options module reloaded=0
 
     old_options=$(cat "$hh983_conf" 2>/dev/null)
     mkdir -p "$SYSROOT/etc/modprobe.d" "$SYSROOT/etc/modules-load.d"
@@ -442,10 +470,14 @@ apply_derived_modules() {
             fi
         done
         "$RMMOD" hh983_serializer || echo "Warning: rmmod hh983_serializer failed" >&2
+        reloaded=1
     fi
     for module in $(grep -v '^#' "$ml" 2>/dev/null | sed '/^[[:space:]]*$/d'); do
         "$MODPROBE" "$module" || echo "Warning: modprobe $module failed" >&2
     done
+    if [ "$reloaded" -eq 1 ] && module_loaded hh983-serializer; then
+        hpd_toggle
+    fi
 }
 
 # Split form writes: the boot partition is mounted read-only on an A/B image, so

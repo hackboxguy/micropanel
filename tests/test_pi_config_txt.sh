@@ -98,7 +98,7 @@ echo "ok  split form: redirect, base + include = single-file lines in order, que
 
 # --- 4. --apply-derived ----------------------------------------------------------
 stub_bin="$work/bin"; mkdir -p "$stub_bin"
-for command in modprobe rmmod; do
+for command in modprobe rmmod i2cset; do
     cat > "$stub_bin/$command" <<EOF
 #!/bin/sh
 echo "$command \$*" >> "\$STUB_LOG"
@@ -107,11 +107,12 @@ case "$command" in
     modprobe) mkdir -p "\$STUB_SYS/\$module" ;;
     rmmod) rm -rf "\$STUB_SYS/\$module" ;;
 esac
+exit 0
 EOF
     chmod +x "$stub_bin/$command"
 done
 derive() { # $1=type $2=modules loaded before (by udev / modules-load at boot)
-    root="$work/derive-$1"; new_sysroot "$root"; mkdir -p "$root/boot" "$root/sys"
+    root="$work/derive-$1"; rm -rf "$root"; new_sysroot "$root"; mkdir -p "$root/boot" "$root/sys"
     for module in $2; do mkdir -p "$root/sys/$module"; done
     echo "MICROPANEL_BOOT_CONFIG=$root/boot/micropanel-display.txt" > "$root/defaults"
     MICROPANEL_DEFAULTS="$root/defaults" MICROPANEL_SYSROOT="$root" \
@@ -120,6 +121,7 @@ derive() { # $1=type $2=modules loaded before (by udev / modules-load at boot)
     : > "$root/stub.log"
     STUB_LOG="$root/stub.log" STUB_SYS="$root/sys" MICROPANEL_DEFAULTS="$root/defaults" MICROPANEL_SYSROOT="$root" \
         MICROPANEL_MODPROBE="$stub_bin/modprobe" MICROPANEL_RMMOD="$stub_bin/rmmod" MICROPANEL_SYS_MODULE_DIR="$root/sys" \
+        MICROPANEL_I2CSET="$stub_bin/i2cset" MICROPANEL_SLEEP=true \
         sh "$script" --configspath="$configs" --apply-derived >/dev/null
 }
 # ots-oled-17: udev loaded the serializer with the default options and
@@ -128,8 +130,20 @@ derive ots-oled-17 "hh983_serializer himax_mmi"
 root="$work/derive-ots-oled-17"
 grep -q 'config_mode=0 ots_touch=1' "$root/etc/modprobe.d/hh983.conf" || fail 'apply-derived: ots-oled-17 options not written'
 grep -qx 'blacklist himax_mmi' "$root/etc/modprobe.d/blacklist-himax-mmi.conf" || fail 'apply-derived: himax_mmi not blacklisted'
-[ "$(cat "$root/stub.log")" = "$(printf '%s\n' 'rmmod himax_mmi' 'rmmod hh983_serializer' 'modprobe hh983-serializer' 'modprobe himax_oled')" ] || {
-    fail 'apply-derived: ots-oled-17 driver sequence'; cat "$root/stub.log" >&2; }
+# ...and after that reload the DP source must be asked to retrain: the HPD
+# toggle (LINK_ENABLE 0, then 1) follows the loads.
+hpd_sequence=$(for value in 0x00 0x01; do
+    printf '%s\n' "i2cset -y -f 1 0x18 0x48 0x01" "i2cset -y -f 1 0x18 0x49 0x00" "i2cset -y -f 1 0x18 0x4a 0x00" \
+        "i2cset -y -f 1 0x18 0x4b $value" "i2cset -y -f 1 0x18 0x4c 0x00" "i2cset -y -f 1 0x18 0x4d 0x00" "i2cset -y -f 1 0x18 0x4e 0x00"
+done)
+[ "$(cat "$root/stub.log")" = "$(printf '%s\n' 'rmmod himax_mmi' 'rmmod hh983_serializer' 'modprobe hh983-serializer' 'modprobe himax_oled' "$hpd_sequence")" ] || {
+    fail 'apply-derived: ots-oled-17 reload sequence (with the HPD toggle after it)'; cat "$root/stub.log" >&2; }
+# An A/B image blacklists the drivers' alias autoload, so at boot nothing is
+# loaded yet: one load each, in order, no reload and no HPD toggle.
+derive ots-oled-17 ""
+root="$work/derive-ots-oled-17"
+[ "$(cat "$root/stub.log")" = "$(printf '%s\n' 'modprobe hh983-serializer' 'modprobe himax_oled')" ] || {
+    fail 'apply-derived: blacklisted autoload - expected one load each and no toggle'; cat "$root/stub.log" >&2; }
 [ -d "$root/sys/himax_oled" ] && [ ! -d "$root/sys/himax_mmi" ] || fail 'apply-derived: wrong touch driver loaded for ots-oled-17'
 # 12.3: the defaults are already right; nothing is unloaded.
 derive 12.3 "hh983_serializer himax_mmi"

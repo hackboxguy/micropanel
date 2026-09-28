@@ -138,6 +138,8 @@ apb_link_enable() {
 # A fresh probe deliberately does no HPD toggle (it would tear down a DP link
 # that is already up at boot), so after a reload the DP input stays down until
 # something asks the source to retrain.
+# pi-config-txt.sh carries a copy of apb_link_enable/hpd_toggle (for
+# --apply-derived after a serializer reload); keep the two identical.
 hpd_toggle() {
     log "  HPD toggle (983 APB LINK_ENABLE 0 -> 1)"
     apb_link_enable 0x00
