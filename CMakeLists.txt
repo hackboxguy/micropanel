@@ -187,6 +187,8 @@ if(BUILD_TESTS)
         COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/tests/test-rh850-flash-auto.sh)
     add_test(NAME pi-config-txt
         COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_pi_config_txt.sh)
+    add_test(NAME micropanel-service
+        COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_micropanel_service.sh)
     message(STATUS "Test targets enabled: test_protocol")
 endif()
 
@@ -271,6 +273,7 @@ if(INSTALL_HELPER_SCRIPTS)
         scripts/stop-image.sh
         scripts/micropanel-version.sh
         scripts/micropanel-detect-i2c.sh
+        scripts/micropanel-oled-present.sh
         scripts/pi-cpu-temp.sh
         scripts/collect-logs-to-usb.sh
         scripts/network-interfaces-list.sh

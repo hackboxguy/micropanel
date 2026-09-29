@@ -5,6 +5,10 @@ After=network.target
 [Service]
 Type=simple
 User=@SERVICE_USER@
+# No SSD1306 on the display bus: a head-unit board (983HH adapter), where this
+# service is not wanted until the next boot. The condition fails, the unit
+# stays inactive and is not restarted; Restart= still covers a real crash.
+ExecCondition=@CMAKE_INSTALL_PREFIX@/usr/bin/micropanel-oled-present.sh @SYSTEMD_UNITFILE_ARGS@
 ExecStart=/bin/sh -c '@CMAKE_INSTALL_PREFIX@/usr/bin/micropanel @SYSTEMD_UNITFILE_ARGS@ -c @CMAKE_INSTALL_PREFIX@/etc/micropanel/config.json >/tmp/micropanel.log 2>&1'
 Restart=on-failure
 RestartSec=5
