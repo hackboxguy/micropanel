@@ -10,6 +10,9 @@ arm_64bit=1
 arm_boost=1
 disable_fw_kms_setup=1
 max_framebuffers=2
+# 128 MB for the VideoCore: two H.264 hardware decoders at once (USB Media's
+# next-item prefetch); at the 76 MB default the codec firmware starves or wedges
+gpu_mem=128
 dtoverlay=himax-touch
 
 # micropanel-display-type: 14.6-fhd
