@@ -189,6 +189,8 @@ if(BUILD_TESTS)
         COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_pi_config_txt.sh)
     add_test(NAME micropanel-service
         COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_micropanel_service.sh)
+    add_test(NAME dhcp-net-settings
+        COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_dhcp_net_settings.sh)
     message(STATUS "Test targets enabled: test_protocol")
 endif()
 
@@ -265,6 +267,7 @@ if(INSTALL_HELPER_SCRIPTS)
         scripts/stop-video.sh
         scripts/buzzer.sh
         scripts/dhcp-net-settings-pios.sh
+        scripts/dhcp-net-settings-netctl.sh
         scripts/hdmi-patch.sh
         scripts/list-videos.sh
         scripts/list-images.sh

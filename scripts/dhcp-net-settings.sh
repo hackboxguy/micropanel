@@ -8,6 +8,16 @@
 
 # Default values
 SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
+
+# br-wrapper's net-ctl.sh (the Network app's helper), if installed: $NET_CTL,
+# else the PATH, else beside the Qt apps ($MICROPANEL_HOME/bin, two levels up
+# from these scripts in $MICROPANEL_HOME/usr/bin), else /usr/bin
+find_net_ctl() {
+    for c in "${NET_CTL:-}" "$(command -v net-ctl.sh 2>/dev/null)" "$SCRIPT_DIR/../../bin/net-ctl.sh" /usr/bin/net-ctl.sh; do
+        [ -n "$c" ] && [ -x "$c" ] && { readlink -f "$c"; return 0; }
+    done
+    return 1
+}
 BACKUP_PATH="/tmp/net-settings-bkup"
 VERBOSE=0
 DRY_RUN=0
@@ -230,6 +240,15 @@ main() {
 
     # Determine OS-specific script
     OS_SCRIPT="$SCRIPT_DIR/dhcp-net-settings-$OS.sh"
+
+    # Pi OS with the Network app's net-ctl.sh and NetworkManager running: the
+    # menu goes through net-ctl.sh, so it and the app agree on every port.
+    # Otherwise (no net-ctl.sh, no NetworkManager) the OS script, as before.
+    if [ "$OS" = "pios" ] && NET_CTL=$(find_net_ctl) && "$NET_CTL" available >/dev/null 2>&1; then
+        OS_SCRIPT="$SCRIPT_DIR/dhcp-net-settings-netctl.sh"
+        export NET_CTL
+        log_verbose "Using net-ctl.sh: $NET_CTL"
+    fi
 
     # Check if OS-specific script exists and is executable
     if [ ! -f "$OS_SCRIPT" ]; then
