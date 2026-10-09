@@ -11,7 +11,13 @@
 #   0xfe  -> 15.6-2k5
 #   0xdf  -> 17.3-3k
 #   0x79  -> ots-oled-17 (DIP setting 01100001, active-low)
+#   0x39  -> ots-oled-17 on a DS90UH983 CS2.0 983HH (DIP setting 01100011)
 #   0x75  -> 3x-qvue (DIP setting 01010001, active-low)
+#   0x35  -> 3x-qvue on a DS90UH983 CS2.0 983HH (DIP setting 01010011)
+#
+# DIP6 selects the 983HH's CS2.0 init sequence (983_manager profiles
+# ots_oled_17_cs2 and qvue3_cs2_6g75); the panel, and so the Pi's display
+# type, is the same as without it.
 #   0xef  -> 27
 #
 # Reboot loop guard: at most one auto-reboot per mismatch.
@@ -158,8 +164,8 @@ map_dip_to_type() {
         0xfd) echo "14.6-2k5" ;;
         0xfe) echo "15.6-2k5" ;;
         0xdf) echo "17.3-3k" ;;
-        0x79) echo "ots-oled-17" ;;
-        0x75) echo "3x-qvue" ;;
+        0x79|0x39) echo "ots-oled-17" ;;
+        0x75|0x35) echo "3x-qvue" ;;
         0xef) echo "27" ;;
         *)    echo "" ;;
     esac
