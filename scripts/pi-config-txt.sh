@@ -252,8 +252,11 @@ configure_als_dimmer() {
     # panels, both DIP2) share one 988/Spartan-7 driver board and its OPT4001,
     # so they share one config. Named here rather than left to the image
     # default, so a link left by another display type cannot outlive a change.
+    # Their pixelpipe bitstreams return integer lux at 0x0C (scale 1.0), the
+    # fpga_opti4001_lux contract; the legacy fpga_opti4001 config's 1.64 read
+    # 1.64x the real light. Brightness is 0x1D reg 0x35, BCD 0-800 (dimmer800).
     case "$config_type" in
-        12.3|14.6-fhd) als_target="$als_dir/config_fpga_opti4001_dimmer800.json" ;;
+        12.3|14.6-fhd) als_target="$als_dir/config_fpga_opti4001_lux_dimmer800.json" ;;
         12.3-nq1) als_target="$als_dir/config_fpga_opti4001_dimmer2048_12_3_nq1v1.json" ;;
         12.3-nq1v1.1) als_target="$als_dir/config_fpga_opti4001_dimmer2048_12_3_nq1v1.json" ;;
         15.6-2k5) als_target="$als_dir/config_fpga_opti4001_dimmer2048_15_6_0od.json" ;;
