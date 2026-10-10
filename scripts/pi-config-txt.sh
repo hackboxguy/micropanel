@@ -248,7 +248,12 @@ configure_als_dimmer() {
     local als_link="$als_dir/config.json"
     local als_target=""
 
+    # 12.3 (12.3"-NQ5) and 14.6-fhd (the 14.6" FHD scan-mode and direct-drive
+    # panels, both DIP2) share one 988/Spartan-7 driver board and its OPT4001,
+    # so they share one config. Named here rather than left to the image
+    # default, so a link left by another display type cannot outlive a change.
     case "$config_type" in
+        12.3|14.6-fhd) als_target="$als_dir/config_fpga_opti4001_dimmer800.json" ;;
         12.3-nq1) als_target="$als_dir/config_fpga_opti4001_dimmer2048_12_3_nq1v1.json" ;;
         12.3-nq1v1.1) als_target="$als_dir/config_fpga_opti4001_dimmer2048_12_3_nq1v1.json" ;;
         15.6-2k5) als_target="$als_dir/config_fpga_opti4001_dimmer2048_15_6_0od.json" ;;
