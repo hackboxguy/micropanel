@@ -19,6 +19,14 @@
 # ots_oled_17_cs2 and qvue3_cs2_6g75); the panel, and so the Pi's display
 # type, is the same as without it.
 #   0xef  -> 27
+#   0xff  -> soft DIP (every switch off): see below
+#
+# Soft DIP: with every switch off the 983HH's RH850 (983_manager v01.13+) runs
+# no profile and waits. The display type chosen on the Pi (Stream Deck HDMI
+# timing buttons -> pi-config-txt.sh, persistent on the SD card) is turned back
+# into the DIP on-mask that type would have, written to the RH850's SOFT_DIP
+# register (0x67 reg 0x0316) and run with a cold re-init (0x0300 = 0x11), on
+# every boot. The RH850 keeps nothing; the Pi's config is the setting.
 #
 # Reboot loop guard: at most one auto-reboot per mismatch.
 # Flag file is created before rebooting; if it exists on next boot
@@ -171,6 +179,83 @@ map_dip_to_type() {
     esac
 }
 
+# Display type -> PCF8574 value, the reverse of map_dip_to_type. The first value
+# that maps to the type wins, so the CS1.0 positions are used for ots-oled-17
+# and 3x-qvue: the RH850 picks the CS2.0 sequence from the silicon itself.
+type_to_dip() {
+    for _v in 0xf7 0x7a 0x6d 0xfb 0xfd 0xfe 0xdf 0x79 0x75 0xef; do
+        if [ "$(map_dip_to_type "$_v")" = "$1" ]; then
+            echo "$_v"
+            return 0
+        fi
+    done
+    return 1
+}
+
+# 983_manager status slave (0x67 on i2c-1): 16-bit register, big-endian.
+RH850_BUS=1
+RH850_ADDR=0x67
+
+rh850_read() {
+    i2ctransfer -y -f "$RH850_BUS" w2@"$RH850_ADDR" "$1" "$2" r1@"$RH850_ADDR" 2>/dev/null
+}
+
+rh850_write() {
+    i2ctransfer -y -f "$RH850_BUS" w3@"$RH850_ADDR" "$1" "$2" "$3" 2>/dev/null
+}
+
+# All switches off: have the RH850 run the profile of the Pi's display type.
+apply_soft_dip() {
+    _type=$("$SCRIPT_DIR/pi-config-txt.sh" $(build_config_args) 2>/dev/null)
+    _raw=$(type_to_dip "$_type") || {
+        log "Soft DIP: display type '${_type:-unknown}' has no 983HH profile, skipping"
+        return 0
+    }
+    _mask=$(printf '0x%02x' $(( _raw ^ 0xff )))
+
+    if ! wait_for_rh850; then
+        return 1
+    fi
+    _hw=$(rh850_read 0x03 0x15)
+    if [ -z "$_hw" ]; then
+        log "Soft DIP: no SOFT_DIP support on the RH850 (983_manager older than v01.13?), skipping"
+        return 1
+    fi
+    if [ "$_hw" != "0x00" ]; then
+        log "Soft DIP: RH850 latched DIP on-mask $_hw at boot, not soft mode, skipping"
+        return 0
+    fi
+    if [ "$(rh850_read 0x03 0x17)" = "0x01" ] && [ "$(rh850_read 0x03 0x16)" = "$_mask" ]; then
+        log "Soft DIP: $_type ($_mask) already running"
+        return 0
+    fi
+
+    log "Soft DIP: display type $_type -> DIP on-mask $_mask, cold re-init"
+    stop_drivers
+    rh850_write 0x03 0x16 "$_mask"
+    rh850_write 0x03 0x00 0x11
+    # The RH850 drops its slave while it runs the profile; poll DBG_STATUS.
+    sleep 1
+    _t=0
+    _st=""
+    while [ "$_t" -lt 30 ]; do
+        _st=$(rh850_read 0x03 0x01)
+        [ "$_st" = "0x02" ] || [ "$_st" = "0xff" ] && break
+        sleep 1
+        _t=$((_t + 1))
+    done
+    _err=$(rh850_read 0x03 0x04)
+    _prof=$(rh850_read 0x03 0x07)
+    if [ "$_st" = "0x02" ]; then
+        log "Soft DIP: profile $_prof up after ~$((_t + 1))s"
+    else
+        echo "[dip-switch] Soft DIP: re-init failed (DBG_STATUS=${_st:-none} LAST_ERROR=${_err:-none} profile=${_prof:-none})"
+    fi
+    start_drivers
+    hpd_toggle
+    [ "$_st" = "0x02" ]
+}
+
 # Read the DIP switch, waiting for the bus if it is not up yet.
 #
 # This unit starts After=local-fs.target, which can be before i2c-3 is
@@ -207,6 +292,12 @@ dip_value=$(read_dip) || exit 0
 log "DIP switch value: $dip_value"
 
 # Map to display type
+if [ "$dip_value" = "0xff" ]; then
+    log "Every DIP switch off: soft DIP mode"
+    apply_soft_dip
+    exit 0
+fi
+
 expected_type=$(map_dip_to_type "$dip_value")
 if [ -z "$expected_type" ]; then
     log "Unknown DIP switch value $dip_value, skipping"
