@@ -179,12 +179,24 @@ map_dip_to_type() {
     esac
 }
 
+# A display type that shares its DIP position with another: same panel size,
+# timing and RH850 profile, told apart only by the type pi-config-txt.sh
+# recorded. The DIP switch cannot select it, so it satisfies its base type's
+# position instead of being "corrected" back to the base type at every boot.
+dip_base_type() {
+    case "$1" in
+        14.6-fhd-ej) echo "14.6-fhd" ;;   # scan-mode EJ; DIP2 like direct-drive
+        *)           echo "$1" ;;
+    esac
+}
+
 # Display type -> PCF8574 value, the reverse of map_dip_to_type. The first value
 # that maps to the type wins, so the CS1.0 positions are used for ots-oled-17
 # and 3x-qvue: the RH850 picks the CS2.0 sequence from the silicon itself.
 type_to_dip() {
+    _base=$(dip_base_type "$1")
     for _v in 0xf7 0x7a 0x6d 0xfb 0xfd 0xfe 0xdf 0x79 0x75 0xef; do
-        if [ "$(map_dip_to_type "$_v")" = "$1" ]; then
+        if [ "$(map_dip_to_type "$_v")" = "$_base" ]; then
             echo "$_v"
             return 0
         fi
@@ -316,8 +328,8 @@ fi
 
 log "Current config type: $current_type"
 
-# Compare
-if [ "$current_type" = "$expected_type" ]; then
+# Compare. A variant type (dip_base_type) matches its base type's position.
+if [ "$current_type" = "$expected_type" ] || [ "$(dip_base_type "$current_type")" = "$expected_type" ]; then
     log "Config matches DIP switch, no action needed"
     # After a DIP-switch-triggered reboot, power-cycle the display to restore sync
     if [ -f "$REBOOT_FLAG" ]; then

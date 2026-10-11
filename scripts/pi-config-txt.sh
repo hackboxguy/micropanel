@@ -58,13 +58,13 @@ SYS_MODULE_DIR="${MICROPANEL_SYS_MODULE_DIR:-/sys/module}"
 # Function to display usage
 usage() {
     echo "Usage:"
-    echo "  Write config: $0 --input=/boot/firmware/config.txt --type=<12.3/12.3-nq1/12.3-nq1v1.1/14.6-fhd/14.6-2k5/15.6-2k5/17.3-3k/ots-oled-17/3x-qvue/27/edid/edid-hdmi>"
+    echo "  Write config: $0 --input=/boot/firmware/config.txt --type=<12.3/12.3-nq1/12.3-nq1v1.1/14.6-fhd/14.6-fhd-ej/14.6-2k5/15.6-2k5/17.3-3k/ots-oled-17/3x-qvue/27/edid/edid-hdmi>"
     echo "  Read config: $0 --input=/boot/firmware/config.txt [--query-config] [-v]"
     echo "  Query display: $0 --query-display [-v]"
     echo ""
     echo "Options:"
     echo "  --input=FILE      Specify the configuration file path"
-    echo "  --type=TYPE       Configure for display type (12.3, 12.3-nq1, 12.3-nq1v1.1, 14.6-fhd, 14.6-2k5, 15.6-2k5, 17.3-3k, ots-oled-17, 3x-qvue, 27, edid, edid-hdmi)"
+    echo "  --type=TYPE       Configure for display type (12.3, 12.3-nq1, 12.3-nq1v1.1, 14.6-fhd, 14.6-fhd-ej, 14.6-2k5, 15.6-2k5, 17.3-3k, ots-oled-17, 3x-qvue, 27, edid, edid-hdmi)"
     echo "  --configspath=DIR Override config directory path (default: /usr/share/micropanel/configs)"
     echo "  --query-config    Read and output configured display type/resolution"
     echo "  --query-display   Query actual display resolution on HDMI output"
@@ -255,8 +255,13 @@ configure_als_dimmer() {
     # Their pixelpipe bitstreams return integer lux at 0x0C (scale 1.0), the
     # fpga_opti4001_lux contract; the legacy fpga_opti4001 config's 1.64 read
     # 1.64x the real light. Brightness is 0x1D reg 0x35, BCD 0-800 (dimmer800).
+    # 14.6-fhd-ej (the scan-mode EJ panel; 14.6-fhd is direct-drive) is the
+    # same board and register map with a different brightness-to-nits curve
+    # (1074 nits at 100 % against the shared table's 1187), so it gets the
+    # same config with its own sweep table.
     case "$config_type" in
         12.3|14.6-fhd) als_target="$als_dir/config_fpga_opti4001_lux_dimmer800.json" ;;
+        14.6-fhd-ej) als_target="$als_dir/config_fpga_opti4001_lux_dimmer800_14_6_ej.json" ;;
         12.3-nq1) als_target="$als_dir/config_fpga_opti4001_dimmer2048_12_3_nq1v1.json" ;;
         12.3-nq1v1.1) als_target="$als_dir/config_fpga_opti4001_dimmer2048_12_3_nq1v1.json" ;;
         15.6-2k5) als_target="$als_dir/config_fpga_opti4001_dimmer2048_15_6_0od.json" ;;
