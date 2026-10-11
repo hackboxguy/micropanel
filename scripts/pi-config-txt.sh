@@ -248,19 +248,21 @@ configure_als_dimmer() {
     local als_link="$als_dir/config.json"
     local als_target=""
 
-    # 12.3 (12.3"-NQ5) and 14.6-fhd (the 14.6" FHD scan-mode and direct-drive
-    # panels, both DIP2) share one 988/Spartan-7 driver board and its OPT4001,
-    # so they share one config. Named here rather than left to the image
-    # default, so a link left by another display type cannot outlive a change.
+    # 12.3 (12.3"-NQ5), 14.6-fhd and 14.6-fhd-ej (the 14.6" FHD direct-drive
+    # and scan-mode EJ panels, both DIP2) share one 988/Spartan-7 driver board
+    # and its OPT4001, so they share one config layout. Named here rather than
+    # left to the image default, so a link left by another display type cannot
+    # outlive a change.
     # Their pixelpipe bitstreams return integer lux at 0x0C (scale 1.0), the
     # fpga_opti4001_lux contract; the legacy fpga_opti4001 config's 1.64 read
     # 1.64x the real light. Brightness is 0x1D reg 0x35, BCD 0-800 (dimmer800).
-    # 14.6-fhd-ej (the scan-mode EJ panel; 14.6-fhd is direct-drive) is the
-    # same board and register map with a different brightness-to-nits curve
-    # (1074 nits at 100 % against the shared table's 1187), so it gets the
-    # same config with its own sweep table.
+    # The two 14.6" panels - 14.6-fhd direct-drive and 14.6-fhd-ej scan-mode
+    # EJ - are the same board and register map with brightness-to-nits curves
+    # about 12 % apart, so each gets that config with its own sweep table;
+    # 12.3 keeps the shared one.
     case "$config_type" in
-        12.3|14.6-fhd) als_target="$als_dir/config_fpga_opti4001_lux_dimmer800.json" ;;
+        12.3) als_target="$als_dir/config_fpga_opti4001_lux_dimmer800.json" ;;
+        14.6-fhd) als_target="$als_dir/config_fpga_opti4001_lux_dimmer800_14_6_dd.json" ;;
         14.6-fhd-ej) als_target="$als_dir/config_fpga_opti4001_lux_dimmer800_14_6_ej.json" ;;
         12.3-nq1) als_target="$als_dir/config_fpga_opti4001_dimmer2048_12_3_nq1v1.json" ;;
         12.3-nq1v1.1) als_target="$als_dir/config_fpga_opti4001_dimmer2048_12_3_nq1v1.json" ;;
