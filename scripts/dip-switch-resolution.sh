@@ -207,6 +207,8 @@ type_to_dip() {
 # 983_manager status slave (0x67 on i2c-1): 16-bit register, big-endian.
 RH850_BUS=1
 RH850_ADDR=0x67
+# Seconds the bus is left alone after a soft-DIP cold re-init (see apply_soft_dip).
+SOFT_DIP_QUIET_S=6
 
 rh850_read() {
     i2ctransfer -y -f "$RH850_BUS" w2@"$RH850_ADDR" "$1" "$2" r1@"$RH850_ADDR" 2>/dev/null
@@ -246,8 +248,15 @@ apply_soft_dip() {
     stop_drivers
     rh850_write 0x03 0x16 "$_mask"
     rh850_write 0x03 0x00 0x11
-    # The RH850 drops its slave while it runs the profile; poll DBG_STATUS.
-    sleep 1
+    # The RH850 drops its slave while it runs the profile; poll DBG_STATUS,
+    # but only after the profile has had time to finish. The RH850 writes the
+    # serializer with a bit-banged master that has no multi-master
+    # arbitration, on the bus we poll it on. A poll that lands on one of its
+    # writes makes that write fail. A CS2.0 profile that loads its EDID over
+    # APB (OTS-OLED, 3x QVue) runs for about 4 s, and a poll at 1 s ended its
+    # bring-up with LAST_ERROR 0x04 on every boot (983_manager v01.14 also
+    # retries such a write).
+    sleep "$SOFT_DIP_QUIET_S"
     _t=0
     _st=""
     while [ "$_t" -lt 30 ]; do
@@ -259,7 +268,7 @@ apply_soft_dip() {
     _err=$(rh850_read 0x03 0x04)
     _prof=$(rh850_read 0x03 0x07)
     if [ "$_st" = "0x02" ]; then
-        log "Soft DIP: profile $_prof up after ~$((_t + 1))s"
+        log "Soft DIP: profile $_prof up after ~$((_t + SOFT_DIP_QUIET_S))s"
     else
         echo "[dip-switch] Soft DIP: re-init failed (DBG_STATUS=${_st:-none} LAST_ERROR=${_err:-none} profile=${_prof:-none})"
     fi
