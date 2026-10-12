@@ -28,6 +28,15 @@
 # register (0x67 reg 0x0316) and run with a cold re-init (0x0300 = 0x11), on
 # every boot. The RH850 keeps nothing; the Pi's config is the setting.
 #
+# 14.6" FHD variant: the direct-drive (14.6-fhd) and scan-mode EJ (14.6-fhd-ej)
+# panels share one DIP position, so the switch cannot tell them apart. Their
+# FPGA bitstreams can: reg 0x10 (FPGA Chip ID) reads 00 00 01 46 on the
+# direct-drive build and 01 00 01 46 on the EJ build (byte 0 = 0x01 =
+# scan backlight, pixelpipe-fpga configs/autoone_14p6_xc7s50_linglong_scan).
+# Once the DIP or soft-DIP type is settled, a 14.6-fhd* type is switched to
+# the variant the FPGA reports. The two types differ only in their marker line
+# and als-dimmer config, so this needs no reboot.
+#
 # Reboot loop guard: at most one auto-reboot per mismatch.
 # Flag file is created before rebooting; if it exists on next boot
 # and there's still a mismatch, no reboot is triggered.
@@ -227,6 +236,61 @@ type_to_dip() {
     return 1
 }
 
+# FPGA Chip ID (reg 0x10) on the FPGA's page-addressed slave 0x1E, page 0.
+FPGA_ADDR=0x1e
+FPGA_WAIT_S=10         # how long to wait for the FPGA behind the FPD-Link
+
+# Set FPGA_VARIANT to the 14.6" FHD type the FPGA bitstream identifies; fail
+# when the FPGA does not answer or is not a 14.6" FHD Spartan-7 build. Bytes
+# 1..3 must read 00 01 46 (1920x1080, spartan7, 14.6"); byte 0 is the variant.
+# Not called in a subshell, so its log lines keep their place in the output.
+fpga_14_6_variant() {
+    FPGA_VARIANT=""
+    _t=0
+    while [ "$_t" -lt "$FPGA_WAIT_S" ]; do
+        _id=$(i2ctransfer -y -f 1 w1@"$FPGA_ADDR" 0x10 r4@"$FPGA_ADDR" 2>/dev/null)
+        [ -n "$_id" ] && break
+        sleep 1
+        _t=$((_t + 1))
+    done
+    if [ -z "$_id" ]; then
+        log "FPGA ID: no answer at $FPGA_ADDR after ${_t}s"
+        return 1
+    fi
+    log "FPGA ID: $_id"
+    set -- $_id
+    [ "$2 $3 $4" = "0x00 0x01 0x46" ] || return 1
+    case "$1" in
+        0x00) FPGA_VARIANT="14.6-fhd" ;;
+        0x01) FPGA_VARIANT="14.6-fhd-ej" ;;
+        *)    return 1 ;;
+    esac
+}
+
+# Switch a 14.6-fhd* display type to the variant the FPGA reports. Anything
+# else, or an FPGA that cannot be read, keeps the type it has.
+apply_fpga_variant() {
+    _cur=$("$SCRIPT_DIR/pi-config-txt.sh" $(build_config_args) 2>/dev/null)
+    [ "$(dip_base_type "$_cur")" = "14.6-fhd" ] || return 0
+    fpga_14_6_variant || {
+        log "14.6\" variant: FPGA did not identify it, keeping $_cur"
+        return 0
+    }
+    _var=$FPGA_VARIANT
+    if [ "$_var" = "$_cur" ]; then
+        log "14.6\" variant: FPGA reports $_var, matches"
+        return 0
+    fi
+    echo "[dip-switch] 14.6\" variant: FPGA reports $_var, config was $_cur; switching (no reboot)"
+    "$SCRIPT_DIR/pi-config-txt.sh" $(build_config_args) --type="$_var" --no-reboot >/dev/null 2>&1 || {
+        echo "[dip-switch] 14.6\" variant: pi-config-txt.sh --type=$_var failed"
+        return 1
+    }
+    # als-dimmer picks its config when it starts; if it already has, restart it
+    # onto the new one.
+    systemctl try-restart als-dimmer.service 2>/dev/null || true
+}
+
 # 983_manager status slave (0x67 on i2c-1): 16-bit register, big-endian.
 RH850_BUS=1
 RH850_ADDR=0x67
@@ -339,6 +403,7 @@ log "DIP switch value: $dip_value"
 if [ "$dip_value" = "0xff" ]; then
     log "Every DIP switch off: soft DIP mode"
     apply_soft_dip
+    apply_fpga_variant
     exit 0
 fi
 
@@ -398,6 +463,7 @@ if [ "$current_type" = "$expected_type" ] || [ "$(dip_base_type "$current_type")
         rm -f "$REBOOT_FLAG"
         log "Cleared reboot flag"
     fi
+    apply_fpga_variant
     exit 0
 fi
 
