@@ -114,7 +114,14 @@ stop_drivers() {
     done
 }
 
+# How many times the serializer driver has logged DP video coming back; see
+# hpd_toggle.
+dp_video_back_count() {
+    dmesg 2>/dev/null | grep -c "hh983-serializer.*DP video back"
+}
+
 start_drivers() {
+    _video_back_before=$(dp_video_back_count)
     for _m in $(configured_modules); do
         log "  loading $_m"
         modprobe "$_m" 2>/dev/null || log "  WARNING: modprobe $_m failed"
@@ -154,7 +161,23 @@ apb_link_enable() {
 # something asks the source to retrain.
 # pi-config-txt.sh carries a copy of apb_link_enable/hpd_toggle (for
 # --apply-derived after a serializer reload); keep the two identical.
+#
+# Only when the video does not come back by itself: on the OTS-OLED the Pi's DP
+# link retrains on its own about 2 s after the reload, the driver restores the
+# 984 stream, and a toggle then drops the link under it. The 984 DTG wedges
+# (measured H total 0), two digital resets do not clear it, and the driver's
+# DTG pulse black-latches the panel until a power cycle - every boot on .153
+# with image 2.15. So wait a few seconds for the driver to report the video.
 hpd_toggle() {
+    _w=0
+    while [ "$_w" -lt 4 ]; do
+        if [ "$(dp_video_back_count)" -gt "${_video_back_before:-0}" ]; then
+            log "  DP video back by itself, no HPD toggle"
+            return 0
+        fi
+        sleep 1
+        _w=$((_w + 1))
+    done
     log "  HPD toggle (983 APB LINK_ENABLE 0 -> 1)"
     apb_link_enable 0x00
     sleep 1

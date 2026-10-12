@@ -111,6 +111,15 @@ exit 0
 EOF
     chmod +x "$stub_bin/$command"
 done
+# dmesg: the serializer's "DP video back" line, once it is loaded, when the test
+# says the video comes back by itself (STUB_VIDEO_BACK=1).
+cat > "$stub_bin/dmesg" <<'EOF'
+#!/bin/sh
+[ "$STUB_VIDEO_BACK" = 1 ] && [ -d "$STUB_SYS/hh983_serializer" ] &&
+    echo "[   14.8] hh983-serializer 1-0018: DP video back (VP_STS=0x01), restoring 984 video stream"
+exit 0
+EOF
+chmod +x "$stub_bin/dmesg"
 derive() { # $1=type $2=modules loaded before (by udev / modules-load at boot)
     root="$work/derive-$1"; rm -rf "$root"; new_sysroot "$root"; mkdir -p "$root/boot" "$root/sys"
     for module in $2; do mkdir -p "$root/sys/$module"; done
@@ -121,7 +130,7 @@ derive() { # $1=type $2=modules loaded before (by udev / modules-load at boot)
     : > "$root/stub.log"
     STUB_LOG="$root/stub.log" STUB_SYS="$root/sys" MICROPANEL_DEFAULTS="$root/defaults" MICROPANEL_SYSROOT="$root" \
         MICROPANEL_MODPROBE="$stub_bin/modprobe" MICROPANEL_RMMOD="$stub_bin/rmmod" MICROPANEL_SYS_MODULE_DIR="$root/sys" \
-        MICROPANEL_I2CSET="$stub_bin/i2cset" MICROPANEL_SLEEP=true \
+        MICROPANEL_I2CSET="$stub_bin/i2cset" MICROPANEL_SLEEP=true MICROPANEL_DMESG="$stub_bin/dmesg" \
         sh "$script" --configspath="$configs" --apply-derived >/dev/null
 }
 # ots-oled-17: udev loaded the serializer with the default options and
@@ -138,6 +147,12 @@ hpd_sequence=$(for value in 0x00 0x01; do
 done)
 [ "$(cat "$root/stub.log")" = "$(printf '%s\n' 'rmmod himax_mmi' 'rmmod hh983_serializer' 'modprobe hh983-serializer' 'modprobe himax_oled' "$hpd_sequence")" ] || {
     fail 'apply-derived: ots-oled-17 reload sequence (with the HPD toggle after it)'; cat "$root/stub.log" >&2; }
+# ...unless the video came back by itself after the reload: a toggle then drops
+# a retrained link, and on the OTS-OLED that black-latches the panel.
+STUB_VIDEO_BACK=1 derive ots-oled-17 "hh983_serializer himax_mmi"
+root="$work/derive-ots-oled-17"
+[ "$(cat "$root/stub.log")" = "$(printf '%s\n' 'rmmod himax_mmi' 'rmmod hh983_serializer' 'modprobe hh983-serializer' 'modprobe himax_oled')" ] || {
+    fail 'apply-derived: HPD toggle after the video came back by itself'; cat "$root/stub.log" >&2; }
 # An A/B image blacklists the drivers' alias autoload, so at boot nothing is
 # loaded yet: one load each, in order, no reload and no HPD toggle.
 derive ots-oled-17 ""

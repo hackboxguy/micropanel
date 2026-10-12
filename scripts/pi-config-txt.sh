@@ -53,6 +53,7 @@ MODPROBE="${MICROPANEL_MODPROBE:-modprobe}"
 RMMOD="${MICROPANEL_RMMOD:-rmmod}"
 I2CSET="${MICROPANEL_I2CSET:-i2cset}"
 SLEEP="${MICROPANEL_SLEEP:-sleep}"
+DMESG="${MICROPANEL_DMESG:-dmesg}"
 SYS_MODULE_DIR="${MICROPANEL_SYS_MODULE_DIR:-/sys/module}"
 
 # Function to display usage
@@ -438,7 +439,22 @@ apb_link_enable() {
     "$I2CSET" -y -f 1 0x18 0x4d 0x00
     "$I2CSET" -y -f 1 0x18 0x4e 0x00
 }
+dp_video_back_count() {
+    "$DMESG" 2>/dev/null | grep -c "hh983-serializer.*DP video back"
+}
+# Only when the video does not come back by itself: a toggle on a link that has
+# already retrained black-latches the OTS-OLED (see dip-switch-resolution.sh).
+# The caller sets _video_back_before before it loads the serializer.
 hpd_toggle() {
+    _w=0
+    while [ "$_w" -lt 4 ]; do
+        if [ "$(dp_video_back_count)" -gt "${_video_back_before:-0}" ]; then
+            echo "DP video back by itself, no HPD toggle"
+            return 0
+        fi
+        "$SLEEP" 1
+        _w=$((_w + 1))
+    done
     echo "HPD toggle (983 APB LINK_ENABLE 0 -> 1)"
     apb_link_enable 0x00
     "$SLEEP" 1
@@ -487,6 +503,7 @@ apply_derived_modules() {
         "$RMMOD" hh983_serializer || echo "Warning: rmmod hh983_serializer failed" >&2
         reloaded=1
     fi
+    _video_back_before=$(dp_video_back_count)
     for module in $(grep -v '^#' "$ml" 2>/dev/null | sed '/^[[:space:]]*$/d'); do
         "$MODPROBE" "$module" || echo "Warning: modprobe $module failed" >&2
     done
