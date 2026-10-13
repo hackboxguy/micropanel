@@ -123,14 +123,14 @@ stop_drivers() {
     done
 }
 
-# How many times the serializer driver has logged DP video coming back; see
-# hpd_toggle.
-dp_video_back_count() {
-    dmesg 2>/dev/null | grep -c "hh983-serializer.*DP video back"
+# How many times the serializer driver has logged DP video coming back or a DP
+# RX kick; see hpd_toggle.
+dp_driver_event_count() {
+    dmesg 2>/dev/null | grep -cE "hh983-serializer.*(DP video back|kicking the DP RX)"
 }
 
 start_drivers() {
-    _video_back_before=$(dp_video_back_count)
+    _video_back_before=$(dp_driver_event_count)
     for _m in $(configured_modules); do
         log "  loading $_m"
         modprobe "$_m" 2>/dev/null || log "  WARNING: modprobe $_m failed"
@@ -177,11 +177,14 @@ apb_link_enable() {
 # (measured H total 0), two digital resets do not clear it, and the driver's
 # DTG pulse black-latches the panel until a power cycle - every boot on .153
 # with image 2.15. So wait a few seconds for the driver to report the video.
+# Nor while the driver is kicking the DP RX (CS2.0; a kick is its own HPD
+# toggle): on the 15.6" 2.5K a toggle 4 s after the kick dropped the link just
+# as the video came up, and the 984 DTG wedged the same way.
 hpd_toggle() {
     _w=0
     while [ "$_w" -lt 4 ]; do
-        if [ "$(dp_video_back_count)" -gt "${_video_back_before:-0}" ]; then
-            log "  DP video back by itself, no HPD toggle"
+        if [ "$(dp_driver_event_count)" -gt "${_video_back_before:-0}" ]; then
+            log "  DP video back by itself or the driver is kicking the DP RX, no HPD toggle"
             return 0
         fi
         sleep 1

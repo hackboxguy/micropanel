@@ -111,12 +111,16 @@ exit 0
 EOF
     chmod +x "$stub_bin/$command"
 done
-# dmesg: the serializer's "DP video back" line, once it is loaded, when the test
-# says the video comes back by itself (STUB_VIDEO_BACK=1).
+# dmesg: once the serializer is loaded, its "DP video back" line when the test
+# says the video comes back by itself (STUB_VIDEO_BACK=1), or its DP RX kick
+# line (STUB_VIDEO_BACK=kick).
 cat > "$stub_bin/dmesg" <<'EOF'
 #!/bin/sh
-[ "$STUB_VIDEO_BACK" = 1 ] && [ -d "$STUB_SYS/hh983_serializer" ] &&
-    echo "[   14.8] hh983-serializer 1-0018: DP video back (VP_STS=0x01), restoring 984 video stream"
+[ -d "$STUB_SYS/hh983_serializer" ] || exit 0
+case "$STUB_VIDEO_BACK" in
+    1) echo "[   14.8] hh983-serializer 1-0018: DP video back (VP_STS=0x01), restoring 984 video stream" ;;
+    kick) echo "[   18.9] hh983-serializer 1-0018: No DP video for 3 polls (VP_STS=0x00, PHY=0x00), kicking the DP RX (1 of 6)" ;;
+esac
 exit 0
 EOF
 chmod +x "$stub_bin/dmesg"
@@ -153,6 +157,11 @@ STUB_VIDEO_BACK=1 derive ots-oled-17 "hh983_serializer himax_mmi"
 root="$work/derive-ots-oled-17"
 [ "$(cat "$root/stub.log")" = "$(printf '%s\n' 'rmmod himax_mmi' 'rmmod hh983_serializer' 'modprobe hh983-serializer' 'modprobe himax_oled')" ] || {
     fail 'apply-derived: HPD toggle after the video came back by itself'; cat "$root/stub.log" >&2; }
+# ...or while the driver is kicking the DP RX: the kick is its own HPD toggle.
+STUB_VIDEO_BACK=kick derive ots-oled-17 "hh983_serializer himax_mmi"
+root="$work/derive-ots-oled-17"
+[ "$(cat "$root/stub.log")" = "$(printf '%s\n' 'rmmod himax_mmi' 'rmmod hh983_serializer' 'modprobe hh983-serializer' 'modprobe himax_oled')" ] || {
+    fail 'apply-derived: HPD toggle during a driver DP RX kick'; cat "$root/stub.log" >&2; }
 # An A/B image blacklists the drivers' alias autoload, so at boot nothing is
 # loaded yet: one load each, in order, no reload and no HPD toggle.
 derive ots-oled-17 ""
