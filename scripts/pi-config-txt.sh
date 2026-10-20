@@ -160,13 +160,21 @@ configure_hh983_serializer() {
     # 3x-qvue requires config_mode=2 (983+988, video only): the QVue has no
     # touch controller, and mode 2 leaves the 983 target-alias slot alone
     # because the RH850 uses it to alias the 988 from 0x38 to 0x2c.
-    # oled-ib-17 has the same 988 addressing. Its HX8530 touch sits behind a
-    # 988, which no mode drives yet (ots_touch is 984-only, and mode 1 cannot
-    # reach this 988 at 0x2c), so it gets mode 2's picture-only handling for now.
-    elif [ "$config_type" = "3x-qvue" ] || [ "$config_type" = "oled-ib-17" ]; then
+    elif [ "$config_type" = "3x-qvue" ]; then
         echo "options hh983-serializer config_mode=2" > "$hh983_conf"
         if [ $VERBOSE -eq 1 ]; then
             echo "HH983 serializer configured: config_mode=2 (video only, for $config_type)"
+        fi
+    # oled-ib-17 has the same 988 addressing, so it is mode 2 too, but it has
+    # touch: the OTS-OLED's HX8530 at phys 0x49 on the 988's I2C Port 1.
+    # ib_touch=1 routes it to host 0x48 through 983 target slot 2 (mode 1 would
+    # take slot 0 from the RH850's 988 alias), runs that port at ~400 kHz and
+    # arms REM_INTB.  The softdep keeps himax_oled behind the route, as on OTS.
+    elif [ "$config_type" = "oled-ib-17" ]; then
+        echo "options hh983-serializer config_mode=2 ib_touch=1" > "$hh983_conf"
+        echo "softdep himax_oled pre: hh983-serializer" >> "$hh983_conf"
+        if [ $VERBOSE -eq 1 ]; then
+            echo "HH983 serializer configured: config_mode=2 ib_touch=1 (for $config_type)"
         fi
     # 15.6-2k5, 12.3-nq1, and ots-oled-17 require config_mode=0 (983+984);
     # all others require config_mode=1 (983+988).
