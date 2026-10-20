@@ -59,13 +59,13 @@ SYS_MODULE_DIR="${MICROPANEL_SYS_MODULE_DIR:-/sys/module}"
 # Function to display usage
 usage() {
     echo "Usage:"
-    echo "  Write config: $0 --input=/boot/firmware/config.txt --type=<12.3/12.3-nq1/12.3-nq1v1.1/14.6-fhd/14.6-fhd-ej/14.6-2k5/15.6-2k5/17.3-3k/ots-oled-17/3x-qvue/27/edid/edid-hdmi>"
+    echo "  Write config: $0 --input=/boot/firmware/config.txt --type=<12.3/12.3-nq1/12.3-nq1v1.1/14.6-fhd/14.6-fhd-ej/14.6-2k5/15.6-2k5/17.3-3k/ots-oled-17/oled-ib-17/3x-qvue/27/edid/edid-hdmi>"
     echo "  Read config: $0 --input=/boot/firmware/config.txt [--query-config] [-v]"
     echo "  Query display: $0 --query-display [-v]"
     echo ""
     echo "Options:"
     echo "  --input=FILE      Specify the configuration file path"
-    echo "  --type=TYPE       Configure for display type (12.3, 12.3-nq1, 12.3-nq1v1.1, 14.6-fhd, 14.6-fhd-ej, 14.6-2k5, 15.6-2k5, 17.3-3k, ots-oled-17, 3x-qvue, 27, edid, edid-hdmi)"
+    echo "  --type=TYPE       Configure for display type (12.3, 12.3-nq1, 12.3-nq1v1.1, 14.6-fhd, 14.6-fhd-ej, 14.6-2k5, 15.6-2k5, 17.3-3k, ots-oled-17, oled-ib-17, 3x-qvue, 27, edid, edid-hdmi)"
     echo "  --configspath=DIR Override config directory path (default: /usr/share/micropanel/configs)"
     echo "  --query-config    Read and output configured display type/resolution"
     echo "  --query-display   Query actual display resolution on HDMI output"
@@ -160,7 +160,10 @@ configure_hh983_serializer() {
     # 3x-qvue requires config_mode=2 (983+988, video only): the QVue has no
     # touch controller, and mode 2 leaves the 983 target-alias slot alone
     # because the RH850 uses it to alias the 988 from 0x38 to 0x2c.
-    elif [ "$config_type" = "3x-qvue" ]; then
+    # oled-ib-17 has the same 988 addressing. Its HX8530 touch sits behind a
+    # 988, which no mode drives yet (ots_touch is 984-only, and mode 1 cannot
+    # reach this 988 at 0x2c), so it gets mode 2's picture-only handling for now.
+    elif [ "$config_type" = "3x-qvue" ] || [ "$config_type" = "oled-ib-17" ]; then
         echo "options hh983-serializer config_mode=2" > "$hh983_conf"
         if [ $VERBOSE -eq 1 ]; then
             echo "HH983 serializer configured: config_mode=2 (video only, for $config_type)"
@@ -214,7 +217,8 @@ configure_hh983_serializer() {
 # Function to select the touch-screen kernel module per display type.
 # himax_oled (single-IC HX8530) and himax_mmi (multi-chip) register the SAME
 # i2c driver name, so exactly one may be loaded. ots-oled-17 uses himax_oled
-# and must keep himax_mmi out; all other displays use himax_mmi.
+# and must keep himax_mmi out; oled-ib-17 has the same HX8530 and does the same.
+# All other displays use himax_mmi.
 # 3x-qvue has no touch surface at all, so it loads neither and blacklists both.
 configure_touch_driver() {
     local config_type="$1"
@@ -227,7 +231,7 @@ configure_touch_driver() {
         if [ $VERBOSE -eq 1 ]; then
             echo "Touch driver: none (himax_mmi and himax_oled blacklisted) for $config_type"
         fi
-    elif [ "$config_type" = "ots-oled-17" ]; then
+    elif [ "$config_type" = "ots-oled-17" ] || [ "$config_type" = "oled-ib-17" ]; then
         printf "# Custom driver load order (OTS-OLED)\\nhh983-serializer\\nhimax_oled\\n" > "$ml"
         printf "# OTS-OLED board uses himax_oled (HX8530); keep the multi-chip driver out\\nblacklist himax_mmi\\n" > "$bl"
         if [ $VERBOSE -eq 1 ]; then
@@ -325,8 +329,11 @@ apply_type_substitutions() {
         sed -i '/dtoverlay=himax-touch/d' "$temp_file"
     fi
 
-    # For ots-oled-17, use the HX8530 single-IC touch overlay (himax-touch-oled)
-    # instead of the multi-chip himax-touch overlay.
+    # For ots-oled-17 and oled-ib-17, use the HX8530 single-IC touch overlay
+    # (himax-touch-oled) instead of the multi-chip himax-touch overlay.
+    if [ "$config_type" = "oled-ib-17" ]; then
+        sed -i 's/^dtoverlay=himax-touch$/dtoverlay=himax-touch-oled/' "$temp_file"
+    fi
     if [ "$config_type" = "ots-oled-17" ]; then
         sed -i 's/^dtoverlay=himax-touch$/dtoverlay=himax-touch-oled/' "$temp_file"
 
@@ -581,7 +588,7 @@ get_expected_hh983_mode() {
     local config_type="$1"
     if [ "$config_type" = "15.6-2k5" ] || [ "$config_type" = "12.3-nq1" ] || [ "$config_type" = "ots-oled-17" ]; then
         echo "0"
-    elif [ "$config_type" = "3x-qvue" ]; then
+    elif [ "$config_type" = "3x-qvue" ] || [ "$config_type" = "oled-ib-17" ]; then
         echo "2"
     else
         echo "1"

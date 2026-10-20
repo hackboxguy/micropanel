@@ -14,9 +14,11 @@
 #   0x39  -> ots-oled-17 on a DS90UH983 CS2.0 983HH (DIP setting 01100011)
 #   0x75  -> 3x-qvue (DIP setting 01010001, active-low)
 #   0x35  -> 3x-qvue on a DS90UH983 CS2.0 983HH (DIP setting 01010011)
+#   0x5d  -> oled-ib-17 (DIP setting 01000101, active-low)
+#   0x1d  -> oled-ib-17 on a DS90UH983 CS2.0 983HH (DIP setting 01000111)
 #
 # DIP6 selects the 983HH's CS2.0 init sequence (983_manager profiles
-# ots_oled_17_cs2 and qvue3_cs2_6g75); the panel, and so the Pi's display
+# ots_oled_17_cs2, qvue3_cs2_6g75 and oled_ib_17_cs2); the panel, and so the Pi's display
 # type, is the same as without it.
 #   0xef  -> 27
 #   0xff  -> soft DIP (every switch off): see below
@@ -209,6 +211,7 @@ map_dip_to_type() {
         0xdf) echo "17.3-3k" ;;
         0x79|0x39) echo "ots-oled-17" ;;
         0x75|0x35) echo "3x-qvue" ;;
+        0x5d|0x1d) echo "oled-ib-17" ;;
         0xef) echo "27" ;;
         *)    echo "" ;;
     esac
@@ -226,11 +229,11 @@ dip_base_type() {
 }
 
 # Display type -> PCF8574 value, the reverse of map_dip_to_type. The first value
-# that maps to the type wins, so the CS1.0 positions are used for ots-oled-17
-# and 3x-qvue: the RH850 picks the CS2.0 sequence from the silicon itself.
+# that maps to the type wins, so the CS1.0 positions are used for ots-oled-17,
+# 3x-qvue and oled-ib-17: the RH850 picks the CS2.0 sequence from the silicon itself.
 type_to_dip() {
     _base=$(dip_base_type "$1")
-    for _v in 0xf7 0x7a 0x6d 0xfb 0xfd 0xfe 0xdf 0x79 0x75 0xef; do
+    for _v in 0xf7 0x7a 0x6d 0xfb 0xfd 0xfe 0xdf 0x79 0x75 0x5d 0xef; do
         if [ "$(map_dip_to_type "$_v")" = "$_base" ]; then
             echo "$_v"
             return 0
