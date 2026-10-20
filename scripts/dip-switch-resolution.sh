@@ -337,8 +337,22 @@ apply_soft_dip() {
         return 0
     fi
 
+    # The 17" OLED-IB's CS2.0 sequence must not run while the DP source is
+    # sending: with the Pi's video live during the re-init, the 983 synced VP0
+    # but no stream reached the 988 (H/V total 0, 3 of 3 cold boots, black),
+    # and neither the HPD toggle below nor a DP RX kick brought it.  At a
+    # DIP-switch power-up the profile always runs before the Pi sends video,
+    # and it works.  So hold HPD low across the re-init and raise it once the
+    # profile is up: the source trains after it, as at power-up (2026-10-20).
+    _hold_hpd=0
+    [ "$_type" = "oled-ib-17" ] && _hold_hpd=1
+
     log "Soft DIP: display type $_type -> DIP on-mask $_mask, cold re-init"
     stop_drivers
+    if [ "$_hold_hpd" -eq 1 ]; then
+        log "  HPD low across the re-init (983 APB LINK_ENABLE 0)"
+        apb_link_enable 0x00
+    fi
     rh850_write 0x03 0x16 "$_mask"
     rh850_write 0x03 0x00 0x11
     # The RH850 drops its slave while it runs the profile; poll DBG_STATUS,
@@ -365,8 +379,14 @@ apply_soft_dip() {
     else
         echo "[dip-switch] Soft DIP: re-init failed (DBG_STATUS=${_st:-none} LAST_ERROR=${_err:-none} profile=${_prof:-none})"
     fi
+    if [ "$_hold_hpd" -eq 1 ]; then
+        # The rising edge is the source's cue to train; a toggle after the
+        # driver reload would only take the link down again under it.
+        log "  HPD high (983 APB LINK_ENABLE 1), the source trains now"
+        apb_link_enable 0x01
+    fi
     start_drivers
-    hpd_toggle
+    [ "$_hold_hpd" -eq 1 ] || hpd_toggle
     [ "$_st" = "0x02" ]
 }
 
