@@ -169,6 +169,19 @@ root="$work/derive-ots-oled-17"
 [ "$(cat "$root/stub.log")" = "$(printf '%s\n' 'modprobe hh983-serializer' 'modprobe himax_oled')" ] || {
     fail 'apply-derived: blacklisted autoload - expected one load each and no toggle'; cat "$root/stub.log" >&2; }
 [ -d "$root/sys/himax_oled" ] && [ ! -d "$root/sys/himax_mmi" ] || fail 'apply-derived: wrong touch driver loaded for ots-oled-17'
+# oled-ib-17: the same HX8530 as the OTS-OLED, but its firmware needs Himax's
+# A09.23 driver (himax_oledib); himax_oled, if something loaded it, goes.
+derive oled-ib-17 "himax_oled"
+root="$work/derive-oled-ib-17"
+grep -q 'config_mode=2 ib_touch=1' "$root/etc/modprobe.d/hh983.conf" || fail 'apply-derived: oled-ib-17 options not written'
+grep -qx 'softdep himax_oledib pre: hh983-serializer' "$root/etc/modprobe.d/hh983.conf" || fail 'apply-derived: oled-ib-17 softdep'
+grep -qx 'blacklist himax_oled' "$root/etc/modprobe.d/blacklist-himax-mmi.conf" || fail 'apply-derived: oled-ib-17 does not blacklist himax_oled'
+[ "$(cat "$root/stub.log")" = "$(printf '%s\n' 'rmmod himax_oled' 'modprobe hh983-serializer' 'modprobe himax_oledib')" ] || {
+    fail 'apply-derived: oled-ib-17 load sequence'; cat "$root/stub.log" >&2; }
+[ -d "$root/sys/himax_oledib" ] && [ ! -d "$root/sys/himax_oled" ] && [ ! -d "$root/sys/himax_mmi" ] || \
+    fail 'apply-derived: wrong touch driver loaded for oled-ib-17'
+grep -qx 'blacklist himax_oledib' "$work/derive-ots-oled-17/etc/modprobe.d/blacklist-himax-mmi.conf" || \
+    fail 'apply-derived: ots-oled-17 does not blacklist himax_oledib'
 # 12.3: the defaults are already right; nothing is unloaded.
 derive 12.3 "hh983_serializer himax_mmi"
 root="$work/derive-12.3"
@@ -178,7 +191,8 @@ root="$work/derive-12.3"
 derive 3x-qvue "hh983_serializer himax_mmi"
 root="$work/derive-3x-qvue"
 grep -q 'config_mode=2' "$root/etc/modprobe.d/hh983.conf" || fail 'apply-derived: 3x-qvue options'
-[ ! -d "$root/sys/himax_mmi" ] && [ ! -d "$root/sys/himax_oled" ] || fail 'apply-derived: 3x-qvue left a touch driver loaded'
+[ ! -d "$root/sys/himax_mmi" ] && [ ! -d "$root/sys/himax_oled" ] && [ ! -d "$root/sys/himax_oledib" ] || \
+    fail 'apply-derived: 3x-qvue left a touch driver loaded'
 # A display file without a known type changes nothing and says so.
 root="$work/derive-unknown"; new_sysroot "$root"; mkdir -p "$root/boot"
 echo "MICROPANEL_BOOT_CONFIG=$root/boot/micropanel-display.txt" > "$root/defaults"

@@ -169,10 +169,11 @@ configure_hh983_serializer() {
     # touch: the OTS-OLED's HX8530 at phys 0x49 on the 988's I2C Port 1.
     # ib_touch=1 routes it to host 0x48 through 983 target slot 2 (mode 1 would
     # take slot 0 from the RH850's 988 alias), runs that port at ~400 kHz and
-    # arms REM_INTB.  The softdep keeps himax_oled behind the route, as on OTS.
+    # arms REM_INTB.  The softdep keeps himax_oledib behind the route, as
+    # himax_oled is on OTS.
     elif [ "$config_type" = "oled-ib-17" ]; then
         echo "options hh983-serializer config_mode=2 ib_touch=1" > "$hh983_conf"
-        echo "softdep himax_oled pre: hh983-serializer" >> "$hh983_conf"
+        echo "softdep himax_oledib pre: hh983-serializer" >> "$hh983_conf"
         if [ $VERBOSE -eq 1 ]; then
             echo "HH983 serializer configured: config_mode=2 ib_touch=1 (for $config_type)"
         fi
@@ -223,11 +224,13 @@ configure_hh983_serializer() {
 }
 
 # Function to select the touch-screen kernel module per display type.
-# himax_oled (single-IC HX8530) and himax_mmi (multi-chip) register the SAME
-# i2c driver name, so exactly one may be loaded. ots-oled-17 uses himax_oled
-# and must keep himax_mmi out; oled-ib-17 has the same HX8530 and does the same.
+# himax_oled (single-IC HX8530), himax_oledib (the same chip, Himax's A09.23
+# driver) and himax_mmi (multi-chip) register the SAME i2c driver name, so
+# exactly one may be loaded. ots-oled-17 uses himax_oled; oled-ib-17 uses
+# himax_oledib, because its touch firmware (Himax, 2026-10-22) is laid out for
+# A09.23 and himax_oled reads it wrong. Both keep the other two out.
 # All other displays use himax_mmi.
-# 3x-qvue has no touch surface at all, so it loads neither and blacklists both.
+# 3x-qvue has no touch surface at all, so it loads none and blacklists all.
 configure_touch_driver() {
     local config_type="$1"
     local ml="$SYSROOT/etc/modules-load.d/custom-drivers.conf"
@@ -235,15 +238,21 @@ configure_touch_driver() {
 
     if [ "$config_type" = "3x-qvue" ]; then
         printf "# Custom driver load order (3x QVue, no touch)\\nhh983-serializer\\n" > "$ml"
-        printf "# 3x QVue has no touch controller; keep both himax drivers out\\nblacklist himax_mmi\\nblacklist himax_oled\\n" > "$bl"
+        printf "# 3x QVue has no touch controller; keep the himax drivers out\\nblacklist himax_mmi\\nblacklist himax_oled\\nblacklist himax_oledib\\n" > "$bl"
         if [ $VERBOSE -eq 1 ]; then
-            echo "Touch driver: none (himax_mmi and himax_oled blacklisted) for $config_type"
+            echo "Touch driver: none (himax_mmi, himax_oled and himax_oledib blacklisted) for $config_type"
         fi
-    elif [ "$config_type" = "ots-oled-17" ] || [ "$config_type" = "oled-ib-17" ]; then
+    elif [ "$config_type" = "ots-oled-17" ]; then
         printf "# Custom driver load order (OTS-OLED)\\nhh983-serializer\\nhimax_oled\\n" > "$ml"
-        printf "# OTS-OLED board uses himax_oled (HX8530); keep the multi-chip driver out\\nblacklist himax_mmi\\n" > "$bl"
+        printf "# OTS-OLED board uses himax_oled (HX8530); keep the other himax drivers out\\nblacklist himax_mmi\\nblacklist himax_oledib\\n" > "$bl"
         if [ $VERBOSE -eq 1 ]; then
-            echo "Touch driver: himax_oled (himax_mmi blacklisted) for $config_type"
+            echo "Touch driver: himax_oled (himax_mmi and himax_oledib blacklisted) for $config_type"
+        fi
+    elif [ "$config_type" = "oled-ib-17" ]; then
+        printf "# Custom driver load order (OLED-IB)\\nhh983-serializer\\nhimax_oledib\\n" > "$ml"
+        printf "# OLED-IB uses himax_oledib (HX8530, Himax A09.23); keep the other himax drivers out\\nblacklist himax_mmi\\nblacklist himax_oled\\n" > "$bl"
+        if [ $VERBOSE -eq 1 ]; then
+            echo "Touch driver: himax_oledib (himax_mmi and himax_oled blacklisted) for $config_type"
         fi
     else
         printf "# Custom driver load order\\n# hh983-serializer must load before himax touch\\nhh983-serializer\\nhimax_mmi\\n" > "$ml"
@@ -337,10 +346,11 @@ apply_type_substitutions() {
         sed -i '/dtoverlay=himax-touch/d' "$temp_file"
     fi
 
-    # For ots-oled-17 and oled-ib-17, use the HX8530 single-IC touch overlay
-    # (himax-touch-oled) instead of the multi-chip himax-touch overlay.
+    # For ots-oled-17 and oled-ib-17, use their HX8530 touch overlay
+    # (himax-touch-oled, himax-touch-oledib) instead of the multi-chip
+    # himax-touch overlay.
     if [ "$config_type" = "oled-ib-17" ]; then
-        sed -i 's/^dtoverlay=himax-touch$/dtoverlay=himax-touch-oled/' "$temp_file"
+        sed -i 's/^dtoverlay=himax-touch$/dtoverlay=himax-touch-oledib/' "$temp_file"
     fi
     if [ "$config_type" = "ots-oled-17" ]; then
         sed -i 's/^dtoverlay=himax-touch$/dtoverlay=himax-touch-oled/' "$temp_file"
@@ -503,7 +513,7 @@ apply_derived_modules() {
     configure_als_dimmer "$config_type"
     new_options=$(cat "$hh983_conf" 2>/dev/null)
 
-    for module in himax_oled himax_mmi; do
+    for module in himax_oled himax_oledib himax_mmi; do
         if grep -qx "blacklist $module" "$bl" 2>/dev/null && module_loaded "$module"; then
             echo "Unloading $module (blacklisted for $config_type)"
             "$RMMOD" "$module" || echo "Warning: rmmod $module failed" >&2
@@ -511,7 +521,7 @@ apply_derived_modules() {
     done
     if [ "$old_options" != "$new_options" ] && module_loaded hh983-serializer; then
         echo "Reloading hh983-serializer with the options for $config_type"
-        for module in himax_oled himax_mmi; do
+        for module in himax_oled himax_oledib himax_mmi; do
             if module_loaded "$module"; then
                 "$RMMOD" "$module" || echo "Warning: rmmod $module failed" >&2
             fi
