@@ -2,8 +2,9 @@
 
 `rh850-flash-auto.sh` selects the Bluebox USB transport for the IOC-update
 actions when one complete Bluebox is attached. It identifies an FT2232D with
-USB ID `0403:a9a0` through sysfs, then requires both interfaces from the same
-device:
+USB manufacturer string `EEHB` and USB ID `0403:a9a0` (newer units) or
+`0403:6010` (older units, product string `FHE_bluebox`) through sysfs, then
+requires both interfaces from the same device:
 
 - interface `01`: programming UART;
 - interface `00`: normal firmware console UART.

@@ -7,7 +7,10 @@ PROGRAM_NAME=${0##*/}
 SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 
 BLUEBOX_VENDOR_ID=${MICROPANEL_BLUEBOX_VENDOR_ID:-0403}
-BLUEBOX_PRODUCT_ID=${MICROPANEL_BLUEBOX_PRODUCT_ID:-a9a0}
+# Older Bluebox units keep the stock FT2232D product ID 6010 ("FHE_bluebox");
+# newer ones use a9a0 ("FHE"). Both speak the same Ax8 protocol.
+BLUEBOX_PRODUCT_IDS=${MICROPANEL_BLUEBOX_PRODUCT_ID:-a9a0 6010}
+BLUEBOX_MANUFACTURER=${MICROPANEL_BLUEBOX_MANUFACTURER:-EEHB}
 TTY_SYS_CLASS=${MICROPANEL_SYS_CLASS_TTY:-/sys/class/tty}
 DEV_ROOT=${MICROPANEL_DEV_ROOT:-/dev}
 
@@ -39,7 +42,7 @@ usage()
 Usage: $PROGRAM_NAME --board=983hh|lattice45-9090|spartan7-9090 <flashrh850.sh arguments>
 
 The board selector must be the first argument. When an EEHB Bluebox
-(USB ID ${BLUEBOX_VENDOR_ID}:${BLUEBOX_PRODUCT_ID}) exposes both serial interfaces,
+(USB vendor ${BLUEBOX_VENDOR_ID}, product ${BLUEBOX_PRODUCT_IDS}) exposes both serial interfaces,
 the matching rh850-tool target profile is used. If no Bluebox is attached, all
 remaining arguments are passed unchanged to flashrh850.sh for the legacy
 Pi GPIO/local-UART path.
@@ -76,6 +79,14 @@ has_option()
     return 1
 }
 
+is_bluebox_product()
+{
+    for candidate in $BLUEBOX_PRODUCT_IDS; do
+        [ "$1" = "$candidate" ] && return 0
+    done
+    return 1
+}
+
 # Find interface 01 (Bluebox programming) and interface 00 (Bluebox console)
 # on the *same* FT2232D device. This avoids binding to unrelated ttyUSB ports.
 find_bluebox_ports()
@@ -91,10 +102,14 @@ find_bluebox_ports()
         usb_dir=$(dirname "$interface_dir")
         vendor=$(cat "$usb_dir/idVendor" 2>/dev/null || true)
         product=$(cat "$usb_dir/idProduct" 2>/dev/null || true)
+        manufacturer=$(cat "$usb_dir/manufacturer" 2>/dev/null || true)
         interface=$(cat "$interface_dir/bInterfaceNumber" 2>/dev/null || true)
 
         [ "$vendor" = "$BLUEBOX_VENDOR_ID" ] || continue
-        [ "$product" = "$BLUEBOX_PRODUCT_ID" ] || continue
+        is_bluebox_product "$product" || continue
+        # 6010 is the generic FT2232 ID; the EEPROM manufacturer string tells
+        # a Bluebox apart from an unrelated FTDI adapter.
+        [ "$manufacturer" = "$BLUEBOX_MANUFACTURER" ] || continue
         [ "$interface" = "01" ] || continue
 
         bluebox_usb_dir=$usb_dir

@@ -53,6 +53,16 @@ for interface in 0 1; do
     ln -s /dev/null "$WORK_DIR/dev/$tty"
 done
 printf '0403\n' > "$usb_dir/idVendor"
+printf '6010\n' > "$usb_dir/idProduct"
+printf 'FTDI\n' > "$usb_dir/manufacturer"
+
+generic_ftdi_output=$(run_tool --board=spartan7-9090 --info)
+printf '%s\n' "$generic_ftdi_output" | grep -q 'Bluebox not detected'
+
+printf 'EEHB\n' > "$usb_dir/manufacturer"
+old_bluebox_output=$(run_tool --board=spartan7-9090 --info)
+printf '%s\n' "$old_bluebox_output" | grep -q 'rh850-tool:probe:--target=r7f7015873:--transport=bluebox:--port='
+
 printf 'a9a0\n' > "$usb_dir/idProduct"
 
 probe_output=$(run_tool --board=983hh --npj=/tmp/983HH.npj --info)
