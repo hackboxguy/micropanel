@@ -33,6 +33,20 @@ Its flashes pass `rh850-tool flash --erase-end=0x7ffff`, so slot B
 OTA'd `display_manager` in slot B would otherwise still be booted. 0x80000 and
 up (the vendor's stock firmware) is not touched.
 
+Restoring the QVue's *stock* MCU firmware is not a selector action: the stock
+dump is a full 1 MiB image, which `--erase-end=0x7ffff` rightly rejects, and
+the old `flashrh850.sh ... --npj=QVUE-F1KM.npj` path used the Pi GPIO wiring
+the rig no longer has. Through the Bluebox it would be (not run on the rig):
+
+```sh
+rh850-tool flash --target=r7f701684 --image=<1 MiB stock dump> --yes
+```
+
+Flash the vendor FPGA image (Qvue-Legacy/FPGA-Flash) first, while
+`display_manager` still runs. The stock firmware hangs on any read of `0x32`;
+restart als-dimmer afterwards so its selector picks the `0x32` write-only
+config.
+
 ## Menu coverage
 
 The IOC-Update menu routes these actions through the selector:
