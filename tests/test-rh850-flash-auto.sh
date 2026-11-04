@@ -42,6 +42,11 @@ s4_fallback_output=$(run_tool --board=spartan7-9090 --info)
 printf '%s\n' "$s4_fallback_output" | grep -q 'Pi GPIO/local-UART transport for S7-9090'
 printf '%s\n' "$s4_fallback_output" | grep -q 'rh850-tool:probe:--target=r7f7015873:--transport=pi-gpio:'
 
+if qvue_no_bluebox_output=$(run_tool --board=qvue-9090 --info 2>&1); then
+    echo 'qvue-9090 without a Bluebox must fail' >&2; exit 1
+fi
+printf '%s\n' "$qvue_no_bluebox_output" | grep -q 'qvue-9090 can only be flashed through a Bluebox'
+
 usb_dir="$WORK_DIR/sys/usb/1-1"
 for interface in 0 1; do
     tty=ttyUSB$interface
@@ -84,5 +89,13 @@ printf 'firmware' > "$WORK_DIR/firmware.bin"
 flash_output=$(run_tool --board=spartan7-9090 --bios-autorun="$WORK_DIR/firmware.bin")
 printf '%s\n' "$flash_output" | grep -q 'rh850-tool:flash:--image='
 printf '%s\n' "$flash_output" | grep -q -- '--target=r7f7015873:'
+
+qvue_flash_output=$(run_tool --board=qvue-9090 --bios-autorun="$WORK_DIR/firmware.bin")
+printf '%s\n' "$qvue_flash_output" | grep -q 'rh850-tool:flash:--image='
+printf '%s\n' "$qvue_flash_output" | grep -q -- '--target=r7f701684:--transport=bluebox:'
+printf '%s\n' "$qvue_flash_output" | grep -q -- ':--erase-end=0x7ffff:'
+if printf '%s\n' "$flash_output" | grep -q -- '--erase-end'; then
+    echo 'only qvue-9090 flashes may pass --erase-end' >&2; exit 1
+fi
 
 printf '%s\n' 'rh850-flash-auto offline tests passed'

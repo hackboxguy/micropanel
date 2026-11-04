@@ -24,6 +24,15 @@ S7-9090 is new to this menu, so its no-Bluebox path uses the explicit
 `rh850-tool --transport=pi-gpio` S4 profile. Its control lines and local UART
 are configured in `rh850-flash-tools/profiles/transports/pi-gpio.conf`.
 
+QVUE-9090 (`--board=qvue-9090`, the 3x QVue display driver's R7F701684) has no
+legacy Pi wiring or NPJ, so without a Bluebox the selector exits with an error
+instead of falling back. It is not in the IOC-Update menu; streamdeck-ctrl's
+`Qvue-Legacy/IOC-Flash` key drives it.
+Its flashes pass `rh850-tool flash --erase-end=0x7ffff`, so slot B
+(0x48000) is erased with slot A: a wire image has boot_seq 0, and an older
+OTA'd `display_manager` in slot B would otherwise still be booted. 0x80000 and
+up (the vendor's stock firmware) is not touched.
+
 ## Menu coverage
 
 The IOC-Update menu routes these actions through the selector:
@@ -33,6 +42,7 @@ The IOC-Update menu routes these actions through the selector:
 | 983HH | `r7f7016863` | existing packet, bare-metal, script, and blink images |
 | Lattice45-9090 | `r7f7016863` | existing packet and bare-metal images |
 | S7-9090 | `r7f7015873` | `Spartan7_9090_ROMBIOS_packet.bin` and `REMOTE_DISP_SPARTAN7_display_manager_s4.bin` |
+| QVUE-9090 (selector only, Bluebox only) | `r7f701684` | `QVUE_9090_qvue_legacy.bin` (streamdeck-ctrl key) |
 
 Bluebox backups are stored under
 `share/sp6bins/bkups/<board>/` with a SHA-256 manifest. Recovery first selects

@@ -21,6 +21,7 @@ BACKUP_ROOT=${MICROPANEL_RH850_BACKUP_ROOT:-$SCRIPT_DIR/../share/sp6bins/bkups}
 BOARD=
 TARGET_PROFILE=
 LEGACY_BACKUP_NAME=
+FLASH_ERASE_END=
 BLUEBOX_PROGRAM_PORT=
 BLUEBOX_CONSOLE_PORT=
 SELECTED_TRANSPORT=
@@ -39,13 +40,14 @@ info()
 usage()
 {
     cat <<EOF
-Usage: $PROGRAM_NAME --board=983hh|lattice45-9090|spartan7-9090 <flashrh850.sh arguments>
+Usage: $PROGRAM_NAME --board=983hh|lattice45-9090|spartan7-9090|qvue-9090 <flashrh850.sh arguments>
 
 The board selector must be the first argument. When an EEHB Bluebox
 (USB vendor ${BLUEBOX_VENDOR_ID}, product ${BLUEBOX_PRODUCT_IDS}) exposes both serial interfaces,
 the matching rh850-tool target profile is used. If no Bluebox is attached, all
 remaining arguments are passed unchanged to flashrh850.sh for the legacy
-Pi GPIO/local-UART path.
+Pi GPIO/local-UART path. qvue-9090 (3x QVue) has no legacy wiring or .npj and
+requires the Bluebox.
 EOF
 }
 
@@ -152,6 +154,16 @@ select_board()
             TARGET_PROFILE=r7f7015873
             LEGACY_BACKUP_NAME=Spartan7_9090
             ;;
+        qvue-9090)
+            TARGET_PROFILE=r7f701684
+            LEGACY_BACKUP_NAME=QVUE_9090
+            # A wire image is bootloader + slot A (0x10000) only, with
+            # boot_seq 0. Slot B (0x48000..0x7FFFF) can still hold an OTA'd
+            # display_manager with a higher boot_seq, which the bootloader
+            # would keep booting, so a flash clears it too. 0x80000 and up
+            # (the vendor's stock firmware) is left alone.
+            FLASH_ERASE_END=0x7ffff
+            ;;
         *) die "unsupported board: $BOARD" ;;
     esac
 }
@@ -182,7 +194,12 @@ flash_image()
     [ -r "$image" ] || die "firmware image is not readable: $image"
     info "Using $(transport_description)"
     info "Flashing $BOARD with $image"
-    run_transport flash --image="$image" --yes
+    if [ -n "$FLASH_ERASE_END" ]; then
+        info "Erasing through $FLASH_ERASE_END (clears the stale A/B slot)"
+        run_transport flash --image="$image" --yes --erase-end="$FLASH_ERASE_END"
+    else
+        run_transport flash --image="$image" --yes
+    fi
 }
 
 backup_target()
@@ -241,7 +258,9 @@ esac
 select_board
 
 if ! find_bluebox_ports; then
-    if [ "$BOARD" = spartan7-9090 ]; then
+    if [ "$BOARD" = qvue-9090 ]; then
+        die "Bluebox not detected; qvue-9090 can only be flashed through a Bluebox"
+    elif [ "$BOARD" = spartan7-9090 ]; then
         SELECTED_TRANSPORT=pi-gpio
         require_executable "$RH850_TOOL"
         info "Bluebox not detected; using Pi GPIO/local-UART transport for S7-9090"
