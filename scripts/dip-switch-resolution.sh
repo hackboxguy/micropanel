@@ -420,15 +420,20 @@ apply_soft_dip() {
 
     log "Soft DIP: display type $_type -> DIP on-mask $_mask, cold re-init"
     stop_drivers
+    # als-dimmer talks to the display (MCU at 0x66, FPGA at 0x1d) through the same
+    # link and bus the RH850 re-inits with a master that has no arbitration; it is
+    # not ordered after this unit, so park it until the drivers are back - for every
+    # display type. On the 12.3" NQ1 it starts ~1.5 s into the re-init and writes
+    # the FPGA every 500 ms; 2 of 7 cold boots (2026-11-13, image 2.46) then ended
+    # black: once the re-init failed outright (DBG_STATUS 0xff LAST_ERROR 0x03),
+    # once the profile came up but the 988 never carried video (i1: 0 nits, no
+    # 984/988 reset, HDMI toggle or driver reload helped). A re-init with
+    # als-dimmer stopped brought that panel back (1234 nits).
     _als_was=0
-    if [ "$_quiet" -eq 1 ]; then
-        # als-dimmer talks to the display MCU at 0x66 through the same link;
-        # it is not ordered after this unit, so park it until the video is up.
-        if systemctl is-active --quiet als-dimmer 2>/dev/null; then
-            _als_was=1
-        fi
-        systemctl stop als-dimmer 2>/dev/null && log "  als-dimmer stopped for the re-init"
+    if systemctl is-active --quiet als-dimmer 2>/dev/null; then
+        _als_was=1
     fi
+    systemctl stop als-dimmer 2>/dev/null && log "  als-dimmer stopped for the re-init"
     _try=1
     while :; do
         if [ "$_quiet" -eq 1 ]; then
@@ -467,7 +472,19 @@ apply_soft_dip() {
         else
             echo "[dip-switch] Soft DIP: re-init failed (DBG_STATUS=${_st:-none} LAST_ERROR=${_err:-none} profile=${_prof:-none})"
         fi
-        [ "$_quiet" -eq 1 ] || break
+        if [ "$_quiet" -ne 1 ]; then
+            # No DP-sync wait for these types (the source is up throughout), but a
+            # re-init the RH850 reports as failed left the 983 dead (NAKs at 0x18,
+            # FPD-Link down) until a power cycle: run it again.
+            [ "$_st" = "0x02" ] && break
+            if [ "$_try" -ge "$SOFT_DIP_TRIES" ]; then
+                log "  WARNING: re-init still failing after $_try tries; loading the drivers anyway"
+                break
+            fi
+            _try=$((_try + 1))
+            log "  re-init again (try $_try of $SOFT_DIP_TRIES)"
+            continue
+        fi
         # The source's cue to train; a toggle after the driver reload would only
         # take the link down again under it.
         if [ -n "$_hdmi" ]; then
@@ -487,12 +504,10 @@ apply_soft_dip() {
     done
     start_drivers
     [ "$_quiet" -eq 1 ] || hpd_toggle
-    if [ "$_quiet" -eq 1 ]; then
-        # Restart it whether or not it was running yet: it may have failed its
-        # first start while the link was down, and systemd's retry would land
-        # in the window this function keeps quiet.
-        systemctl start --no-block als-dimmer 2>/dev/null && log "  als-dimmer started (was ${_als_was})"
-    fi
+    # Restart it whether or not it was running yet: it may have failed its
+    # first start while the link was down, and systemd's retry would land
+    # in the window this function keeps quiet.
+    systemctl start --no-block als-dimmer 2>/dev/null && log "  als-dimmer started (was ${_als_was})"
     [ "$_st" = "0x02" ]
 }
 
