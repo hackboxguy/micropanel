@@ -345,6 +345,12 @@ SOFT_DIP_QUIET_S=6
 # many re-inits are run before the drivers are loaded anyway.
 DP_SYNC_WAIT_S=12
 SOFT_DIP_TRIES=3
+# After the drivers are back: kicks without video that count as a dark boot,
+# how long a boot with no kick at all is watched, and how many cold re-inits
+# a dark boot gets in total (see dp_up_after_load).
+POST_LOAD_KICKS=3
+POST_LOAD_QUIET_S=10
+POST_LOAD_ROUNDS=2
 
 rh850_read() {
     i2ctransfer -y -f "$RH850_BUS" w2@"$RH850_ADDR" "$1" "$2" r1@"$RH850_ADDR" 2>/dev/null
@@ -352,6 +358,43 @@ rh850_read() {
 
 rh850_write() {
     i2ctransfer -y -f "$RH850_BUS" w3@"$RH850_ADDR" "$1" "$2" "$3" 2>/dev/null
+}
+
+# The 12.3" NQ1 also came up black with the re-init reported good: VP0 never
+# synced once the drivers were loaded, and the driver kicked the DP RX 6 times
+# (16..54 s) and gave up -- 1 of 16 cold boots on image 2.47, 1 of 7 on 2.46,
+# with als-dimmer parked. No 984/988 reset, HDMI toggle or driver reload
+# brought it back; another cold re-init did (video up after 1 kick, 1234 nits).
+# A good boot shows video right away or after 1 kick, so watch the driver's own
+# log (reading VP0 here would race its indirect-register accesses): "DP video
+# up" or no kick in POST_LOAD_QUIET_S is good, POST_LOAD_KICKS kicks is dark.
+dp_kicks_logged() {
+    dmesg 2>/dev/null | grep -c "hh983-serializer.*kicking the DP RX"
+}
+dp_ups_logged() {
+    dmesg 2>/dev/null | grep -c "hh983-serializer.*DP video up"
+}
+dp_up_after_load() {
+    _t=0
+    while [ "$_t" -lt 60 ]; do
+        _k=$(( $(dp_kicks_logged) - _kicks_before ))
+        if [ "$(dp_ups_logged)" -gt "$_ups_before" ]; then
+            log "  DP video up with the drivers loaded after $_k kick(s)"
+            return 0
+        fi
+        if [ "$_k" -eq 0 ] && [ "$_t" -ge "$POST_LOAD_QUIET_S" ]; then
+            log "  DP video up with the drivers loaded (no kick in ${_t}s)"
+            return 0
+        fi
+        if [ "$_k" -ge "$POST_LOAD_KICKS" ]; then
+            log "  WARNING: no DP video with the drivers loaded, $_k kicks"
+            return 1
+        fi
+        sleep 1
+        _t=$((_t + 1))
+    done
+    log "  WARNING: DP video state unclear 60s after the driver load ($_k kicks), leaving it"
+    return 0
 }
 
 # All switches off: have the RH850 run the profile of the Pi's display type.
@@ -434,76 +477,90 @@ apply_soft_dip() {
         _als_was=1
     fi
     systemctl stop als-dimmer 2>/dev/null && log "  als-dimmer stopped for the re-init"
-    _try=1
+    _round=1
     while :; do
-        if [ "$_quiet" -eq 1 ]; then
-            if [ -n "$_hdmi" ]; then
-                log "  Pi HDMI output off across the re-init ($_hdmi)"
-                "$_hdmi" off >/dev/null 2>&1
-                sleep 1
-            else
-                log "  HPD low across the re-init (983 APB LINK_ENABLE 0; toggle-pi-hdmi.sh not found)"
-                apb_link_enable 0x00
+        _try=1
+        while :; do
+            if [ "$_quiet" -eq 1 ]; then
+                if [ -n "$_hdmi" ]; then
+                    log "  Pi HDMI output off across the re-init ($_hdmi)"
+                    "$_hdmi" off >/dev/null 2>&1
+                    sleep 1
+                else
+                    log "  HPD low across the re-init (983 APB LINK_ENABLE 0; toggle-pi-hdmi.sh not found)"
+                    apb_link_enable 0x00
+                fi
             fi
-        fi
-        rh850_write 0x03 0x16 "$_mask"
-        rh850_write 0x03 0x00 0x11
-        # The RH850 drops its slave while it runs the profile; poll DBG_STATUS,
-        # but only after the profile has had time to finish. The RH850 writes the
-        # serializer with a bit-banged master that has no multi-master
-        # arbitration, on the bus we poll it on. A poll that lands on one of its
-        # writes makes that write fail. A CS2.0 profile that loads its EDID over
-        # APB (OTS-OLED, 3x QVue) runs for about 4 s, and a poll at 1 s ended its
-        # bring-up with LAST_ERROR 0x04 on every boot (983_manager v01.14 also
-        # retries such a write).
-        sleep "$SOFT_DIP_QUIET_S"
-        _t=0
-        _st=""
-        while [ "$_t" -lt 30 ]; do
-            _st=$(rh850_read 0x03 0x01)
-            [ "$_st" = "0x02" ] || [ "$_st" = "0xff" ] && break
-            sleep 1
-            _t=$((_t + 1))
-        done
-        _err=$(rh850_read 0x03 0x04)
-        _prof=$(rh850_read 0x03 0x07)
-        if [ "$_st" = "0x02" ]; then
-            log "Soft DIP: profile $_prof up after ~$((_t + SOFT_DIP_QUIET_S))s"
-        else
-            echo "[dip-switch] Soft DIP: re-init failed (DBG_STATUS=${_st:-none} LAST_ERROR=${_err:-none} profile=${_prof:-none})"
-        fi
-        if [ "$_quiet" -ne 1 ]; then
-            # No DP-sync wait for these types (the source is up throughout), but a
-            # re-init the RH850 reports as failed left the 983 dead (NAKs at 0x18,
-            # FPD-Link down) until a power cycle: run it again.
-            [ "$_st" = "0x02" ] && break
+            rh850_write 0x03 0x16 "$_mask"
+            rh850_write 0x03 0x00 0x11
+            # The RH850 drops its slave while it runs the profile; poll DBG_STATUS,
+            # but only after the profile has had time to finish. The RH850 writes the
+            # serializer with a bit-banged master that has no multi-master
+            # arbitration, on the bus we poll it on. A poll that lands on one of its
+            # writes makes that write fail. A CS2.0 profile that loads its EDID over
+            # APB (OTS-OLED, 3x QVue) runs for about 4 s, and a poll at 1 s ended its
+            # bring-up with LAST_ERROR 0x04 on every boot (983_manager v01.14 also
+            # retries such a write).
+            sleep "$SOFT_DIP_QUIET_S"
+            _t=0
+            _st=""
+            while [ "$_t" -lt 30 ]; do
+                _st=$(rh850_read 0x03 0x01)
+                [ "$_st" = "0x02" ] || [ "$_st" = "0xff" ] && break
+                sleep 1
+                _t=$((_t + 1))
+            done
+            _err=$(rh850_read 0x03 0x04)
+            _prof=$(rh850_read 0x03 0x07)
+            if [ "$_st" = "0x02" ]; then
+                log "Soft DIP: profile $_prof up after ~$((_t + SOFT_DIP_QUIET_S))s"
+            else
+                echo "[dip-switch] Soft DIP: re-init failed (DBG_STATUS=${_st:-none} LAST_ERROR=${_err:-none} profile=${_prof:-none})"
+            fi
+            if [ "$_quiet" -ne 1 ]; then
+                # No DP-sync wait for these types (the source is up throughout), but a
+                # re-init the RH850 reports as failed left the 983 dead (NAKs at 0x18,
+                # FPD-Link down) until a power cycle: run it again.
+                [ "$_st" = "0x02" ] && break
+                if [ "$_try" -ge "$SOFT_DIP_TRIES" ]; then
+                    log "  WARNING: re-init still failing after $_try tries; loading the drivers anyway"
+                    break
+                fi
+                _try=$((_try + 1))
+                log "  re-init again (try $_try of $SOFT_DIP_TRIES)"
+                continue
+            fi
+            # The source's cue to train; a toggle after the driver reload would only
+            # take the link down again under it.
+            if [ -n "$_hdmi" ]; then
+                log "  983 LINK_ENABLE after the re-init: $(apb_link_enabled); Pi HDMI output on, the source trains now"
+                "$_hdmi" on >/dev/null 2>&1
+            else
+                log "  HPD high (983 APB LINK_ENABLE 1), the source trains now"
+                apb_link_enable 0x01
+            fi
+            await_dp_sync && break
             if [ "$_try" -ge "$SOFT_DIP_TRIES" ]; then
-                log "  WARNING: re-init still failing after $_try tries; loading the drivers anyway"
+                log "  WARNING: no DP video after $_try re-inits; loading the drivers anyway"
                 break
             fi
             _try=$((_try + 1))
             log "  re-init again (try $_try of $SOFT_DIP_TRIES)"
-            continue
-        fi
-        # The source's cue to train; a toggle after the driver reload would only
-        # take the link down again under it.
-        if [ -n "$_hdmi" ]; then
-            log "  983 LINK_ENABLE after the re-init: $(apb_link_enabled); Pi HDMI output on, the source trains now"
-            "$_hdmi" on >/dev/null 2>&1
-        else
-            log "  HPD high (983 APB LINK_ENABLE 1), the source trains now"
-            apb_link_enable 0x01
-        fi
-        await_dp_sync && break
-        if [ "$_try" -ge "$SOFT_DIP_TRIES" ]; then
-            log "  WARNING: no DP video after $_try re-inits; loading the drivers anyway"
+        done
+        _kicks_before=$(dp_kicks_logged)
+        _ups_before=$(dp_ups_logged)
+        start_drivers
+        [ "$_quiet" -eq 1 ] || hpd_toggle
+        [ "$_st" = "0x02" ] || break
+        dp_up_after_load && break
+        if [ "$_round" -ge "$POST_LOAD_ROUNDS" ]; then
+            log "  WARNING: still no DP video after $_round cold re-inits, leaving it to the driver"
             break
         fi
-        _try=$((_try + 1))
-        log "  re-init again (try $_try of $SOFT_DIP_TRIES)"
+        _round=$((_round + 1))
+        log "  cold re-init again with the drivers out (round $_round of $POST_LOAD_ROUNDS)"
+        stop_drivers
     done
-    start_drivers
-    [ "$_quiet" -eq 1 ] || hpd_toggle
     # Restart it whether or not it was running yet: it may have failed its
     # first start while the link was down, and systemd's retry would land
     # in the window this function keeps quiet.
