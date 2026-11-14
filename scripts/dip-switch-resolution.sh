@@ -347,10 +347,13 @@ DP_SYNC_WAIT_S=12
 SOFT_DIP_TRIES=3
 # After the drivers are back: kicks without video that count as a dark boot,
 # how long a boot with no kick at all is watched, and how many cold re-inits
-# a dark boot gets in total (see dp_up_after_load).
+# a dark boot gets in total (see dp_up_after_load). Two were not always enough:
+# on 2026-11-14 both re-inits of a dark NQ1 boot (13 s, 39 s) ended without
+# video, and a third run by hand at 210 s brought it up after 1 kick; the
+# second round had fixed the dark boot before. Each round costs ~26 s.
 POST_LOAD_KICKS=3
 POST_LOAD_QUIET_S=10
-POST_LOAD_ROUNDS=2
+POST_LOAD_ROUNDS=4
 
 rh850_read() {
     i2ctransfer -y -f "$RH850_BUS" w2@"$RH850_ADDR" "$1" "$2" r1@"$RH850_ADDR" 2>/dev/null
@@ -368,6 +371,41 @@ rh850_write() {
 # A good boot shows video right away or after 1 kick, so watch the driver's own
 # log (reading VP0 here would race its indirect-register accesses): "DP video
 # up" or no kick in POST_LOAD_QUIET_S is good, POST_LOAD_KICKS kicks is dark.
+# The 983 can also latch the wrong I2C address from its IDX strap at power-up:
+# on 2026-11-14 (NQ1 rig, 1 of 10 cold boots) it answered at 0x14 instead of
+# 0x18 (I2C_DEV_ID 0x28), so the driver's probe NAKed at 6 s and every RH850
+# re-init failed with DBG_STATUS 0xff LAST_ERROR 0x03 -- the RH850 and the
+# driver only know 0x18. Moving it back with the ID override (reg 0x00 =
+# 0x18<<1 | SER_ID_OVERRIDE) made the next re-init succeed. The override
+# survives the driver's digital reset; only a power cycle re-reads the strap.
+SER_ADDR=0x18
+SER_ALT_ADDRS="0x0c 0x0d 0x14 0x15 0x19 0x1a 0x1b"
+is_983_at() {
+    # FPD-Link ID registers 0xF0..0xF5 read "_HH983" ("_UH983" on UB parts).
+    [ "$(i2cget -y -f "$RH850_BUS" "$1" 0xf2 2>/dev/null)" = "0x48" ] &&
+    [ "$(i2cget -y -f "$RH850_BUS" "$1" 0xf3 2>/dev/null)" = "0x39" ] &&
+    [ "$(i2cget -y -f "$RH850_BUS" "$1" 0xf4 2>/dev/null)" = "0x38" ] &&
+    [ "$(i2cget -y -f "$RH850_BUS" "$1" 0xf5 2>/dev/null)" = "0x33" ]
+}
+fix_983_address() {
+    i2cget -y -f "$RH850_BUS" "$SER_ADDR" 0x00 >/dev/null 2>&1 && return 0
+    for _a in $SER_ALT_ADDRS; do
+        if is_983_at "$_a"; then
+            log "  983 strapped to $_a instead of $SER_ADDR (I2C_DEV_ID $(i2cget -y -f "$RH850_BUS" "$_a" 0x00 2>/dev/null)), moving it back"
+            i2cset -y -f "$RH850_BUS" "$_a" 0x00 $(( (SER_ADDR << 1) | 1 )) 2>/dev/null
+            sleep 0.2
+            if i2cget -y -f "$RH850_BUS" "$SER_ADDR" 0x00 >/dev/null 2>&1; then
+                log "  983 answers at $SER_ADDR again"
+                return 0
+            fi
+            log "  WARNING: 983 still not answering at $SER_ADDR after the ID override"
+            return 1
+        fi
+    done
+    log "  WARNING: no 983 at $SER_ADDR or any strap alternative ($SER_ALT_ADDRS)"
+    return 1
+}
+
 dp_kicks_logged() {
     dmesg 2>/dev/null | grep -c "hh983-serializer.*kicking the DP RX"
 }
@@ -491,6 +529,7 @@ apply_soft_dip() {
                     apb_link_enable 0x00
                 fi
             fi
+            fix_983_address
             rh850_write 0x03 0x16 "$_mask"
             rh850_write 0x03 0x00 0x11
             # The RH850 drops its slave while it runs the profile; poll DBG_STATUS,
