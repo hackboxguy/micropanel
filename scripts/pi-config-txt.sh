@@ -566,6 +566,99 @@ write_split_config() {
     [ "$status" -eq 0 ] || { echo "Error: writing $target failed" >&2; exit 1; }
 }
 
+# --- Kernel command line: framebuffer depth ------------------------------------
+# The Qt apps draw through /dev/fb0 (linuxfb), the vc4 driver's fbdev emulation,
+# which the kernel creates at 16 bpp (RGB565) unless the command line names a
+# depth; nothing in config.txt sets it (framebuffer_depth is the firmware's own
+# framebuffer, disabled by disable_fw_kms_setup=1), and it cannot be changed once
+# booted (FBIOPUT_VSCREENINFO: EINVAL). The types listed here get
+#   video=HDMI-A-1:<WxH>-32@<refresh>
+# with the mode exactly the type's hdmi_timings, so no other mode is picked:
+# a 32 bpp (XRGB8888) fb0, so their pictures reach the panel 1:1 in 8 bits per
+# channel. Measured on a 3x QVue rig: gallery output pixel-identical to the PNG.
+FB32_TYPES="3x-qvue"
+# The token this script owns: any video= for the first HDMI connector. Every
+# other type removes it, so switching away undoes it.
+CMDLINE_OWNED_PREFIX="video=HDMI-A-1:"
+
+# The video= token the type needs on the kernel command line, or nothing.
+kernel_video_token() {
+    local config_type="$1" refresh
+    case " $FB32_TYPES " in
+        *" $config_type "*) ;;
+        *) return 0 ;;
+    esac
+    load_display_config "$config_type"
+    refresh=$(echo "$HDMI_TIMINGS" | awk '{ print $14 }')
+    case "$RESOLUTION" in
+        *x*) ;;
+        *) echo "Error: $config_type has no WxH resolution for its video= token" >&2; exit 1 ;;
+    esac
+    echo "${CMDLINE_OWNED_PREFIX}${RESOLUTION}-32@${refresh:-60}"
+}
+
+# The cmdline.txt files that boot from the partition holding $1: the A/B slots'
+# (A/, B/: os_prefix) and the root one (single-slot images, the A/B build stage).
+boot_cmdline_files() {
+    local dir="$1" f
+    for f in "$dir/cmdline.txt" "$dir/A/cmdline.txt" "$dir/B/cmdline.txt"; do
+        [ -f "$f" ] && echo "$f"
+    done
+}
+
+# The first line of cmdline file $1 with the owned token replaced by $2 (or
+# removed when $2 is empty); every other token kept, in order; later lines (the
+# firmware reads only the first) kept as they are.
+render_cmdline() {
+    awk -v tok="$2" -v owned="$CMDLINE_OWNED_PREFIX" '
+        NR == 1 {
+            out = ""
+            for (i = 1; i <= NF; i++) {
+                if (index($i, owned) == 1) continue
+                out = out (out == "" ? "" : " ") $i
+            }
+            if (tok != "") out = out (out == "" ? "" : " ") tok
+            print out
+            next
+        }
+        { print }' "$1"
+}
+
+# Make every cmdline.txt booting from the partition of $2 carry exactly the
+# token type $1 needs. Writes only files that change (this runs on every boot,
+# via --apply-derived), remounting a read-only boot partition for the write.
+# Prints the files it changed. A change takes effect on the next boot.
+sync_kernel_cmdline() {
+    local config_type="$1" boot_dir token f new changed="" was_read_only=0
+    boot_dir=$(dirname "$2")
+    token=$(kernel_video_token "$config_type") || exit 1
+    for f in $(boot_cmdline_files "$boot_dir"); do
+        new=$(render_cmdline "$f" "$token")
+        [ "$new" = "$(cat "$f")" ] || changed="$changed $f"
+    done
+    [ -n "$changed" ] || return 0
+    if awk -v d="$boot_dir" '$2 == d { n = split($4, o, ","); for (i = 1; i <= n; i++) if (o[i] == "ro") r = 1 }
+                             END { exit !r }' /proc/mounts; then
+        mount -o remount,rw "$boot_dir" || { echo "Error: cannot make $boot_dir writable" >&2; exit 1; }
+        was_read_only=1
+    fi
+    local status=0
+    for f in $changed; do
+        if ! { render_cmdline "$f" "$token" > "$f.new" && mv -f "$f.new" "$f"; }; then
+            status=1
+            rm -f "$f.new"
+        fi
+    done
+    sync
+    if [ "$was_read_only" -eq 1 ]; then
+        mount -o remount,ro "$boot_dir" || echo "Warning: could not return $boot_dir to read-only" >&2
+    fi
+    [ "$status" -eq 0 ] || { echo "Error: updating the kernel command line failed" >&2; exit 1; }
+    for f in $changed; do
+        echo "Kernel command line updated for $config_type (${token:-no video= token}), next boot: $f"
+    done
+}
+
 # Function to extract config content for comparison
 extract_config_content() {
     local file="$1"
@@ -1037,6 +1130,11 @@ if [ $APPLY_DERIVED -eq 1 ]; then
     fi
     [ $VERBOSE -eq 1 ] && echo "Applying the module configuration for display type: $derived_type"
     apply_derived_modules "$derived_type"
+    # A slot's cmdline.txt is release-owned: an A/B update renders it afresh
+    # from the release's template, without the device's display token. Put it
+    # back for the next boot. No reboot here: this boot may be an update's
+    # trial boot, and rebooting it would fall back to the old slot.
+    sync_kernel_cmdline "$derived_type" "$INPUT_FILE"
     exit 0
 fi
 
@@ -1080,6 +1178,8 @@ if [ -n "$DISPLAY_TYPE" ] && [ -n "$INPUT_FILE" ]; then
     configure_hh983_serializer "$DISPLAY_TYPE"
     configure_touch_driver "$DISPLAY_TYPE"
     configure_als_dimmer "$DISPLAY_TYPE"
+    # The framebuffer depth the type needs (the reboot below applies it)
+    sync_kernel_cmdline "$DISPLAY_TYPE" "$INPUT_FILE"
 
     if [ $VERBOSE -eq 1 ]; then
         echo "Configuration update completed successfully"
