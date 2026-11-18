@@ -16,7 +16,10 @@
 #define EXIT_RECV_ERROR     4
 
 // Default values
-#define DEFAULT_TIMEOUT_SEC 2
+// The launcher serves one connection at a time and queues the others; a
+// stop-app keeps it busy for up to 5 s (SIGTERM, 3 s, then SIGKILL, 2 s), so
+// a command queued behind one waits that long for its turn
+#define DEFAULT_TIMEOUT_SEC 6
 #define DEFAULT_SERVER      "127.0.0.1:8081"
 #define BUFFER_SIZE         4096
 
