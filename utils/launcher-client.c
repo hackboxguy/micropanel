@@ -40,11 +40,14 @@ void print_usage(const char* program_name) {
     printf("  set-button-enabled (--command-arg=\"<id> <true|false>\")  Enable/disable button\n");
     printf("  get-button-status (--command-arg=<id>)  Get button enabled/disabled status\n");
     printf("  list-all-buttons                   List all buttons with their status\n");
+    printf("  warp (--command-arg=on|off|toggle|status)  3x QVue realtime warp (qvue-warpd);\n");
+    printf("                                     ERROR when the warp daemon is not running\n");
     printf("\nExamples:\n");
     printf("  %s --command=get-running-app\n", program_name);
     printf("  %s --command=list-apps\n", program_name);
     printf("  %s --command=stop-app\n", program_name);
     printf("  %s --command=start-app --command-arg=gallery\n", program_name);
+    printf("  %s --command=warp --command-arg=toggle\n", program_name);
     printf("  %s --srv=192.168.1.100:8081 --command=get-running-app\n", program_name);
     printf("  %s --srv=127.0.0.1:8082 --command=pattern --command-arg=red\n", program_name);
     printf("\nOutput:\n");
