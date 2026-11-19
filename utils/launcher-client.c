@@ -42,6 +42,7 @@ void print_usage(const char* program_name) {
     printf("  list-all-buttons                   List all buttons with their status\n");
     printf("  warp (--command-arg=on|off|toggle|status)  3x QVue realtime warp (qvue-warpd);\n");
     printf("                                     ERROR when the warp daemon is not running\n");
+    printf("  warp (--command-arg=\"mirror x|y on|off|toggle\" or \"mirror off\")  mirror the warped picture\n");
     printf("\nExamples:\n");
     printf("  %s --command=get-running-app\n", program_name);
     printf("  %s --command=list-apps\n", program_name);
