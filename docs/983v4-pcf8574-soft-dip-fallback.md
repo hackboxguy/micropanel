@@ -31,10 +31,11 @@ pull-ups that the v4 integrated in place of the v3 rework. Both `0x19` and
 
 The RH850 reads the same switches itself (AP0_7..14, latched at its power-up)
 and reports them at `0x67` reg `0x0315` as an on-mask (DIP0 = bit 0). That
-mask is the PCF8574 value inverted. If the PCF8574 does not answer, the script
-asks the RH850 instead (up to 5 s), logs
+mask is the PCF8574 value inverted. If `/dev/i2c-3` exists, three PCF8574
+reads in a row fail and the RH850 answers, the script uses the RH850's mask
+right away (about 30 ms, no waiting), logs
 
-`WARNING: PCF8574 missing on i2c-3, DIP switches read from the RH850 (on-mask 0x.. = DIP value 0x..) (983v4 workaround)`
+`WARNING: PCF8574 not answering on i2c-3 (after 0s), DIP switches read from the RH850 (on-mask 0x.. = DIP value 0x..) (983v4 workaround)`
 
 and carries on with `mask ^ 0xff` as if the PCF8574 had read it:
 
@@ -44,7 +45,14 @@ and carries on with `mask ^ 0xff` as if the PCF8574 had read it:
 - switches set: the normal DIP-switch type check. The RH850 runs the profile
   itself at power-up; the Pi compares its display type with the switches and,
   on a mismatch, reconfigures and reboots once (reboot-loop guard unchanged).
-- no RH850 at `0x67` (no 983HH): the script stops, as before.
+- neither the PCF8574 nor the RH850 answers (no 983HH): the script keeps
+  retrying both once a second for `DIP_WAIT_S` (15 s), then stops, as before.
+
+There is no extra wait because the 15 s exists only for `/dev/i2c-3` to
+appear late at boot. Once the bus exists, a fitted PCF8574 answers the first
+read, and an RH850 that answers means the board is powered. If a good board
+ever took the fallback by a fluke it would get the same switches, read by the
+RH850 instead.
 
 So **DIP switches and soft DIP both work on a 983v4 as on a 983v3**, without a
 Stream Deck. Checked 2026-11-20: on the 983v4 rig, Pi GPIO22 (the RH850 reset
@@ -56,19 +64,26 @@ Those boards never reach the fallback.
 
 **Limits while the workaround is in use:**
 
-1. A boot takes about 15 s longer: the script still waits `DIP_WAIT_S` for
-   the PCF8574 before it falls back.
-2. The RH850 latches the switches at its own power-up, the PCF8574 is read
+1. The RH850 latches the switches at its own power-up, the PCF8574 is read
    live. A switch moved without a power cycle is seen by neither the RH850's
    profile nor (now) the Pi until the next power cycle; with the PCF8574 the
    Pi would have seen it at a Pi-only reboot. Power-cycle after changing DIPs.
-3. Whatever sits at `0x19` on i2c-3 stays unreachable. Nothing in this tree
+2. Whatever sits at `0x19` on i2c-3 stays unreachable. Nothing in this tree
    uses it.
 
+Until 2026-11-20 the fallback ran only after the full 15 s PCF8574 wait, on
+every 983v4 boot; it now takes about 30 ms (the service finishes ~0.2 s after
+it starts). On the test rigs `multi-user.target` and the Qt demo are held
+until ~25 s by `disp-settings-dual-display-restore.service` either way, so the
+gain shows in the units ordered after this one (e.g. `micropanel.service`),
+not in when the demo appears.
+
 Tested: 983v4 + 12.3"-NQ5, every DIP off, 5 Tasmota cold boots (profile 0x04,
-picture every time, ~14 cd/m², 0.000 before). Switch-set paths (match,
-mismatch with one reconfigure, unknown position, no RH850) with stubbed I2C;
-not yet with real switches on the 983v4.
+picture every time, ~14 cd/m², 0.000 before). Image v2.61 with DIP3 set on the
+983v4: first boot reconfigured `edid` -> 12.3 and rebooted once, later boots
+matched; with the no-wait fallback, 3 Tasmota cold boots OK (profile 0x04,
+fallback after 0 s) and the 983v3 normal path unaffected (2 reboots). Switch
+mismatch / unknown position / no RH850 / no bus also with stubbed I2C.
 
 ## Checking a board
 
@@ -80,8 +95,8 @@ journalctl -b -u dip-switch-resolution       # which path ran
 
 - `DIP switch value: 0xff` then `Every DIP switch off: soft DIP mode`: the
   normal path; the hardware works.
-- `WARNING: PCF8574 missing on i2c-3, DIP switches read from the RH850 ...
-  (983v4 workaround)`: this board still has the fault.
+- `WARNING: PCF8574 not answering on i2c-3 (after 0s), DIP switches read from
+  the RH850 ... (983v4 workaround)`: this board still has the fault.
 
 ## When the hardware is fixed
 
@@ -90,9 +105,8 @@ normal path runs, and the fallback code is never reached. **Nothing needs to
 change in software.** You can leave the block in place indefinitely; it costs
 nothing on a good board.
 
-Remove it (the function `dip_from_rh850` and the `if ! dip_value=...`
-fallback, back to `dip_value=$(read_dip) || exit 0`) only when **all** of these are
-true:
+Remove it (the function `dip_from_rh850` and the `dip_from_rh850 && return 0`
+line in `read_dip`) only when **all** of these are true:
 
 1. Every 983v4 board in use has the fix. Check each one with `i2cdetect -y -r 3`
    (`0x20` present) and the journal (no `983v4 workaround` warning across a few
@@ -101,6 +115,4 @@ true:
    the removal, it boots black again with every DIP off.
 
 If the hardware is never fixed, keep the workaround and mind the limits
-above. If boot time matters on those boards, the 15 s PCF8574 wait could be
-cut short; that is not done today, because the wait also covers i2c-3
-appearing late on boards that work.
+above.

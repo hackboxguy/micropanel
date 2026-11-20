@@ -618,26 +618,6 @@ apply_soft_dip() {
 # The probe is a direct read rather than `i2cdetect | grep "20"`: it is the same
 # read the script needs anyway, and a grep for "20" also matches the address
 # column and any other device whose address ends in 0x20 on that row.
-read_dip() {
-    _t=0
-    while [ "$_t" -lt "$DIP_WAIT_S" ]; do
-        if [ -e "/dev/i2c-$I2C_BUS" ]; then
-            _v=$(i2cget -y "$I2C_BUS" "$DIP_ADDR" 2>/dev/null)
-            if [ -n "$_v" ]; then
-                # log() writes to stdout and this function's stdout is the
-                # value, so send the note to stderr or it lands in dip_value.
-                [ "$_t" -gt 0 ] && log "DIP switch answered after ${_t}s" >&2
-                echo "$_v"
-                return 0
-            fi
-        fi
-        sleep 1
-        _t=$((_t + 1))
-    done
-    log "No DIP switch (PCF8574) found at $DIP_ADDR on i2c-$I2C_BUS after ${_t}s" >&2
-    return 1
-}
-
 # --- WORKAROUND: 983HH board whose PCF8574 the Pi cannot reach (983v4) -------
 #
 # The Pi reads the 983HH's DIP switches through a PCF8574 at 0x20 on i2c-3.
@@ -657,32 +637,52 @@ read_dip() {
 # PCF8574 answers never comes here, so 983v3 rigs are unaffected; with no
 # RH850 at 0x67 (no 983HH) the script stops as before.
 #
+# No extra wait: the 15 s in read_dip is for /dev/i2c-3 to appear. Once the
+# node exists, a fitted PCF8574 answers the first read (it shares the board's
+# supply with the RH850, so an RH850 that answers means the PCF8574 is powered
+# too). So the fallback is taken as soon as the bus is up, three PCF8574 reads
+# in a row fail and the RH850 answers -- about 30 ms. A good board that hit it
+# by a fluke would get the same switches (the RH850 reads them too), only
+# latched at power-up. Before 2026-11-20 (v2.61) the fallback ran only after
+# the full 15 s wait, which cost the 983v4 15 s on every boot.
+#
 # Once the hardware is fixed this no longer runs (the PCF8574 answers first),
 # and it can stay. See docs/983v4-pcf8574-soft-dip-fallback.md for how to
 # verify a fixed board and when to remove this block.
-RH850_PROBE_S=5
 dip_from_rh850() {
-    _t=0
-    _hw=""
-    while [ "$_t" -lt "$RH850_PROBE_S" ]; do
-        _hw=$(rh850_read 0x03 0x15)
-        [ -n "$_hw" ] && break
-        sleep 1
-        _t=$((_t + 1))
-    done
-    if [ -z "$_hw" ]; then
-        log "No RH850 (983_manager) at $RH850_ADDR either, skipping" >&2
-        return 1
-    fi
+    _hw=$(rh850_read 0x03 0x15)
+    [ -n "$_hw" ] || return 1
     _v=$(printf '0x%02x' $(( _hw ^ 0xff )))
     # stdout is the value: the warning goes to stderr (the journal has both).
-    echo "[dip-switch] WARNING: PCF8574 missing on i2c-$I2C_BUS, DIP switches read from the RH850 (on-mask $_hw = DIP value $_v) (983v4 workaround)" >&2
+    echo "[dip-switch] WARNING: PCF8574 not answering on i2c-$I2C_BUS (after ${_t}s), DIP switches read from the RH850 (on-mask $_hw = DIP value $_v) (983v4 workaround)" >&2
     echo "$_v"
 }
 
-if ! dip_value=$(read_dip); then
-    dip_value=$(dip_from_rh850) || exit 0
-fi
+read_dip() {
+    _t=0
+    while [ "$_t" -lt "$DIP_WAIT_S" ]; do
+        if [ -e "/dev/i2c-$I2C_BUS" ]; then
+            for _try in 1 2 3; do
+                _v=$(i2cget -y "$I2C_BUS" "$DIP_ADDR" 2>/dev/null)
+                if [ -n "$_v" ]; then
+                    # log() writes to stdout and this function's stdout is the
+                    # value, so send the note to stderr or it lands in dip_value.
+                    [ "$_t" -gt 0 ] && log "DIP switch answered after ${_t}s" >&2
+                    echo "$_v"
+                    return 0
+                fi
+            done
+            # Bus up, no PCF8574: the 983v4 workaround above, if the RH850 answers.
+            dip_from_rh850 && return 0
+        fi
+        sleep 1
+        _t=$((_t + 1))
+    done
+    log "No DIP switch (PCF8574) at $DIP_ADDR on i2c-$I2C_BUS and no RH850 at $RH850_ADDR after ${_t}s, skipping" >&2
+    return 1
+}
+
+dip_value=$(read_dip) || exit 0
 
 log "DIP switch value: $dip_value"
 
