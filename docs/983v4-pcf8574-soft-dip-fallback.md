@@ -1,7 +1,7 @@
 # 983v4: soft-DIP fallback when the Pi cannot read the DIP switches
 
 Software workaround in `scripts/dip-switch-resolution.sh`
-(`soft_dip_without_pcf8574()`), added 2026-11-20.
+(`dip_from_rh850()`), added 2026-11-20.
 
 ## The fault
 
@@ -29,27 +29,46 @@ pull-ups that the v4 integrated in place of the v3 rework. Both `0x19` and
 
 ## What the workaround does
 
-If the PCF8574 does not answer, the script asks the RH850 instead (`0x67`
-reg `0x0315`, up to 5 s):
+The RH850 reads the same switches itself (AP0_7..14, latched at its power-up)
+and reports them at `0x67` reg `0x0315` as an on-mask (DIP0 = bit 0). That
+mask is the PCF8574 value inverted. If the PCF8574 does not answer, the script
+asks the RH850 instead (up to 5 s), logs
 
-- `0x00` (every switch off): logs
-  `WARNING: PCF8574 missing on i2c-3 but the RH850 reports every DIP off: soft DIP fallback (983v4 workaround)`
-  and runs the same `apply_soft_dip` / `apply_fpga_variant` as for a `0xff` read.
-- non-zero: the RH850 already runs that profile itself; nothing to do.
-- no answer (no 983HH): nothing to do, as before.
+`WARNING: PCF8574 missing on i2c-3, DIP switches read from the RH850 (on-mask 0x.. = DIP value 0x..) (983v4 workaround)`
+
+and carries on with `mask ^ 0xff` as if the PCF8574 had read it:
+
+- every switch off (`0x00` -> `0xff`): soft DIP. The Pi's display type
+  (`/boot/firmware/micropanel-display.txt`, set by the Stream Deck keys or by
+  `pi-config-txt.sh --type=<type>` over SSH) is sent to the RH850.
+- switches set: the normal DIP-switch type check. The RH850 runs the profile
+  itself at power-up; the Pi compares its display type with the switches and,
+  on a mismatch, reconfigures and reboots once (reboot-loop guard unchanged).
+- no RH850 at `0x67` (no 983HH): the script stops, as before.
+
+So **DIP switches and soft DIP both work on a 983v4 as on a 983v3**, without a
+Stream Deck. Checked 2026-11-20: on the 983v4 rig, Pi GPIO22 (the RH850 reset
+the post-reconfigure step pulses) does reset the RH850, so only the i2c-3 path
+is broken on that board.
 
 **Effect on boards with a working PCF8574 (983v3 and fixed 983v4): none.**
 Those boards never reach the fallback.
 
 **Limits while the workaround is in use:**
 
-1. Keep every DIP off and pick the display on the Stream Deck. With hardware
-   DIPs set, the RH850 still runs the right profile, but the Pi cannot detect a
-   mismatch with its own HDMI timing and correct it.
-2. A boot takes about 15 s longer: the script still waits `DIP_WAIT_S` for
+1. A boot takes about 15 s longer: the script still waits `DIP_WAIT_S` for
    the PCF8574 before it falls back.
+2. The RH850 latches the switches at its own power-up, the PCF8574 is read
+   live. A switch moved without a power cycle is seen by neither the RH850's
+   profile nor (now) the Pi until the next power cycle; with the PCF8574 the
+   Pi would have seen it at a Pi-only reboot. Power-cycle after changing DIPs.
 3. Whatever sits at `0x19` on i2c-3 stays unreachable. Nothing in this tree
    uses it.
+
+Tested: 983v4 + 12.3"-NQ5, every DIP off, 5 Tasmota cold boots (profile 0x04,
+picture every time, ~14 cd/m², 0.000 before). Switch-set paths (match,
+mismatch with one reconfigure, unknown position, no RH850) with stubbed I2C;
+not yet with real switches on the 983v4.
 
 ## Checking a board
 
@@ -61,8 +80,8 @@ journalctl -b -u dip-switch-resolution       # which path ran
 
 - `DIP switch value: 0xff` then `Every DIP switch off: soft DIP mode`: the
   normal path; the hardware works.
-- `WARNING: PCF8574 missing ... soft DIP fallback (983v4 workaround)`: this
-  board still has the fault.
+- `WARNING: PCF8574 missing on i2c-3, DIP switches read from the RH850 ...
+  (983v4 workaround)`: this board still has the fault.
 
 ## When the hardware is fixed
 
@@ -71,8 +90,8 @@ normal path runs, and the fallback code is never reached. **Nothing needs to
 change in software.** You can leave the block in place indefinitely; it costs
 nothing on a good board.
 
-Remove it (the function `soft_dip_without_pcf8574` and the `if ! dip_value=...`
-call, back to `dip_value=$(read_dip) || exit 0`) only when **all** of these are
+Remove it (the function `dip_from_rh850` and the `if ! dip_value=...`
+fallback, back to `dip_value=$(read_dip) || exit 0`) only when **all** of these are
 true:
 
 1. Every 983v4 board in use has the fix. Check each one with `i2cdetect -y -r 3`
@@ -81,7 +100,7 @@ true:
 2. No unfixed 983v4 remains in the field or on a bench. If one turns up after
    the removal, it boots black again with every DIP off.
 
-If the hardware is never fixed, keep the workaround and follow the limits
-above. If boot time matters on those boards, the 15 s PCF8574 wait can be
-skipped when the RH850 already reports `0x0315 = 0x00`; that is not done
-today, because it would also change the timing on boards that work.
+If the hardware is never fixed, keep the workaround and mind the limits
+above. If boot time matters on those boards, the 15 s PCF8574 wait could be
+cut short; that is not done today, because the wait also covers i2c-3
+appearing late on boards that work.
