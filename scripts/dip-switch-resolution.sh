@@ -634,11 +634,61 @@ read_dip() {
         sleep 1
         _t=$((_t + 1))
     done
-    log "No DIP switch (PCF8574) found at $DIP_ADDR on i2c-$I2C_BUS after ${_t}s, skipping" >&2
+    log "No DIP switch (PCF8574) found at $DIP_ADDR on i2c-$I2C_BUS after ${_t}s" >&2
     return 1
 }
 
-dip_value=$(read_dip) || exit 0
+# --- WORKAROUND: 983HH board whose PCF8574 the Pi cannot reach (983v4) -------
+#
+# The Pi reads the 983HH's DIP switches through a PCF8574 at 0x20 on i2c-3.
+# On the first 983v4 board (2026-11-20, 12.3"-NQ5 rig) nothing answers on
+# i2c-3 at all (no 0x20, no 0x19; a 10 kHz retry found nothing either), while a 983v3 shows
+# both. Before this fallback the script stopped here, so with every switch off
+# the soft DIP was never sent: the RH850 ran no profile, the 988 stayed
+# unreachable, the serializer driver's probe failed (-5) and the panel stayed
+# black whatever the Stream Deck selected.
+#
+# The RH850 reads the same switches itself (AP0_7..14) and reports them at
+# 0x67 reg 0x0315, so it can answer the one question this script needs: are
+# all switches off? If so, the soft-DIP path runs exactly as after a 0xff
+# PCF8574 read. A board whose PCF8574 answers never comes here, so 983v3 rigs
+# are unaffected; with no RH850 at 0x67 (no 983HH) this does nothing.
+#
+# Not covered without the PCF8574: with hardware DIPs set, the RH850 runs its
+# profile but the Pi cannot check its display type against the switches, so
+# the type must be picked on the Stream Deck to match (or keep all DIPs off).
+#
+# Once the hardware is fixed this no longer runs (the PCF8574 answers first),
+# and it can stay. See docs/983v4-pcf8574-soft-dip-fallback.md for how to
+# verify a fixed board and when to remove this block.
+RH850_PROBE_S=5
+soft_dip_without_pcf8574() {
+    _t=0
+    _hw=""
+    while [ "$_t" -lt "$RH850_PROBE_S" ]; do
+        _hw=$(rh850_read 0x03 0x15)
+        [ -n "$_hw" ] && break
+        sleep 1
+        _t=$((_t + 1))
+    done
+    if [ -z "$_hw" ]; then
+        log "No RH850 (983_manager) at $RH850_ADDR either, skipping"
+        return 0
+    fi
+    if [ "$_hw" != "0x00" ]; then
+        log "RH850 reports DIP on-mask $_hw: it runs its own profile; without the PCF8574 the Pi cannot check its display type against it, skipping"
+        return 0
+    fi
+    echo "[dip-switch] WARNING: PCF8574 missing on i2c-$I2C_BUS but the RH850 reports every DIP off: soft DIP fallback (983v4 workaround)"
+    apply_soft_dip
+    apply_fpga_variant
+    return 0
+}
+
+if ! dip_value=$(read_dip); then
+    soft_dip_without_pcf8574
+    exit 0
+fi
 
 log "DIP switch value: $dip_value"
 
